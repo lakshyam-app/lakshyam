@@ -2,6 +2,7 @@
    registers screens and the service worker. */
 import { html, onAction } from "./core/dom.js";
 import { t, setLocale } from "./core/i18n.js";
+import { applyTheme } from "./core/theme.js";
 import { registerScreen, listTabs, startRouter, rerender, go, tabFor } from "./core/router.js";
 import { registerServiceWorker } from "./core/sw-client.js";
 import { requestPersistence } from "./core/storage-health.js";
@@ -81,6 +82,7 @@ async function boot() {
   try {
     await store.load();
     setLocale(store.setting("appLang", "en"));
+    applyTheme(store.setting("theme", "system"));
     document.title = t("app.name");
   } catch {
     screen.innerHTML = html`<section class="empty"><p>${t("app.dbError")}</p></section>`;
@@ -98,7 +100,7 @@ async function boot() {
     renderTopbar(activeId);
   });
   // Any data change (import, restore, syllabus switch) redraws the screen.
-  store.onChange(() => { setLocale(store.setting("appLang", "en")); rerender(); });
+  store.onChange(() => { setLocale(store.setting("appLang", "en")); applyTheme(store.setting("theme", "system")); rerender(); });
 
   registerServiceWorker();
   requestPersistence();

@@ -154,6 +154,8 @@ export function rowSub(r, extra = []) {
 
 /* ---------- ⚙ settings: counting basis, start fresh ---------- */
 
+export function openStatsSettings() { settingsSheet(); }
+
 function settingsSheet() {
   const p = prefs();
   openSheet(html`<h2>${t("stats.settings")}</h2>

@@ -167,7 +167,7 @@ export function exportRecords() {
 
 /** mode "replace": wipe the backed-up stores first. mode "merge": update matching
     IDs and keep everything else. One transaction: all or nothing. */
-const DEVICE_SETTINGS = ["appLang"];
+const DEVICE_SETTINGS = ["appLang", "theme"];
 
 export async function commitRecords(records, mode) {
   const changes = {};

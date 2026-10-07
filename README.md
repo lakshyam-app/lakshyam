@@ -55,9 +55,14 @@ Presets fall back to the next one if one fails, and can be paused.
 - Study PDFs and AI keys stay on the phone; they are not in backups.
 - Clearing the browser's site data for this address deletes Lakshyam's data. Export first.
 
-### Language
+### Settings
 
-Settings → Display: app language English / മലയാളം, and subject/topic names in English, Malayalam or both.
+Settings (⚙) has a search box and eight groups: Study goals & Today · Theme & language · Tests & questions ·
+Progress & stats · Syllabuses & marking · AI · Backup & data · About & updates. Search finds a setting in English
+or Malayalam and opens it highlighted.
+
+Theme: Phone setting (follows the phone's light / dark mode), Light or Dark. App language: English / മലയാളം;
+subject/topic names in English, Malayalam or both.
 
 ---
 
@@ -103,7 +108,8 @@ docs/                                      redesign brief, feature check, AI ins
 
 - Database: `lakshyam-db` (IndexedDB), layout version **2**. Migrations only add stores
   (v2 added `timetables`, `ttLog`, `diary`).
-- No `localStorage`: settings live in the `settings` store of the database.
+- Settings live in the `settings` store of the database. The only `localStorage` key is `lakshyam-theme`,
+  a copy of the theme choice so the first paint has the right colours (`src/core/theme-boot.js`).
 - Offline cache: names starting with `lakshyam-`; the service worker never touches other caches.
   The PDF reader cache (`lakshyam-pdfjs-…`) is kept across updates.
 - Private stores, never in backups: `aiPresets`, `pdfs`, `snapshots`, `importLog`.
@@ -135,3 +141,4 @@ and [`docs/feature-check.md`](docs/feature-check.md) for where every old-app fea
 | 8 | Malayalam names |
 | 8+ | Timetable, countdown, study diary, Smart insights, app in Malayalam and more |
 | 9 | Accessibility, speed check, AI instructions in the app, sample paper, CI, feature check (1.0.0) |
+| 1.1 | Theme choice, clearer question cards (especially dark), Settings in groups with search |

@@ -1,10 +1,14 @@
-/* Settings: your data (import, backup, restore, undo, erase), storage, display, app. */
+/* Settings: a search box and eight groups. Each group opens on its own page
+   (#/settings?section=<group>); search also finds settings that live on other
+   screens (Progress ⚙, the AI sheet, the timetable) and takes you straight there. */
 import { html, onAction } from "../../core/dom.js";
 import { t, locale, LANGUAGES } from "../../core/i18n.js";
 import { APP_VERSION } from "../../core/version.js";
 import { isPersisted, requestPersistence, usage, formatBytes } from "../../core/storage-health.js";
 import { checkForUpdate } from "../../core/sw-client.js";
 import { toast } from "../../core/toast.js";
+import { go } from "../../core/router.js";
+import { THEMES } from "../../core/theme.js";
 import { openSheet, updateSheet, closeSheet, setSheetDismissible } from "../../core/sheet.js";
 import * as store from "../../data/store.js";
 import { downloadBackup } from "../../data/backup.js";
@@ -16,9 +20,24 @@ import { aiBlock, openAiSettings } from "../ai/ai-settings.js";
 import { namesBlock, namesHandlers } from "./names.js";
 import { autoTimesLine, openAutoTimes } from "./difficulty-times.js";
 import { editExam, examOf } from "../today/countdown.js";
+import { openStatsSettings } from "../progress/progress.js";
 import { can } from "../../core/entitlements.js";
+import * as presets from "../../ai/presets.js";
+import { header, backHandler } from "../library/library.js";
+import { SETTINGS_INDEX, CATEGORIES, CATEGORY_ICON, searchSettings } from "./settings-index.js";
 
 const when = (ms) => new Date(ms).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+const GOALS = [10, 20, 30, 50, 75, 100];
+const SIZES = [10, 25, 50, 100];
+const ALIASES = { display: "look" };
+let query = ""; // the search box; kept in the address (?q=) so Back from a group returns to the same results
+
+const testDefaults = () => ({ timerOn: false, layout: "single", count: 25, ...(store.setting("testDefaults") || {}) });
+const on = (key) => store.setting(key, true) !== false;
+const seg = (items, cls = "") => html`<div class="segmented ${items.length === 3 ? "three" : "two"} ${cls}" role="group">${items.map((it) => html`<button type="button" class="${it.on ? "on" : ""}" data-action="${it.action}" data-v="${it.v}" aria-pressed="${String(Boolean(it.on))}" ${it.lang ? html`lang="${it.lang}"` : ""}>${it.label}</button>`)}</div>`;
+const sw = (id, key, label, hint = "") => html`<label class="switch-row" data-set="${id}"><input type="checkbox" data-switch="${key}" ${on(key) ? "checked" : ""}><span>${label}${hint ? html`<span class="row-sub">${hint}</span>` : ""}</span></label>`;
+
+/* ---------- blocks ---------- */
 
 async function storageBlock() {
   const persisted = await isPersisted();
@@ -36,20 +55,20 @@ function dataBlock() {
   const last = store.setting("lastBackupAt");
   if (store.isEmpty()) {
     return html`<p>${t("settings.importOldHint")}</p>
-      <button type="button" class="btn" data-action="import">${t("settings.importOld")}</button>
-      <button type="button" class="link" data-action="import">${t("settings.restore")}</button>
-      <button type="button" class="link" data-action="undo">${t("settings.undo")}</button>`;
+      <button type="button" class="btn" data-action="import" data-set="importOld">${t("settings.importOld")}</button>
+      <button type="button" class="link" data-action="import" data-set="restore">${t("settings.restore")}</button>
+      <button type="button" class="link" data-action="undo" data-set="undo">${t("settings.undo")}</button>`;
   }
   return html`
     <p>${t("settings.dataSummary", {
       papers: t("common.papers", { n: c.papers }), questions: t("common.questions", { n: c.questions }), tests: t("common.tests", { n: c.attempts })
     })}</p>
     <p class="hint">${last ? t("settings.lastBackup", { when: when(last) }) : t("settings.neverBackedUp")}</p>
-    <button type="button" class="btn" data-action="backup">${t("settings.backupNow")}</button>
-    <button type="button" class="link" data-action="import">${t("settings.importOld")}</button>
-    <button type="button" class="link" data-action="import">${t("settings.restore")}</button>
-    <button type="button" class="link" data-action="undo">${t("settings.undo")}</button>
-    <button type="button" class="link danger" data-action="erase">${t("settings.erase")}</button>`;
+    <button type="button" class="btn" data-action="backup" data-set="backup">${t("settings.backupNow")}</button>
+    <button type="button" class="link" data-action="import" data-set="importOld">${t("settings.importOld")}</button>
+    <button type="button" class="link" data-action="import" data-set="restore">${t("settings.restore")}</button>
+    <button type="button" class="link" data-action="undo" data-set="undo">${t("settings.undo")}</button>
+    <button type="button" class="link danger" data-action="erase" data-set="erase">${t("settings.erase")}</button>`;
 }
 
 async function openUndo() {
@@ -104,121 +123,299 @@ function confirmErase() {
   });
 }
 
+/* ---------- one page per group ---------- */
+
+const PAGES = {
+  today() {
+    const goalNow = Number(store.setting("dailyGoal", 30)) || 30;
+    const custom = !GOALS.includes(goalNow);
+    return html`<div class="group" data-set="goal">
+        <p class="field-label">${t("settings.goal")}</p>
+        <div class="chip-wrap">${GOALS.map((n) => html`<button type="button" class="pill ${goalNow === n ? "on" : ""}" data-action="goal" data-n="${n}">${n}</button>`)}
+          <button type="button" class="pill ${custom ? "on" : ""}" data-action="goal-custom">${custom ? goalNow : t("settings.goalOther")}</button></div>
+        <p class="hint">${t("settings.goalHint")}</p>
+      </div>
+      <div class="group">
+        <button type="button" class="row" data-action="exam" data-set="exam"><span class="row-main"><span class="row-title">📅 ${examOf(store.currentSyllabus()) ? t("exam.change") : t("exam.set")}</span>
+          <span class="row-sub">${t("exam.setSub")}</span></span><span class="chev-txt">›</span></button>
+        ${sw("countdown", "showCountdown", t("exam.showSetting"))}
+        ${sw("diary", "showDiary", t("diary.showSetting"))}
+        ${sw("streak", "showStreak", t("settings.showStreak"))}
+        ${sw("showGoal", "showGoal", t("settings.showGoal"))}
+      </div>
+      <div class="group" data-set="name">
+        <label class="field-label">${t("settings.name")}<input class="field" id="userName" type="text" value="${store.setting("userName", "")}" placeholder="${t("settings.namePlaceholder")}" autocomplete="off"></label>
+      </div>`;
+  },
+
+  look() {
+    const theme = store.setting("theme", "system");
+    return html`<div class="group" data-set="theme">
+        <h3>${t("setx.theme")}</h3>
+        ${seg(THEMES.map((v) => ({ action: "theme", v, on: theme === v, label: t(`setx.themes.${v}`) })))}
+        <p class="hint">${t("setx.themeHint")}</p>
+      </div>
+      <div class="group" data-set="appLang">
+        <h3>${t("settings.appLang")}</h3>
+        ${seg(LANGUAGES.map((l) => ({ action: "app-lang", v: l.code, on: locale() === l.code, label: l.name, lang: l.code })))}
+        <p class="hint">${t("settings.appLangHint")}</p>
+      </div>
+      ${can("malayalamNames") ? html`<div class="group" data-set="names namesFile">${namesBlock()}</div>` : ""}`;
+  },
+
+  tests() {
+    const d = testDefaults();
+    const view = store.setting("questionView", "study");
+    const listLayout = store.setting("listLayout", "scroll");
+    const resLayout = store.setting("resultLayout", null);
+    const diffOn = on("difficultyEnabled");
+    return html`<div class="group">
+        <h3>${t("setx.testDefaults")}</h3>
+        <p class="field-label" data-set="timer">${t("setx.timerDefault")}</p>
+        ${seg([{ action: "td-timer", v: "0", on: !d.timerOn, label: t("start.timerOff") }, { action: "td-timer", v: "1", on: d.timerOn, label: t("start.timerOn") }])}
+        <p class="field-label" data-set="testLayout">${t("setx.testLayout")}</p>
+        ${seg(["single", "scroll"].map((v) => ({ action: "td-layout", v, on: d.layout === v, label: t(`layout.${v}`) })))}
+        <p class="field-label" data-set="testCount">${t("setx.testCount")}</p>
+        <div class="chip-wrap">${SIZES.map((n) => html`<button type="button" class="pill ${d.count === n ? "on" : ""}" data-action="td-count" data-n="${n}">${n}</button>`)}</div>
+        <p class="hint">${t("setx.testDefaultsHint")}</p>
+      </div>
+      <div class="group">
+        <h3>${t("setx.lists")}</h3>
+        <p class="field-label" data-set="listView">${t("setx.listView")}</p>
+        ${seg(["study", "selftest"].map((v) => ({ action: "q-view", v, on: view === v, label: t(`view.${v}`) })))}
+        <p class="field-label" data-set="listLayout">${t("setx.listLayout")}</p>
+        ${seg(["scroll", "single"].map((v) => ({ action: "l-layout", v, on: listLayout === v, label: t(`layout.${v}`) })))}
+        <p class="field-label" data-set="resultLayout">${t("setx.resultLayout")}</p>
+        ${seg([{ action: "r-layout", v: "", on: !resLayout, label: t("setx.resultSame") }, ...["scroll", "single"].map((v) => ({ action: "r-layout", v, on: resLayout === v, label: t(`layout.${v}`) }))])}
+      </div>
+      <div class="group">
+        ${sw("difficulty", "difficultyEnabled", t("settings.difficulty"), t("settings.difficultyHint"))}
+        ${diffOn ? html`<p class="hint">${autoTimesLine()}</p>
+        <button type="button" class="link" data-action="diff-times" data-set="diffTimes">${t("diffTimes.change")}</button>` : ""}
+      </div>`;
+  },
+
+  progress() {
+    const basis = ["first", "latest", "all"].includes(store.setting("statsBasis")) ? store.setting("statsBasis") : "first";
+    return html`<div class="group" data-set="basis">
+        <h3>${t("stats.basisTitle")}</h3>
+        <div class="menu">${["first", "latest", "all"].map((b) => html`<button type="button" class="menu-item ${basis === b ? "is-current" : ""}" data-action="basis" data-v="${b}">
+          <span class="row-main"><span>${t(`stats.basis.${b}`)}</span><span class="row-sub">${t(`stats.basisInfo.${b}`)}</span></span>${basis === b ? html`<span class="tick">✓</span>` : ""}</button>`)}</div>
+      </div>
+      <div class="group" data-set="fresh">
+        <h3>${t("stats.freshTitle")}</h3>
+        <p class="hint">${t("stats.freshInfo")}</p>
+        <button type="button" class="btn btn-quiet" data-action="stats">${t("setx.statsFresh")}</button>
+      </div>`;
+  },
+
+  syllabi() {
+    return html`<div class="group" data-set="syllabi marking pattern"><div class="rows">${syllabiBlock()}</div></div>`;
+  },
+
+  ai() {
+    return html`<div class="group" data-set="presets aiLang fallback pause removeKeys"><div id="aiBlock"></div></div>
+      <div class="group">${sw("aiOnCards", "aiOnCards", t("ai.onCards"), t("ai.onCardsHint"))}</div>`;
+  },
+
+  data() {
+    return html`<div class="group">${dataBlock()}</div>
+      <div class="group" data-set="protect">
+        <h3>${t("settings.sectionStorage")}</h3>
+        <div id="storageBlock"></div>
+      </div>`;
+  },
+
+  about() {
+    return html`<div class="group" data-set="update">
+        <p>${t("app.name")}, ${t("settings.version", { version: APP_VERSION }).toLowerCase()}</p>
+        <button type="button" class="btn btn-quiet" data-action="update">${t("settings.checkUpdate")}</button>
+      </div>`;
+  }
+};
+
+/* ---------- the start page ---------- */
+
+function catSubs(aiSummary) {
+  const d = testDefaults();
+  const syl = store.currentSyllabus();
+  const last = store.setting("lastBackupAt");
+  const basis = ["first", "latest", "all"].includes(store.setting("statsBasis")) ? store.setting("statsBasis") : "first";
+  return {
+    today: t("setx.catSub.today", { goal: Number(store.setting("dailyGoal", 30)) || 30, exam: examOf(syl) ? t("setx.examSet") : t("setx.examNone") }),
+    look: t("setx.catSub.look", { theme: t(`setx.themes.${store.setting("theme", "system")}`), lang: LANGUAGES.find((l) => l.code === locale())?.name || "" }),
+    tests: t("setx.catSub.tests", { timer: d.timerOn ? t("setx.on") : t("setx.off"), layout: t(`layout.${d.layout === "scroll" ? "scroll" : "singleShort"}`), diff: on("difficultyEnabled") ? t("setx.on") : t("setx.off") }),
+    progress: t("setx.catSub.progress", { basis: t(`stats.basis.${basis}`) }),
+    syllabi: t("setx.catSub.syllabi", { n: store.syllabi().length, current: syl?.name || "–" }),
+    ai: aiSummary,
+    data: last ? t("settings.lastBackup", { when: when(last) }) : t("settings.neverBackedUp"),
+    about: t("setx.catSub.about", { version: APP_VERSION })
+  };
+}
+
+function resultsHtml(q) {
+  const hits = searchSettings(q);
+  if (!hits.length) return html`<p class="hint pad">${t("setx.noMatch", { q })}</p>`;
+  return html`<p class="hint">${t("setx.results", { n: hits.length })}</p>
+    <div class="rows">${hits.map((it) => html`<button type="button" class="row" data-action="hit" data-id="${it.id}">
+      <span class="set-icon" aria-hidden="true">${CATEGORY_ICON[it.cat] || "↗"}</span>
+      <span class="row-main"><span class="row-title">${it.label()}</span><span class="row-sub">${it.cat === "elsewhere" ? t("setx.elsewhere") : t(`setx.cat.${it.cat}`)}</span></span>
+      <span class="chev-txt">›</span></button>`)}</div>`;
+}
+
+function homeHtml(subs) {
+  return html`<section class="settings">
+    <h1>${t("settings.title")}</h1>
+    <div class="set-search">
+      <input class="field" type="search" id="setSearch" value="${query}" placeholder="${t("setx.searchHint")}" aria-label="${t("setx.search")}" autocomplete="off" enterkeyhint="search">
+    </div>
+    <div id="setBody">${query.trim() ? resultsHtml(query.trim()) : catList(subs)}</div>
+  </section>`;
+}
+
+function catList(subs) {
+  return html`<div class="rows set-cats">${CATEGORIES.map((c) => html`<button type="button" class="row" data-action="cat" data-id="${c}">
+      <span class="set-icon" aria-hidden="true">${CATEGORY_ICON[c]}</span>
+      <span class="row-main"><span class="row-title">${t(`setx.cat.${c}`)}</span><span class="row-sub" data-sub="${c}">${subs[c] || ""}</span></span>
+      <span class="chev-txt">›</span></button>`)}</div>
+    <h3 class="rows-head">${t("setx.elsewhere")}</h3>
+    <div class="rows"><button type="button" class="row" data-action="hit" data-id="timetable">
+      <span class="set-icon" aria-hidden="true">🗓</span>
+      <span class="row-main"><span class="row-title">${t("setx.timetable")}</span><span class="row-sub">${t("setx.timetableSub")}</span></span>
+      <span class="chev-txt">›</span></button></div>`;
+}
+
+async function aiSummaryText() {
+  const list = await presets.getPresets();
+  const cfg = await presets.getConfig();
+  const active = list.find((p) => p.id === cfg.activeId) || list[0];
+  return list.length ? t("ai.summary", { n: list.length, active: active?.name || "" }) : t("ai.none");
+}
+
+/* ---------- actions ---------- */
+
+const ACTIONS = {
+  exam: () => editExam(),
+  "ai-settings": () => openAiSettings(),
+  undo: () => openUndo(),
+  "diff-times": () => openAutoTimes(),
+  stats: () => openStatsSettings(),
+  timetable: () => go("timetable"),
+  "names-import": () => namesHandlers["names-import"](),
+  erase: () => confirmErase()
+};
+
+/** A search hit: run its action, or open its group with the setting highlighted. */
+function openHit(id) {
+  const it = SETTINGS_INDEX.find((x) => x.id === id);
+  if (!it) return;
+  if (it.cat !== "elsewhere") go("settings", { section: it.cat, focus: it.id });
+  if (it.act) setTimeout(() => ACTIONS[it.act]?.(), it.cat === "elsewhere" ? 0 : 120);
+}
+
+function handlers(container, goalNow) {
+  return {
+    ...backHandler,
+    ...namesHandlers,
+    cat: (el) => go("settings", { section: el.dataset.id }),
+    hit: (el) => openHit(el.dataset.id),
+    import: startImport,
+    undo: openUndo,
+    erase: confirmErase,
+    exam: () => editExam(),
+    stats: () => openStatsSettings(),
+    "diff-times": () => openAutoTimes(),
+    "ai-settings": () => openAiSettings(),
+    "app-lang": (el) => store.setSetting("appLang", el.dataset.v),
+    theme: (el) => store.setSetting("theme", el.dataset.v),
+    goal: (el) => store.setSetting("dailyGoal", Number(el.dataset.n)),
+    "goal-custom": () => runFlow(async () => {
+      const v = await askText({ title: t("settings.goal"), hint: t("settings.goalHint"), value: String(goalNow), inputMode: "numeric" });
+      const n = Math.round(Number(v));
+      if (v !== null && n >= 1 && n <= 500) await store.setSetting("dailyGoal", n);
+      else if (v !== null) toast(t("settings.goalInvalid"));
+    }),
+    "td-timer": (el) => store.setSetting("testDefaults", { ...testDefaults(), timerOn: el.dataset.v === "1" }),
+    "td-layout": (el) => store.setSetting("testDefaults", { ...testDefaults(), layout: el.dataset.v }),
+    "td-count": (el) => store.setSetting("testDefaults", { ...testDefaults(), count: Number(el.dataset.n) }),
+    "q-view": (el) => store.setSetting("questionView", el.dataset.v),
+    "l-layout": (el) => store.setSetting("listLayout", el.dataset.v),
+    "r-layout": (el) => store.setSetting("resultLayout", el.dataset.v || null),
+    basis: (el) => store.setSetting("statsBasis", el.dataset.v),
+    "syl-add": addSyllabusFlow,
+    "syl-edit": (el) => editSyllabusFlow(el.dataset.id),
+    backup: async () => {
+      // Saved first, so the backup itself records when it was made.
+      await store.setSetting("lastBackupAt", Date.now());
+      downloadBackup();
+      toast(t("settings.backupSaved"));
+    },
+    persist: async () => {
+      const granted = await requestPersistence();
+      toast(granted ? t("settings.persistentGranted") : t("settings.persistentDenied"), { duration: 5000 });
+      const block = container.querySelector("#storageBlock");
+      if (block) block.innerHTML = await storageBlock();
+    },
+    update: async (button) => {
+      button.disabled = true;
+      button.textContent = t("settings.checking");
+      const result = await checkForUpdate();
+      button.disabled = false;
+      button.textContent = t("settings.checkUpdate");
+      if (result === "offline") toast(t("settings.offlineNow"));
+      else if (result === "latest") toast(t("settings.upToDate"));
+    }
+  };
+}
+
 export const settingsScreen = {
   id: "settings",
   async render(container, params = {}) {
+    const section = ALIASES[params.section] || params.section;
     const goalNow = Number(store.setting("dailyGoal", 30)) || 30;
-    container.innerHTML = html`
-      <section class="settings">
-        <h1>${t("settings.title")}</h1>
-        <div class="group" id="sec-today">
-          <h2>${t("settings.sectionToday")}</h2>
-          <p class="field-label">${t("settings.goal")}</p>
-          <div class="chip-wrap">${[10, 20, 30, 50, 75, 100].map((n) => html`<button type="button" class="pill ${goalNow === n ? "on" : ""}" data-action="goal" data-n="${n}">${n}</button>`)}
-            <button type="button" class="pill ${[10, 20, 30, 50, 75, 100].includes(goalNow) ? "" : "on"}" data-action="goal-custom">${[10, 20, 30, 50, 75, 100].includes(goalNow) ? t("settings.goalOther") : goalNow}</button></div>
-          <p class="hint">${t("settings.goalHint")}</p>
-          <label class="field-label">${t("settings.name")}<input class="field" id="userName" type="text" value="${store.setting("userName", "")}" placeholder="${t("settings.namePlaceholder")}" autocomplete="off"></label>
-          <label class="switch-row"><input type="checkbox" id="showCountdown" ${store.setting("showCountdown", true) !== false ? "checked" : ""}><span>${t("exam.showSetting")}</span></label>
-          <button type="button" class="link" data-action="exam">📅 ${examOf(store.currentSyllabus()) ? t("exam.change") : t("exam.set")}</button>
-          <label class="switch-row"><input type="checkbox" id="showDiary" ${store.setting("showDiary", true) !== false ? "checked" : ""}><span>${t("diary.showSetting")}</span></label>
-          <label class="switch-row"><input type="checkbox" id="showStreak" ${store.setting("showStreak", true) !== false ? "checked" : ""}><span>${t("settings.showStreak")}</span></label>
-          <label class="switch-row"><input type="checkbox" id="showGoal" ${store.setting("showGoal", true) !== false ? "checked" : ""}><span>${t("settings.showGoal")}</span></label>
-        </div>
-        <div class="group">
-          <h2>${t("settings.sectionData")}</h2>
-          ${dataBlock()}
-        </div>
-        ${store.syllabi().length ? html`<div class="group">
-          <h2>${t("syllabi.title")}</h2>
-          <div class="rows">${syllabiBlock()}</div>
-        </div>` : ""}
-        <div class="group" id="sec-ai">
-          <h2>${t("ai.title")}</h2>
-          <div id="aiBlock"></div>
-          <label class="switch-row"><input type="checkbox" id="aiOnCards" ${store.setting("aiOnCards", true) !== false ? "checked" : ""}><span>${t("ai.onCards")}<span class="row-sub">${t("ai.onCardsHint")}</span></span></label>
-        </div>
-        <div class="group">
-          <h2>${t("settings.sectionStorage")}</h2>
-          <div id="storageBlock"></div>
-        </div>
-        <div class="group" id="sec-display">
-          <h2>${t("settings.sectionDisplay")}</h2>
-          <h3>${t("settings.appLang")}</h3>
-          <div class="segmented two" role="group" aria-label="${t("settings.appLang")}">${LANGUAGES.map((l) => html`<button type="button" class="${locale() === l.code ? "on" : ""}" data-action="app-lang" data-v="${l.code}" lang="${l.code}" aria-pressed="${String(locale() === l.code)}">${l.name}</button>`)}</div>
-          <p class="hint">${t("settings.appLangHint")}</p>
-          <p>${t("settings.theme")}</p>
-          ${can("malayalamNames") ? namesBlock() : ""}
-          <label class="switch-row"><input type="checkbox" id="diffToggle" ${store.setting("difficultyEnabled", true) !== false ? "checked" : ""}>
-            <span>${t("settings.difficulty")}<span class="row-sub">${t("settings.difficultyHint")}</span></span></label>
-          ${store.setting("difficultyEnabled", true) !== false ? html`<p class="hint">${autoTimesLine()}</p>
-          <button type="button" class="link" data-action="diff-times">${t("diffTimes.change")}</button>` : ""}
-        </div>
-        <div class="group">
-          <h2>${t("settings.sectionApp")}</h2>
-          <p>${t("app.name")}, ${t("settings.version", { version: APP_VERSION }).toLowerCase()}</p>
-          <button type="button" class="btn btn-quiet" data-action="update">${t("settings.checkUpdate")}</button>
-        </div>
-        <div class="group quiet">
-          <h2>${t("settings.comingTitle")}</h2>
-          <p>${t("settings.coming")}</p>
-        </div>
-      </section>`;
 
-    container.querySelector("#diffToggle").addEventListener("change", (e) => store.setSetting("difficultyEnabled", e.target.checked));
-    container.querySelector("#aiOnCards").addEventListener("change", (e) => store.setSetting("aiOnCards", e.target.checked));
-    container.querySelector("#showCountdown").addEventListener("change", (e) => store.setSetting("showCountdown", e.target.checked));
-    container.querySelector("#showDiary").addEventListener("change", (e) => store.setSetting("showDiary", e.target.checked));
-    container.querySelector("#showStreak").addEventListener("change", (e) => store.setSetting("showStreak", e.target.checked));
-    container.querySelector("#showGoal").addEventListener("change", (e) => store.setSetting("showGoal", e.target.checked));
-    container.querySelector("#userName").addEventListener("change", (e) => store.quietly(() => store.setSetting("userName", e.target.value.trim().slice(0, 40))).then(() => toast(t("settings.saved"))));
-    aiBlock().then((markup) => { const el = container.querySelector("#aiBlock"); if (el) el.innerHTML = String(markup); });
-    if (params.section) container.querySelector(`#sec-${params.section}`)?.scrollIntoView({ block: "start" });
-    if (params.section === "ai") setTimeout(() => openAiSettings(), 50);
+    if (!PAGES[section]) {
+      query = params.q || "";
+      container.innerHTML = homeHtml(catSubs(""));
+      aiSummaryText().then((s) => { const el = container.querySelector('[data-sub="ai"]'); if (el) el.textContent = s; });
+      const input = container.querySelector("#setSearch");
+      input.addEventListener("input", () => {
+        query = input.value;
+        history.replaceState(history.state, "", query.trim() ? `#/settings?q=${encodeURIComponent(query)}` : "#/settings");
+        const body = container.querySelector("#setBody");
+        body.innerHTML = query.trim() ? resultsHtml(query.trim()) : catList(catSubs(""));
+        if (!query.trim()) aiSummaryText().then((s) => { const el = container.querySelector('[data-sub="ai"]'); if (el) el.textContent = s; });
+      });
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { const first = container.querySelector('#setBody [data-action="hit"]'); if (first) { e.preventDefault(); openHit(first.dataset.id); } }
+      });
+      onAction(container, handlers(container, goalNow));
+      return;
+    }
 
-    const refreshStorage = async () => {
-      const block = container.querySelector("#storageBlock");
-      if (block) block.innerHTML = await storageBlock();
-    };
-    refreshStorage();
+    container.innerHTML = html`<section class="settings set-page">
+      ${header({ backTo: "settings", backParams: query.trim() ? { q: query } : {}, backLabel: t("setx.back"), title: `${CATEGORY_ICON[section]} ${t(`setx.cat.${section}`)}` })}
+      ${PAGES[section]()}
+    </section>`;
 
-    onAction(container, {
-      import: startImport,
-      undo: openUndo,
-      ...namesHandlers,
-      "diff-times": () => openAutoTimes(),
-      "app-lang": (el) => store.setSetting("appLang", el.dataset.v),
-      exam: () => editExam(),
-      "ai-settings": () => openAiSettings(),
-      goal: (el) => store.setSetting("dailyGoal", Number(el.dataset.n)),
-      "goal-custom": () => runFlow(async () => {
-        const v = await askText({ title: t("settings.goal"), hint: t("settings.goalHint"), value: String(goalNow), inputMode: "numeric" });
-        const n = Math.round(Number(v));
-        if (v !== null && n >= 1 && n <= 500) await store.setSetting("dailyGoal", n);
-        else if (v !== null) toast(t("settings.goalInvalid"));
-      }),
-      "syl-add": addSyllabusFlow,
-      "syl-edit": (el) => editSyllabusFlow(el.dataset.id),
-      erase: confirmErase,
-      backup: async () => {
-        // Saved first, so the backup itself records when it was made.
-        await store.setSetting("lastBackupAt", Date.now());
-        downloadBackup();
-        toast(t("settings.backupSaved"));
-      },
-      persist: async () => {
-        const granted = await requestPersistence();
-        toast(granted ? t("settings.persistentGranted") : t("settings.persistentDenied"), { duration: 5000 });
-        refreshStorage();
-      },
-      update: async (button) => {
-        button.disabled = true;
-        button.textContent = t("settings.checking");
-        const result = await checkForUpdate();
-        button.disabled = false;
-        button.textContent = t("settings.checkUpdate");
-        if (result === "offline") toast(t("settings.offlineNow"));
-        else if (result === "latest") toast(t("settings.upToDate"));
+    container.querySelectorAll("[data-switch]").forEach((box) => box.addEventListener("change", () => store.setSetting(box.dataset.switch, box.checked)));
+    container.querySelector("#userName")?.addEventListener("change", (e) => store.quietly(() => store.setSetting("userName", e.target.value.trim().slice(0, 40))).then(() => toast(t("settings.saved"))));
+    if (section === "ai") aiBlock().then((markup) => { const el = container.querySelector("#aiBlock"); if (el) el.innerHTML = String(markup); });
+    if (section === "data") storageBlock().then((markup) => { const el = container.querySelector("#storageBlock"); if (el) el.innerHTML = String(markup); });
+    // One-off requests (open the AI sheet, highlight a search hit) are removed from the
+    // address, so a redraw after a change doesn't repeat them.
+    if (params.open || params.focus) history.replaceState(history.state, "", `#/settings?section=${section}`);
+    if (section === "ai" && params.open === "1") setTimeout(() => openAiSettings(), 50);
+
+    if (params.focus) {
+      // Search hit: bring the setting into view and light it up briefly.
+      const target = container.querySelector(`[data-set~="${CSS.escape(params.focus)}"]`);
+      if (target) {
+        target.scrollIntoView({ block: "center" });
+        target.classList.add("set-flash");
+        setTimeout(() => target.classList.remove("set-flash"), 1800);
       }
-    });
+    }
+    onAction(container, handlers(container, goalNow));
   }
 };

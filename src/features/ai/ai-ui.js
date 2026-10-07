@@ -29,7 +29,7 @@ export async function ensureAi() {
   openSheet(html`<h2>${t("ai.setUpTitle")}</h2><p>${t("ai.setUpBody")}</p><p class="hint">${t("ai.privacy")}</p>
     <div class="sheet-actions"><button type="button" class="btn btn-quiet" data-action="close">${t("common.cancel")}</button>
       <button type="button" class="btn" data-action="go">${t("ai.setUp")}</button></div>`,
-  { close: () => closeSheet(), go: () => go("settings", { section: "ai" }) });
+  { close: () => closeSheet(), go: () => go("settings", { section: "ai", open: "1" }) });
   return false;
 }
 
@@ -53,7 +53,7 @@ export async function askInSheet({ title, sub = "", system, user, maxTokens = 25
         <p class="hint">${t("ai.checkPreset")}</p>
         <div class="sheet-actions"><button type="button" class="btn btn-quiet" data-action="settings">${t("ai.title")}</button>
           <button type="button" class="btn" data-action="close">${t("common.close")}</button></div>`,
-      { close: () => closeSheet(), settings: () => go("settings", { section: "ai" }) });
+      { close: () => closeSheet(), settings: () => go("settings", { section: "ai", open: "1" }) });
     }
     return null;
   }
