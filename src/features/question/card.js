@@ -1,41 +1,65 @@
-/* One question card, shared by Library, tests, results and search.
-   Phase 1: read-only "Study view" (answer shown). */
+/* One question card, shared by Library, banks, search (and later tests/results).
+   mode: "study"   – correct answer shown, explanation one tap away
+         "selftest"– answer hidden; tap an option (or "Show answer") to check yourself
+         "edit"    – tap an option to set the correct answer (tap again to clear) */
 import { html } from "../../core/dom.js";
 import { t } from "../../core/i18n.js";
 import { richText, letterFor } from "../../domain/text.js";
 import * as store from "../../data/store.js";
 
-/** showPaper: add the paper name (useful when the list mixes papers). */
-export function questionCard(q, { showPaper = true } = {}) {
+const star = (on) => html`<svg viewBox="0 0 24 24" aria-hidden="true" class="${on ? "filled" : ""}"><path d="M12 3.8l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16.8l-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/></svg>`;
+const dots = html`<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="18.5" cy="12" r="1.3"/></svg>`;
+
+/** The difficulty that counts: yours if set, otherwise the one in the paper file. */
+export function difficultyOf(q) {
+  return store.questionState(q.id)?.difficulty || q.difficultyHint || null;
+}
+
+export function questionCard(q, { showPaper = true, mode = "study", revealed = null, showDifficulty = true } = {}) {
   const paper = store.paper(q.paperId);
   const state = store.questionState(q.id);
   const deleted = q.status === "deleted_by_psc";
+  const flagged = Boolean(state?.flagged);
+  const diff = showDifficulty ? difficultyOf(q) : null;
   const meta = [
     q.number ? t("question.number", { n: q.number }) : null,
     showPaper && paper ? paper.name : null,
     showPaper && paper?.postName ? paper.postName : null
   ].filter(Boolean);
+  // In self-test the answer shows only after you pick an option or tap "Show answer".
+  const hidden = mode === "selftest" && revealed === null;
+  const picked = mode === "selftest" && typeof revealed === "number" ? revealed : null;
 
-  return html`<article class="qcard ${deleted ? "is-deleted" : ""}" lang="${q.lang === "ml" ? "ml" : "en"}">
+  const option = (opt, i) => {
+    const right = !deleted && q.answerIndex === i && !hidden;
+    const wrongPick = picked === i && !right;
+    const cls = [right ? "right" : "", wrongPick ? "wrong" : "", mode !== "study" ? "tappable" : ""].join(" ");
+    const inner = html`<span class="opt-letter">${letterFor(i)}</span>
+      <span class="opt-text">${richText(opt)}</span>
+      ${right ? html`<span class="tick" aria-label="${t("question.correct")}">✓</span>` : ""}
+      ${wrongPick ? html`<span class="cross" aria-label="${t("question.yourPick")}">✗</span>` : ""}`;
+    return mode === "study"
+      ? html`<li class="${cls}">${inner}</li>`
+      : html`<li class="${cls}"><button type="button" class="opt-btn" data-action="q-option" data-i="${i}">${inner}</button></li>`;
+  };
+
+  return html`<article class="qcard ${deleted ? "is-deleted" : ""} ${mode === "edit" ? "is-editing" : ""}" data-qid="${q.id}" lang="${q.lang === "ml" ? "ml" : "en"}">
     <header class="qcard-meta">
-      <span>${meta.join(" · ")}</span>
+      <span class="qcard-where">${meta.join(" · ")}</span>
       <span class="qcard-badges">
-        ${state?.difficulty ? html`<span class="chip chip-${state.difficulty}">${t(`question.difficulty.${state.difficulty}`)}</span>` : ""}
-        ${state?.flagged ? html`<span class="flag" title="${t("question.flagged")}" aria-label="${t("question.flagged")}">★</span>` : ""}
+        ${diff ? html`<button type="button" class="chip chip-${diff}" data-action="q-diff">${t(`question.difficulty.${diff}`)}</button>` : ""}
+        <button type="button" class="icon-sm ${flagged ? "on" : ""}" data-action="q-flag" aria-pressed="${String(flagged)}"
+          aria-label="${flagged ? t("question.unflag") : t("question.flag")}">${star(flagged)}</button>
+        <button type="button" class="icon-sm" data-action="q-menu" aria-label="${t("question.more")}">${dots}</button>
       </span>
     </header>
     ${deleted ? html`<p class="qcard-note">${t("question.deleted")}</p>` : ""}
     <div class="qtext">${richText(q.text)}</div>
-    <ol class="options">${q.options.map((opt, i) => {
-      const right = !deleted && q.answerIndex === i;
-      return html`<li class="${right ? "right" : ""}">
-        <span class="opt-letter">${letterFor(i)}</span>
-        <span class="opt-text">${richText(opt)}</span>
-        ${right ? html`<span class="tick" aria-label="correct">✓</span>` : ""}
-      </li>`;
-    })}</ol>
-    ${!deleted && q.answerIndex === null ? html`<p class="qcard-note quiet">${t("question.noAnswer")}</p>` : ""}
-    ${q.explanation ? html`<details class="explain"><summary>${t("question.explanation")}</summary>
+    <ol class="options">${q.options.map(option)}</ol>
+    ${mode === "edit" ? html`<p class="qcard-note quiet">${t("question.editHint")}</p>` : ""}
+    ${!deleted && q.answerIndex === null && !hidden ? html`<p class="qcard-note quiet">${t("question.noAnswer")}</p>` : ""}
+    ${hidden ? html`<button type="button" class="link" data-action="q-reveal">${t("question.showAnswer")}</button>` : ""}
+    ${q.explanation && !hidden ? html`<details class="explain"><summary>${t("question.explanation")}</summary>
       <div class="qtext">${richText(q.explanation)}</div></details>` : ""}
   </article>`;
 }

@@ -114,6 +114,8 @@ export const settingsScreen = {
         <div class="group">
           <h2>${t("settings.sectionDisplay")}</h2>
           <p>${t("settings.theme")}</p>
+          <label class="switch-row"><input type="checkbox" id="diffToggle" ${store.setting("difficultyEnabled", true) !== false ? "checked" : ""}>
+            <span>${t("settings.difficulty")}<span class="row-sub">${t("settings.difficultyHint")}</span></span></label>
         </div>
         <div class="group">
           <h2>${t("settings.sectionApp")}</h2>
@@ -125,6 +127,8 @@ export const settingsScreen = {
           <p>${t("settings.coming")}</p>
         </div>
       </section>`;
+
+    container.querySelector("#diffToggle").addEventListener("change", (e) => store.setSetting("difficultyEnabled", e.target.checked));
 
     const refreshStorage = async () => {
       const block = container.querySelector("#storageBlock");

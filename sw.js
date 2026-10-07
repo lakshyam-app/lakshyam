@@ -4,7 +4,7 @@
      (Other apps on the same site keep their caches.)
    - A new version waits until the user taps "Refresh" in the app. */
 
-const VERSION = "0.2.0";
+const VERSION = "0.3.0";
 const PREFIX = "lakshyam-";
 const SHELL_CACHE = `${PREFIX}shell-${VERSION}`;
 
@@ -16,12 +16,15 @@ const SHELL_FILES = [
   "./icons/icon-512.png",
   "./icons/icon.svg",
   "./icons/maskable-512.png",
+  "./src/core/clipboard.js",
+  "./src/core/dialogs.js",
   "./src/core/dom.js",
   "./src/core/entitlements.js",
   "./src/core/files.js",
   "./src/core/flags.js",
   "./src/core/i18n.js",
   "./src/core/icons.js",
+  "./src/core/longpress.js",
   "./src/core/math.js",
   "./src/core/router.js",
   "./src/core/sheet.js",
@@ -33,17 +36,29 @@ const SHELL_FILES = [
   "./src/data/db.js",
   "./src/data/ids.js",
   "./src/data/import-legacy.js",
+  "./src/data/mutations.js",
+  "./src/data/paper-json.js",
   "./src/data/schema.js",
   "./src/data/snapshots.js",
   "./src/data/store.js",
   "./src/data/taxonomy-seed.js",
   "./src/domain/scoring.js",
+  "./src/domain/study.js",
   "./src/domain/text.js",
   "./src/features/import/import-flow.js",
+  "./src/features/library/banks.js",
   "./src/features/library/library.js",
+  "./src/features/library/paper-files.js",
+  "./src/features/library/topic-actions.js",
+  "./src/features/library/topic-picker.js",
+  "./src/features/notes/note-editor.js",
   "./src/features/notes/notes.js",
   "./src/features/progress/progress.js",
   "./src/features/question/card.js",
+  "./src/features/question/copy.js",
+  "./src/features/question/exam-filter.js",
+  "./src/features/question/list.js",
+  "./src/features/search/search.js",
   "./src/features/settings/settings.js",
   "./src/features/today/today.js",
   "./src/main.js",

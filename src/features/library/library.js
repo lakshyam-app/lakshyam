@@ -1,20 +1,32 @@
-/* Library (Phase 1: read-only browsing).
-   Tab:      #/library?view=subjects|topics|papers
-   Screens:  #/subject?id=…  #/topic?id=…  #/paper?id=… */
+/* Library.
+   Tab:      #/library?view=subjects|topics|papers|banks[&list=…]
+   Screens:  #/subject?id=…  #/subject-all?id=…  #/topic?id=…  #/paper?id=…
+   (Banks live in banks.js.) */
 import { html, onAction } from "../../core/dom.js";
 import { t } from "../../core/i18n.js";
 import { go } from "../../core/router.js";
-import { typesetMath } from "../../core/math.js";
+import { openSheet } from "../../core/sheet.js";
+import { onLongPress } from "../../core/longpress.js";
+import { runFlow, chooseAction, askText, confirmAction } from "../../core/dialogs.js";
+import { toast } from "../../core/toast.js";
 import * as store from "../../data/store.js";
-import { questionCard } from "../question/card.js";
+import * as mut from "../../data/mutations.js";
 import { startImport } from "../import/import-flow.js";
+import { mountQuestions, visibleQuestions } from "../question/list.js";
+import { copyQuestions } from "../question/copy.js";
+import { noteBlock, editNote } from "../notes/note-editor.js";
+import { topicMenu, labelFor, labelDot, LABELS, renameTopicFlow, renameSubjectFlow, markStudied } from "./topic-actions.js";
+import { addPaperFlow, answerKeyFlow } from "./paper-files.js";
+import { banksRows } from "./banks.js";
 
-const PAGE = 30;
-const VIEWS = ["subjects", "topics", "papers"];
+const VIEWS = ["subjects", "topics", "papers", "banks"];
 let lastView = "subjects";
-const filterText = { subjects: "", topics: "", papers: "" };
+const filterText = { subjects: "", topics: "", papers: "", banks: "" };
+// Topics view: chip ("all" or a list ID), sort, studied filter, label filter
+const topicView = { chip: "all", sort: "freq", studied: "all", labels: null };
 
-const chev = html`<svg class="chev-r" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 7l5 5-5 5"/></svg>`;
+export const chev = html`<svg class="chev-r" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 7l5 5-5 5"/></svg>`;
+const dotsIcon = html`<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18.5" cy="12" r="1.4"/></svg>`;
 
 function emptyLibrary(container) {
   container.innerHTML = html`<section class="empty">
@@ -27,6 +39,158 @@ function emptyLibrary(container) {
 
 const matches = (q, ...texts) => !q || texts.some((s) => String(s || "").toLowerCase().includes(q));
 
+/* ---------- Topics view ---------- */
+
+function topicEntries(syllabusId) {
+  const list = topicView.chip !== "all" ? store.byId("topicLists", topicView.chip) : null;
+  const counts = new Map(store.topicsWithCounts(syllabusId).map((x) => [x.topic.id, x.count]));
+  const ids = list ? list.topicIds : [...counts.keys()];
+  let rows = ids.map((id) => store.topic(id)).filter(Boolean).map((topic) => ({
+    topic, subject: store.subject(topic.subjectId), count: counts.get(topic.id) || 0,
+    studied: store.topicStateFor(syllabusId, topic.id)?.studiedCount || 0,
+    label: labelFor(syllabusId, topic.id)
+  }));
+  const { studied, labels, sort } = topicView;
+  if (studied === "0") rows = rows.filter((r) => r.studied === 0);
+  if (studied === "1") rows = rows.filter((r) => r.studied >= 1);
+  if (studied === "3") rows = rows.filter((r) => r.studied >= 3);
+  if (labels) rows = rows.filter((r) => labels.has(r.label?.name || "__none"));
+  const byName = (a, b) => a.topic.name.localeCompare(b.topic.name);
+  const labelRank = (r) => { const i = LABELS.findIndex((l) => l.name === r.label?.name); return i < 0 ? 99 : i; };
+  if (list && sort === "freq") return rows; // a list keeps its own order unless you sort it
+  rows.sort({
+    freq: (a, b) => b.count - a.count || byName(a, b),
+    az: byName,
+    most: (a, b) => b.studied - a.studied || b.count - a.count || byName(a, b),
+    least: (a, b) => a.studied - b.studied || b.count - a.count || byName(a, b),
+    label: (a, b) => labelRank(a) - labelRank(b) || b.count - a.count || byName(a, b)
+  }[sort] || byName);
+  return rows;
+}
+
+function topicRow(r) {
+  const sub = [r.subject?.name, r.studied ? t("library.studied", { n: r.studied }) : null].filter(Boolean).join(" · ");
+  return html`<button type="button" class="row" data-action="open" data-to="topic" data-id="${r.topic.id}" data-lp="1">
+    <span class="row-main"><span class="row-title">${labelDot(r.label)}${r.topic.name}</span>
+      <span class="row-sub">${sub}</span></span>
+    <span class="row-count">${r.count}</span>${chev}
+  </button>`;
+}
+
+function topicChips() {
+  const lists = store.all("topicLists").sort((a, b) => a.name.localeCompare(b.name));
+  if (topicView.chip !== "all" && !lists.some((l) => l.id === topicView.chip)) topicView.chip = "all";
+  const filtered = topicView.sort !== "freq" || topicView.studied !== "all" || topicView.labels;
+  return html`<div class="chip-row">
+    <button type="button" class="pill ${topicView.chip === "all" ? "on" : ""}" data-action="chip" data-id="all">${t("topics.all")}</button>
+    ${lists.map((l) => html`<button type="button" class="pill ${topicView.chip === l.id ? "on" : ""}" data-action="chip" data-id="${l.id}">📌 ${l.name}</button>`)}
+    <button type="button" class="pill" data-action="new-list">${t("lists.newShort")}</button>
+  </div>
+  <div class="toolbar">
+    <button type="button" class="pill ${filtered ? "on" : ""}" data-action="topic-sort">${t("topics.sortFilter")} ▾</button>
+    ${topicView.chip !== "all" ? html`<button type="button" class="pill" data-action="list-menu">${t("lists.menu")} ▾</button>` : ""}
+  </div>
+  ${topicView.chip !== "all" ? noteBlock("list", topicView.chip) : ""}`;
+}
+
+function topicSortSheet() {
+  return new Promise((resolve) => {
+    const opt = (group, value, label, on) => html`<button type="button" class="pill ${on ? "on" : ""}" data-action="set" data-g="${group}" data-v="${value}">${label}</button>`;
+    const draw = () => openSheet(html`<h2>${t("topics.sortFilter")}</h2>
+      <h3>${t("topics.sortBy")}</h3>
+      <div class="chip-wrap">${["freq", "az", "most", "least", "label"].map((s) => opt("sort", s, t(`topics.sort.${s}`), topicView.sort === s))}</div>
+      <h3>${t("topics.studiedFilter")}</h3>
+      <div class="chip-wrap">${["all", "0", "1", "3"].map((s) => opt("studied", s, t(`topics.studied.${s}`), topicView.studied === s))}</div>
+      <h3>${t("labels.title")}</h3>
+      <div class="chip-wrap">
+        ${opt("labels", "__all", t("topics.all"), !topicView.labels)}
+        ${LABELS.map((l) => html`<button type="button" class="pill ${topicView.labels?.has(l.name) ? "on" : ""}" data-action="set" data-g="labels" data-v="${l.name}"><span class="dot" style="background:${l.color}"></span>${t(`labels.${l.name}`)}</button>`)}
+        ${opt("labels", "__none", t("labels.none"), topicView.labels?.has("__none"))}
+      </div>
+      <p class="hint">${t("topics.labelHint")}</p>
+      <div class="sheet-actions">
+        <button type="button" class="btn btn-quiet" data-action="reset">${t("topics.reset")}</button>
+        <button type="button" class="btn" data-action="done">${t("common.done")}</button>
+      </div>`, {
+      set: (el) => {
+        const { g, v } = el.dataset;
+        if (g !== "labels") topicView[g] = v;
+        else if (v === "__all") topicView.labels = null;
+        else {
+          const s = new Set(topicView.labels || []);
+          if (s.has(v)) s.delete(v); else s.add(v);
+          topicView.labels = s.size ? s : null;
+        }
+        draw();
+      },
+      reset: () => { Object.assign(topicView, { sort: "freq", studied: "all", labels: null }); draw(); },
+      done: () => resolve()
+    }, { label: t("topics.sortFilter"), onClose: () => resolve() });
+    draw();
+  });
+}
+
+function addTopicsToList(list, syllabusId) {
+  return new Promise((resolve) => {
+    let term = "";
+    const chosen = new Set(list.topicIds);
+    const all = store.topicsWithCounts(syllabusId).sort((a, b) => b.count - a.count);
+    const body = openSheet(html`<h2>${t("lists.addTopics")}</h2><p class="hint">${list.name}</p>
+      <input type="search" class="search" id="ltSearch" placeholder="${t("common.searchPlaceholder")}" autocomplete="off">
+      <div class="checks" id="ltRows"></div>
+      <div class="sheet-actions">
+        <button type="button" class="btn btn-quiet" data-action="cancel">${t("common.cancel")}</button>
+        <button type="button" class="btn" data-action="save">${t("common.save")}</button>
+      </div>`, {
+      toggle: (el) => { const id = el.dataset.id; if (chosen.has(id)) chosen.delete(id); else chosen.add(id); draw(); },
+      cancel: () => resolve(null),
+      save: () => resolve(chosen)
+    }, { onClose: () => resolve(null) });
+    const draw = () => {
+      const q = term.toLowerCase();
+      body.querySelector("#ltRows").innerHTML = html`${all.filter((x) => matches(q, x.topic.name, x.subject?.name)).slice(0, 200).map((x) => html`
+        <button type="button" class="check ${chosen.has(x.topic.id) ? "on" : ""}" data-action="toggle" data-id="${x.topic.id}">
+          <span class="box">${chosen.has(x.topic.id) ? "✓" : ""}</span>
+          <span class="row-main"><span>${x.topic.name}</span><span class="row-sub">${x.subject?.name || ""} · ${x.count}</span></span>
+        </button>`)}`;
+    };
+    body.querySelector("#ltSearch").addEventListener("input", (e) => { term = e.target.value; draw(); });
+    draw();
+  });
+}
+
+function listMenu(listId, syllabusId) {
+  const list = store.byId("topicLists", listId);
+  return runFlow(async () => {
+    const id = await chooseAction({ title: list.name, items: [
+      { id: "add", label: t("lists.addTopics") },
+      { id: "rename", label: t("lists.rename") },
+      { id: "note", label: t("notes.myNote") },
+      { id: "delete", label: t("lists.delete"), danger: true }
+    ] });
+    if (id === "add") {
+      const chosen = await addTopicsToList(list, syllabusId);
+      if (!chosen) return;
+      const kept = list.topicIds.filter((x) => chosen.has(x));
+      await store.apply({ topicLists: { put: [{ ...list, topicIds: [...kept, ...[...chosen].filter((x) => !kept.includes(x))] }] } });
+    } else if (id === "rename") {
+      const name = await askText({ title: t("lists.rename"), value: list.name });
+      if (name) await mut.renameList(list, name);
+    } else if (id === "note") {
+      return editNote("list", list.id, list.name);
+    } else if (id === "delete") {
+      const ok = await confirmAction({ title: t("lists.deleteTitle", { name: list.name }), body: t("lists.deleteBody"), confirmLabel: t("common.delete"), danger: true });
+      if (!ok) return;
+      const copy = { ...list };
+      topicView.chip = "all";
+      await mut.deleteList(list);
+      toast(t("lists.deleted"), { actionLabel: t("common.undo"), onAction: () => store.apply({ topicLists: { put: [copy] } }) });
+    }
+  });
+}
+
+/* ---------- Library tab ---------- */
+
 function rowsFor(view, syllabusId, q) {
   if (view === "subjects") {
     return store.subjectsWithCounts(syllabusId).filter((x) => matches(q, x.subject.name)).map((x) => html`
@@ -36,15 +200,9 @@ function rowsFor(view, syllabusId, q) {
       </button>`);
   }
   if (view === "topics") {
-    return store.topicsWithCounts(syllabusId).filter((x) => matches(q, x.topic.name, x.subject?.name))
-      .sort((a, b) => b.count - a.count || a.topic.name.localeCompare(b.topic.name))
-      .map((x) => html`
-      <button type="button" class="row" data-action="open" data-to="topic" data-id="${x.topic.id}">
-        <span class="row-main"><span class="row-title">${x.topic.name}</span>
-          <span class="row-sub">${x.subject?.name || ""}</span></span>
-        <span class="row-count">${x.count}</span>${chev}
-      </button>`);
+    return topicEntries(syllabusId).filter((r) => matches(q, r.topic.name, r.subject?.name)).map(topicRow);
   }
+  if (view === "banks") return banksRows(syllabusId, q);
   return store.papersOf(syllabusId).filter((p) => matches(q, p.name, p.postName)).map((p) => html`
     <button type="button" class="row" data-action="open" data-to="paper" data-id="${p.id}">
       <span class="row-main"><span class="row-title">${p.name}</span>
@@ -60,22 +218,28 @@ export const libraryScreen = {
     if (store.isEmpty()) return emptyLibrary(container);
     const view = VIEWS.includes(params.view) ? params.view : lastView;
     lastView = view;
+    if (params.list && store.byId("topicLists", params.list)) topicView.chip = params.list;
     const syllabus = store.currentSyllabus();
 
     container.innerHTML = html`<section class="library">
-      <div class="segmented" role="tablist">${VIEWS.map((v) => html`
+      <div class="segmented four" role="tablist">${VIEWS.map((v) => html`
         <button type="button" role="tab" aria-selected="${String(v === view)}" class="${v === view ? "on" : ""}"
           data-action="view" data-view="${v}">${t(`library.views.${v}`)}</button>`)}</div>
       <input type="search" class="search" id="libFilter" placeholder="${t("common.searchPlaceholder")}"
         value="${filterText[view]}" autocomplete="off">
+      ${view === "topics" ? topicChips() : ""}
+      ${view === "papers" ? html`<button type="button" class="btn btn-quiet add-btn" data-action="add-paper">${t("addPaper.button")}</button>` : ""}
+      ${view === "banks" ? html`<button type="button" class="btn btn-quiet add-btn" data-action="new-bank">${t("banks.newBank")}</button>` : ""}
       <div class="rows" id="libRows"></div>
+      ${view === "topics" ? html`<p class="hint pad">${t("topics.tip")}</p>` : ""}
     </section>`;
 
     const rowsEl = container.querySelector("#libRows");
     const drawRows = () => {
       const q = filterText[view].trim().toLowerCase();
       const rows = rowsFor(view, syllabus.id, q);
-      rowsEl.innerHTML = rows.length ? html`${rows}` : html`<p class="hint pad">${t("library.nothingFound", { q: filterText[view] })}</p>`;
+      rowsEl.innerHTML = rows.length ? html`${rows}`
+        : html`<p class="hint pad">${q ? t("library.nothingFound", { q: filterText[view] }) : t(`library.emptyView.${view}`)}</p>`;
     };
     drawRows();
 
@@ -87,44 +251,53 @@ export const libraryScreen = {
     });
     onAction(container, {
       view: (el) => go("library", { view: el.dataset.view }),
-      open: (el) => go(el.dataset.to, { id: el.dataset.id })
+      open: (el) => go(el.dataset.to, { id: el.dataset.id }),
+      chip: (el) => { topicView.chip = el.dataset.id; go("library", { view: "topics" }); },
+      "new-list": () => runFlow(async () => {
+        const name = await askText({ title: t("lists.newList"), placeholder: t("lists.namePlaceholder"), confirmLabel: t("common.create") });
+        if (!name) return;
+        const list = await store.quietly(() => mut.createList(name));
+        topicView.chip = list.id;
+        store.touch();
+      }),
+      "topic-sort": () => topicSortSheet().then(() => runFlow(async () => store.touch())),
+      "list-menu": () => listMenu(topicView.chip, syllabus.id),
+      "note-edit": () => editNote("list", topicView.chip, store.byId("topicLists", topicView.chip)?.name || ""),
+      "add-paper": () => addPaperFlow(),
+      "new-bank": () => runFlow(async () => {
+        const name = await askText({ title: t("banks.newBank"), placeholder: t("banks.namePlaceholder"), confirmLabel: t("common.create") });
+        if (!name) return;
+        const bank = await store.quietly(() => mut.createBank(name));
+        go("bank", { id: bank.id });
+      })
     });
+    if (view === "topics") {
+      onLongPress(rowsEl, (el) => {
+        const topic = store.topic(el.dataset.id);
+        if (topic) topicMenu(topic, { listId: topicView.chip !== "all" ? topicView.chip : null });
+      });
+    }
   }
 };
 
-/* ---------- question lists with paging ---------- */
+/* ---------- shared header ---------- */
 
-function questionList(container, questions, { showPaper }) {
-  const listEl = container.querySelector("#qList");
-  let shown = 0;
-  const more = container.querySelector("#qMore");
-  const drawMore = () => {
-    const next = questions.slice(shown, shown + PAGE);
-    const holder = document.createElement("div");
-    holder.innerHTML = html`${next.map((q) => questionCard(q, { showPaper }))}`;
-    typesetMath(holder);
-    listEl.append(...holder.children);
-    shown += next.length;
-    const left = questions.length - shown;
-    more.hidden = left <= 0;
-    more.textContent = t("common.showMore", { n: Math.min(PAGE, left) });
-  };
-  more.addEventListener("click", drawMore);
-  if (!questions.length) listEl.innerHTML = html`<p class="hint">${t("library.noQuestions")}</p>`;
-  else drawMore();
-}
-
-function header({ backTo, backParams, backLabel, title, sub }) {
+export function header({ backTo, backParams, backLabel, title, sub, menu = false }) {
   return html`<header class="screen-head">
-    <button type="button" class="back" data-action="back" data-to="${backTo}" data-params="${JSON.stringify(backParams || {})}">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>${backLabel}</span>
-    </button>
+    <div class="head-bar">
+      <button type="button" class="back" data-action="back" data-to="${backTo}" data-params="${JSON.stringify(backParams || {})}">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>${backLabel}</span>
+      </button>
+      ${menu ? html`<button type="button" class="icon-btn" data-action="menu" aria-label="${t("common.more")}">${dotsIcon}</button>` : ""}
+    </div>
     <h1>${title}</h1>
     ${sub ? html`<p class="hint">${sub}</p>` : ""}
   </header>`;
 }
 
-const backHandler = { back: (el) => go(el.dataset.to, JSON.parse(el.dataset.params || "{}")) };
+export const backHandler = { back: (el) => go(el.dataset.to, JSON.parse(el.dataset.params || "{}")) };
+
+/* ---------- Subject ---------- */
 
 export const subjectScreen = {
   id: "subject",
@@ -133,23 +306,66 @@ export const subjectScreen = {
     const subject = store.subject(id);
     if (!subject) return go("library");
     const syllabus = store.currentSyllabus();
-    const topics = store.topicsWithCounts(syllabus.id, id).sort((a, b) => a.topic.order - b.topic.order);
+    const topics = store.topicsWithCounts(syllabus.id, id).sort((a, b) => a.topic.order - b.topic.order || b.count - a.count);
     const total = topics.reduce((n, x) => n + x.count, 0);
     container.innerHTML = html`${header({
       backTo: "library", backParams: { view: "subjects" }, backLabel: t("library.views.subjects"),
-      title: subject.name, sub: `${t("common.questions", { n: total })} · ${t("common.topics", { n: topics.length })}`
+      title: subject.name, sub: `${t("common.questions", { n: total })} · ${t("common.topics", { n: topics.length })}`, menu: true
     })}
-    <div class="rows">${topics.map((x) => {
-      const st = store.topicStateFor(syllabus.id, x.topic.id);
-      return html`<button type="button" class="row" data-action="open" data-id="${x.topic.id}">
-        <span class="row-main"><span class="row-title">${x.topic.name}</span>
-          ${st?.studiedCount ? html`<span class="row-sub">${t("library.studied", { n: st.studiedCount })}</span>` : ""}</span>
-        <span class="row-count">${x.count}</span>${chev}
-      </button>`;
-    })}</div>`;
-    onAction(container, { ...backHandler, open: (el) => go("topic", { id: el.dataset.id }) });
+    ${noteBlock("subject", id)}
+    <div class="rows" id="subRows">
+      ${total ? html`<button type="button" class="row" data-action="all">
+        <span class="row-main"><span class="row-title">${t("subject.allQuestions")}</span></span>
+        <span class="row-count">${total}</span>${chev}</button>` : ""}
+      ${topics.map((x) => {
+        const st = store.topicStateFor(syllabus.id, x.topic.id);
+        const label = labelFor(syllabus.id, x.topic.id);
+        return html`<button type="button" class="row" data-action="open" data-id="${x.topic.id}" data-lp="1">
+          <span class="row-main"><span class="row-title">${labelDot(label)}${x.topic.name}</span>
+            ${st?.studiedCount ? html`<span class="row-sub">${t("library.studied", { n: st.studiedCount })}</span>` : ""}</span>
+          <span class="row-count">${x.count}</span>${chev}
+        </button>`;
+      })}
+    </div>`;
+    onAction(container, {
+      ...backHandler,
+      open: (el) => go("topic", { id: el.dataset.id }),
+      all: () => go("subject-all", { id }),
+      "note-edit": () => editNote("subject", id, subject.name),
+      menu: () => runFlow(async () => {
+        const choice = await chooseAction({ title: subject.name, items: [
+          { id: "rename", label: t("subjectMenu.rename") },
+          { id: "copy", label: t("listing.copy") },
+          { id: "note", label: t("notes.myNote") }
+        ] });
+        if (choice === "rename") return renameSubjectFlow(subject);
+        if (choice === "copy") return copyQuestions(visibleQuestions(`subject-all:${id}`, store.questionsFor({ syllabusId: syllabus.id, subjectId: id })), subject.name);
+        if (choice === "note") return editNote("subject", id, subject.name);
+      })
+    });
+    onLongPress(container.querySelector("#subRows"), (el) => { const topic = store.topic(el.dataset.id); if (topic) topicMenu(topic); });
   }
 };
+
+export const subjectAllScreen = {
+  id: "subject-all",
+  parent: "library",
+  render(container, { id }) {
+    const subject = store.subject(id);
+    if (!subject) return go("library");
+    const syllabus = store.currentSyllabus();
+    const questions = store.questionsFor({ syllabusId: syllabus.id, subjectId: id })
+      .sort((a, b) => (store.topic(a.topicId)?.order ?? 0) - (store.topic(b.topicId)?.order ?? 0));
+    container.innerHTML = html`${header({
+      backTo: "subject", backParams: { id }, backLabel: subject.name,
+      title: t("subject.allQuestions"), sub: t("common.questions", { n: questions.length })
+    })}<div id="qHost"></div>`;
+    onAction(container, backHandler);
+    mountQuestions(container.querySelector("#qHost"), { key: `subject-all:${id}`, questions, showPaper: true });
+  }
+};
+
+/* ---------- Topic ---------- */
 
 export const topicScreen = {
   id: "topic",
@@ -161,18 +377,34 @@ export const topicScreen = {
     const syllabus = store.currentSyllabus();
     const questions = store.questionsFor({ syllabusId: syllabus.id, topicId: id });
     const st = store.topicStateFor(syllabus.id, id);
-    const sub = [t("common.questions", { n: questions.length }), st?.studiedCount ? t("library.studied", { n: st.studiedCount }) : null]
+    const label = labelFor(syllabus.id, id);
+    const sub = [t("common.questions", { n: questions.length }), st?.studiedCount ? t("library.studied", { n: st.studiedCount }) : t("library.notStudied")]
       .filter(Boolean).join(" · ");
     container.innerHTML = html`${header({
       backTo: "subject", backParams: { id: topic.subjectId }, backLabel: subject?.name || t("common.back"),
-      title: topic.name, sub
+      title: html`${labelDot(label)}${topic.name}`, sub, menu: true
     })}
-    <div class="qlist" id="qList"></div>
-    <button type="button" class="btn btn-quiet more" id="qMore" hidden></button>`;
-    onAction(container, backHandler);
-    questionList(container, questions, { showPaper: true });
+    <div class="actions-row">
+      <button type="button" class="btn" data-action="studied">${t("studied.button")}</button>
+    </div>
+    ${noteBlock("topic", id)}
+    <div id="qHost"></div>`;
+    const key = `topic:${id}`;
+    onAction(container, {
+      ...backHandler,
+      studied: () => markStudied(syllabus.id, topic),
+      "note-edit": () => editNote("topic", id, topic.name),
+      menu: () => topicMenu(topic, { onPage: true, extra: [
+        st?.studiedCount ? { id: "minus", label: t("studied.minus", { n: st.studiedCount }), run: () => mut.addStudied(syllabus.id, id, -1) } : null,
+        { id: "copy", label: t("listing.copy"), run: () => copyQuestions(visibleQuestions(key, questions), `${subject?.name} — ${topic.name}`) },
+        { id: "note", label: t("notes.myNote"), run: () => editNote("topic", id, topic.name) }
+      ].filter(Boolean) })
+    });
+    mountQuestions(container.querySelector("#qHost"), { key, questions, showPaper: true });
   }
 };
+
+/* ---------- Paper ---------- */
 
 export const paperScreen = {
   id: "paper",
@@ -181,13 +413,55 @@ export const paperScreen = {
     const paper = store.paper(id);
     if (!paper) return go("library", { view: "papers" });
     const questions = store.questionsOfPaper(id);
+    const key = `paper:${id}`;
     container.innerHTML = html`${header({
       backTo: "library", backParams: { view: "papers" }, backLabel: t("library.views.papers"),
-      title: paper.name, sub: [paper.postName, t("common.questions", { n: questions.length })].filter(Boolean).join(" · ")
+      title: paper.name, sub: [paper.postName, t("common.questions", { n: questions.length })].filter(Boolean).join(" · "), menu: true
     })}
-    <div class="qlist" id="qList"></div>
-    <button type="button" class="btn btn-quiet more" id="qMore" hidden></button>`;
-    onAction(container, backHandler);
-    questionList(container, questions, { showPaper: false });
+    ${noteBlock("paper", id)}
+    <div id="qHost"></div>`;
+    onAction(container, {
+      ...backHandler,
+      "note-edit": () => editNote("paper", id, paper.name),
+      menu: () => paperMenu(paper, questions, key)
+    });
+    mountQuestions(container.querySelector("#qHost"), { key, questions, showPaper: false, examFilter: false });
   }
 };
+
+function paperMenu(paper, questions, key) {
+  return runFlow(async () => {
+    const choice = await chooseAction({ title: paper.name, sub: paper.postName, items: [
+      { id: "key", label: t("paperMenu.answerKey") },
+      { id: "explain", label: t("paperMenu.explanations") },
+      { id: "rename", label: t("paperMenu.rename") },
+      { id: "post", label: t("paperMenu.postName") },
+      store.syllabi().length > 1 ? { id: "move", label: t("paperMenu.move") } : null,
+      { id: "copy", label: t("listing.copy") },
+      { id: "note", label: t("notes.myNote") },
+      { id: "delete", label: t("paperMenu.delete"), danger: true }
+    ] });
+    switch (choice) {
+      case "key": return answerKeyFlow(paper, "key");
+      case "explain": return answerKeyFlow(paper, "explain");
+      case "rename": { const name = await askText({ title: t("paperMenu.rename"), value: paper.name }); if (name) await mut.renamePaper(paper, name); return; }
+      case "post": { const post = await askText({ title: t("paperMenu.postName"), value: paper.postName || "", allowEmpty: true }); if (post !== null) await mut.setPostName(paper, post); return; }
+      case "move": {
+        const target = await chooseAction({ title: t("paperMenu.move"), items: store.syllabi().map((s) => ({ id: s.id, label: s.name, current: s.id === paper.syllabusId })) });
+        if (!target || target === paper.syllabusId) return;
+        await mut.movePaper(paper, target);
+        toast(t("paperMenu.moved", { syllabus: store.syllabi().find((s) => s.id === target)?.name }));
+        return go("library", { view: "papers" });
+      }
+      case "copy": return copyQuestions(visibleQuestions(key, questions), paper.name);
+      case "note": return editNote("paper", paper.id, paper.name);
+      case "delete": {
+        const ok = await confirmAction({ title: t("paperMenu.deleteTitle", { name: paper.name }), body: t("paperMenu.deleteBody", { n: questions.length }), confirmLabel: t("common.delete"), danger: true });
+        if (!ok) return;
+        const bundle = await store.quietly(() => mut.deletePaper(paper));
+        toast(t("paperMenu.deleted"), { actionLabel: t("common.undo"), onAction: () => mut.restorePaper(bundle), duration: 10000 });
+        return go("library", { view: "papers" });
+      }
+    }
+  });
+}

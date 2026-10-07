@@ -3,6 +3,8 @@
    A screen: { id, tab?, parent?, render(container, params) }.
    `tab` puts it in the bottom bar; `parent` says which tab stays lit. */
 
+import { isSheetOpen, closeSheet } from "./sheet.js";
+
 const screens = new Map();
 let onChange = () => {};
 let container = null;
@@ -18,7 +20,14 @@ export function listTabs() {
 export function go(id, params = {}) {
   const query = new URLSearchParams(params).toString();
   const target = `#/${id}${query ? `?${query}` : ""}`;
-  if (location.hash === target) rerender();
+  // Leaving from inside a sheet: the sheet's history entry becomes the new screen,
+  // so Back returns to the screen the sheet was opened on.
+  const fromSheet = isSheetOpen() && history.state?.sheet;
+  if (isSheetOpen()) closeSheet(true);
+  if (location.hash === target) {
+    if (fromSheet) history.back(); // drop the closed sheet's history entry
+    rerender();
+  } else if (fromSheet) location.replace(target);
   else location.hash = target;
 }
 

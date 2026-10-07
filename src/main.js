@@ -5,18 +5,20 @@ import { t, setLocale } from "./core/i18n.js";
 import { registerScreen, listTabs, startRouter, rerender, go, tabFor } from "./core/router.js";
 import { registerServiceWorker } from "./core/sw-client.js";
 import { requestPersistence } from "./core/storage-health.js";
-import { toast } from "./core/toast.js";
 import { icons } from "./core/icons.js";
 import { openSheet, closeSheet } from "./core/sheet.js";
 import * as store from "./data/store.js";
 
 import { todayScreen } from "./features/today/today.js";
-import { libraryScreen, subjectScreen, topicScreen, paperScreen } from "./features/library/library.js";
+import { libraryScreen, subjectScreen, subjectAllScreen, topicScreen, paperScreen } from "./features/library/library.js";
+import { bankScreen, bankAddScreen } from "./features/library/banks.js";
+import { searchScreen } from "./features/search/search.js";
 import { progressScreen } from "./features/progress/progress.js";
 import { notesScreen } from "./features/notes/notes.js";
 import { settingsScreen } from "./features/settings/settings.js";
 
-[todayScreen, libraryScreen, subjectScreen, topicScreen, paperScreen, progressScreen, notesScreen, settingsScreen]
+[todayScreen, libraryScreen, subjectScreen, subjectAllScreen, topicScreen, paperScreen, bankScreen, bankAddScreen,
+  searchScreen, progressScreen, notesScreen, settingsScreen]
   .forEach(registerScreen);
 
 function renderTabbar(activeId) {
@@ -32,7 +34,9 @@ function renderTabbar(activeId) {
 function renderTopbar(activeId) {
   const syllabus = store.currentSyllabus();
   document.getElementById("syllabusName").textContent = syllabus ? syllabus.name : t("top.noSyllabus");
-  document.getElementById("searchBtn").setAttribute("aria-label", t("top.search"));
+  const search = document.getElementById("searchBtn");
+  search.setAttribute("aria-label", t("top.search"));
+  search.classList.toggle("active", activeId === "search");
   const settings = document.getElementById("settingsBtn");
   settings.setAttribute("aria-label", t("top.settings"));
   settings.classList.toggle("active", activeId === "settings");
@@ -72,7 +76,7 @@ async function boot() {
 
   onAction(document.getElementById("app"), {
     go: (el) => go(el.dataset.to),
-    "open-search": () => toast(t("search.soon")),
+    "open-search": () => go("search"),
     "open-syllabus": openSyllabusPicker
   });
 

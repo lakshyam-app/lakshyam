@@ -13,8 +13,9 @@ file you choose.
 |---|---|---|
 | 0 | Identity, offline shell, 4 tabs, Settings basics | Done |
 | 1 | Data layer, import from PSC Exam Vault (checked + verified), backup/restore, undo, read-only Library | Done |
-| 2 | Library editing, notes, search, banks | Next |
-| 3–9 | Tests, progress, habits, AI, PDFs, Malayalam names, polish | Planned |
+| 2 | Library editing, notes, search, banks, add paper / answer key / explanations | Done |
+| 3 | Tests and results | Next |
+| 4–9 | Progress, habits, AI, PDFs, Malayalam names, polish | Planned |
 
 The full plan is in [`docs/redesign-brief.md`](docs/redesign-brief.md).
 

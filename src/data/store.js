@@ -20,7 +20,35 @@ export async function load() {
 }
 
 export function onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); }
-function notify() { indexes = null; listeners.forEach((fn) => fn()); }
+let muted = 0;
+function notify() { indexes = null; if (!muted) listeners.forEach((fn) => fn()); }
+
+/** Redraws the screen after a series of quiet changes. */
+export function touch() { notify(); }
+
+/** Runs a change without redrawing the screen (the caller updates the part it changed). */
+export async function quietly(fn) {
+  muted++;
+  try { return await fn(); } finally { muted--; indexes = null; }
+}
+
+/** The single write path for everyday edits (used by mutations.js).
+    changes = { storeName: { put?: [records], delete?: [ids] } } — one transaction.
+    Records are stamped with updatedAt. */
+export async function apply(changes, { silent = false } = {}) {
+  const now = Date.now();
+  Object.values(changes).forEach((c) => (c.put || []).forEach((r) => { r.updatedAt = now; r.createdAt ??= now; }));
+  await db.writeAll(changes);
+  Object.entries(changes).forEach(([name, c]) => {
+    (c.delete || []).forEach((id) => cache[name].delete(id));
+    (c.put || []).forEach((r) => cache[name].set(r.id, r));
+  });
+  if (!silent) notify();
+}
+
+/** Read-only list of every record in a store (for mutations and search). */
+export const all = (storeName) => [...cache[storeName].values()];
+export const byId = (storeName, id) => cache[storeName].get(id);
 
 /** Builds look-up tables once per data change. */
 function idx() {

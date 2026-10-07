@@ -1,0 +1,50 @@
+/* One note per listing (paper, subject, topic, bank, topic list).
+   noteBlock() is the collapsed preview shown on a listing; editNote() the editor. */
+import { html } from "../../core/dom.js";
+import { t } from "../../core/i18n.js";
+import { askText, runFlow } from "../../core/dialogs.js";
+import { toast } from "../../core/toast.js";
+import { ids } from "../../data/ids.js";
+import * as store from "../../data/store.js";
+import * as mut from "../../data/mutations.js";
+
+export const noteFor = (type, id) => store.byId("notes", ids.note(type, id)) || null;
+
+/** Live name and screen for a note's listing (names follow renames). */
+export function noteTarget(note) {
+  const { type, id } = note.target || {};
+  const s = store;
+  switch (type) {
+    case "topic": { const x = s.topic(id); return x ? { name: x.name, kind: t("notes.kind.topic"), sub: s.subject(x.subjectId)?.name, to: "topic", params: { id } } : null; }
+    case "subject": { const x = s.subject(id); return x ? { name: x.name, kind: t("notes.kind.subject"), to: "subject", params: { id } } : null; }
+    case "paper": { const x = s.paper(id); return x ? { name: x.name, kind: t("notes.kind.paper"), sub: x.postName, to: "paper", params: { id } } : null; }
+    case "bank": { const x = s.byId("sets", id); return x ? { name: x.name, kind: t("notes.kind.bank"), to: "bank", params: { id } } : null; }
+    case "set": return { name: t(`banks.auto.${id === "auto:wrong" ? "wrong" : "flagged"}`), kind: t("notes.kind.bank"), to: "bank", params: { id } };
+    case "list": { const x = s.byId("topicLists", id); return x ? { name: x.name, kind: t("notes.kind.list"), to: "library", params: { view: "topics", list: id } } : null; }
+    default: return null;
+  }
+}
+
+export function noteBlock(type, id) {
+  const note = noteFor(type, id);
+  if (!note) return "";
+  const first = note.text.split("\n").find((l) => l.trim()) || "";
+  return html`<button type="button" class="note-preview" data-action="note-edit">
+    <span class="note-label">${t("notes.myNote")}</span>
+    <span class="note-text">${first}</span>
+  </button>`;
+}
+
+/** Opens the editor; an empty note is removed. */
+export function editNote(type, id, label) {
+  return runFlow(async () => {
+    const note = noteFor(type, id);
+    const text = await askText({ title: t("notes.editTitle"), hint: label, value: note?.text || "", multiline: true, allowEmpty: true, placeholder: t("notes.placeholder") });
+    if (text === null) return;
+    if (!text && !note) return;
+    const previous = note ? { ...note } : null;
+    await mut.saveNote({ type, id }, label, text);
+    if (!text && previous) toast(t("notes.removed"), { actionLabel: t("common.undo"), onAction: () => mut.saveNote(previous.target, previous.label, previous.text) });
+    else toast(t("notes.saved"));
+  });
+}
