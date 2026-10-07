@@ -1,9 +1,11 @@
-/* Hash-based router (#/today, #/library …).
+/* Hash-based router (#/today, #/topic?id=…).
    Works on GitHub Pages with no server setup.
-   Each feature registers a screen: { id, tab?, render(container, params) }. */
+   A screen: { id, tab?, parent?, render(container, params) }.
+   `tab` puts it in the bottom bar; `parent` says which tab stays lit. */
 
 const screens = new Map();
 let onChange = () => {};
+let container = null;
 
 export function registerScreen(screen) {
   screens.set(screen.id, screen);
@@ -16,7 +18,7 @@ export function listTabs() {
 export function go(id, params = {}) {
   const query = new URLSearchParams(params).toString();
   const target = `#/${id}${query ? `?${query}` : ""}`;
-  if (location.hash === target) render();
+  if (location.hash === target) rerender();
   else location.hash = target;
 }
 
@@ -26,18 +28,35 @@ export function current() {
   return { id, params: Object.fromEntries(new URLSearchParams(query)) };
 }
 
-export function startRouter(container, changed) {
-  onChange = changed;
-  window.addEventListener("hashchange", () => render(container));
-  render(container);
+/** Which tab is lit for a screen (itself, its parent, or none). */
+export function tabFor(id) {
+  const screen = screens.get(id);
+  return screen?.tab ? id : screen?.parent || null;
 }
 
-function render(container = document.getElementById("screen")) {
+export function startRouter(target, changed) {
+  container = target;
+  onChange = changed;
+  window.addEventListener("hashchange", () => render(true));
+  render(true);
+}
+
+/** Draws the current screen again (e.g. after data changed), keeping scroll. */
+export function rerender() {
+  render(false);
+}
+
+function render(resetScroll) {
   const { id, params } = current();
   const screen = screens.get(id);
-  container.replaceChildren();
-  screen.render(container, params);
-  container.scrollTop = 0;
-  window.scrollTo(0, 0);
+  const scrollY = window.scrollY;
+  // Each render gets a fresh element, so event listeners from the previous
+  // screen can never fire on this one.
+  const host = document.createElement("div");
+  host.className = "screen-host";
+  container.replaceChildren(host);
+  screen.render(host, params);
+  if (resetScroll) window.scrollTo(0, 0);
+  else window.scrollTo(0, scrollY);
   onChange(id);
 }

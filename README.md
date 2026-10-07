@@ -12,8 +12,9 @@ file you choose.
 | Phase | What | State |
 |---|---|---|
 | 0 | Identity, offline shell, 4 tabs, Settings basics | Done |
-| 1 | Data layer, import from PSC Exam Vault, backup/restore | Next |
-| 2–9 | Library, tests, progress, habits, AI, PDFs, Malayalam names, polish | Planned |
+| 1 | Data layer, import from PSC Exam Vault (checked + verified), backup/restore, undo, read-only Library | Done |
+| 2 | Library editing, notes, search, banks | Next |
+| 3–9 | Tests, progress, habits, AI, PDFs, Malayalam names, polish | Planned |
 
 The full plan is in [`docs/redesign-brief.md`](docs/redesign-brief.md).
 
@@ -28,7 +29,11 @@ index.html, manifest.webmanifest, sw.js   app page, install info, offline cache
 icons/                                     app icons
 styles/app.css                             all styling (light/dark follows the phone)
 src/main.js                                start-up: shell, tabs, screens
-src/core/                                  shared helpers (router, text, toast, storage, flags)
+src/core/                                  shared helpers (router, sheet, text, toast, storage, flags)
+src/data/                                  database, import from PSC Exam Vault, backup, safety copies
+src/domain/                                pure logic (scoring, text formatting) — no screen code
+vendor/katex/                              maths rendering, stored here so it works offline
+tests/                                     automatic checks (run with: node --test tests/*.test.mjs)
 src/strings/en.js                          all interface text (translations go here later)
 src/features/<name>/                       one folder per screen
 content/taxonomy-ml.json                   Malayalam subject/topic names (used in Phase 8)
@@ -37,7 +42,7 @@ docs/                                      plan and documentation
 
 ## Storage names (kept separate from all other apps)
 
-- Database: `lakshyam-db` (IndexedDB, from Phase 1)
+- Database: `lakshyam-db` (IndexedDB)
 - Small settings: keys starting with `lk_`
 - Offline cache: names starting with `lakshyam-` (the service worker never touches any other cache)
 

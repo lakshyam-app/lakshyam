@@ -4,7 +4,7 @@
      (Other apps on the same site keep their caches.)
    - A new version waits until the user taps "Refresh" in the app. */
 
-const VERSION = "0.1.0";
+const VERSION = "0.2.0";
 const PREFIX = "lakshyam-";
 const SHELL_CACHE = `${PREFIX}shell-${VERSION}`;
 
@@ -12,28 +12,66 @@ const SHELL_FILES = [
   "./",
   "./index.html",
   "./manifest.webmanifest",
-  "./styles/app.css",
-  "./icons/icon.svg",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
+  "./icons/icon.svg",
   "./icons/maskable-512.png",
-  "./src/main.js",
-  "./src/core/version.js",
   "./src/core/dom.js",
-  "./src/core/i18n.js",
-  "./src/core/router.js",
-  "./src/core/toast.js",
   "./src/core/entitlements.js",
+  "./src/core/files.js",
   "./src/core/flags.js",
+  "./src/core/i18n.js",
+  "./src/core/icons.js",
+  "./src/core/math.js",
+  "./src/core/router.js",
+  "./src/core/sheet.js",
   "./src/core/storage-health.js",
   "./src/core/sw-client.js",
-  "./src/core/icons.js",
-  "./src/strings/en.js",
-  "./src/features/today/today.js",
+  "./src/core/toast.js",
+  "./src/core/version.js",
+  "./src/data/backup.js",
+  "./src/data/db.js",
+  "./src/data/ids.js",
+  "./src/data/import-legacy.js",
+  "./src/data/schema.js",
+  "./src/data/snapshots.js",
+  "./src/data/store.js",
+  "./src/data/taxonomy-seed.js",
+  "./src/domain/scoring.js",
+  "./src/domain/text.js",
+  "./src/features/import/import-flow.js",
   "./src/features/library/library.js",
-  "./src/features/progress/progress.js",
   "./src/features/notes/notes.js",
-  "./src/features/settings/settings.js"
+  "./src/features/progress/progress.js",
+  "./src/features/question/card.js",
+  "./src/features/settings/settings.js",
+  "./src/features/today/today.js",
+  "./src/main.js",
+  "./src/strings/en.js",
+  "./styles/app.css",
+  "./vendor/katex/contrib/auto-render.min.js",
+  "./vendor/katex/katex.min.css",
+  "./vendor/katex/katex.min.js",
+  "./vendor/katex/fonts/KaTeX_AMS-Regular.woff2",
+  "./vendor/katex/fonts/KaTeX_Caligraphic-Bold.woff2",
+  "./vendor/katex/fonts/KaTeX_Caligraphic-Regular.woff2",
+  "./vendor/katex/fonts/KaTeX_Fraktur-Bold.woff2",
+  "./vendor/katex/fonts/KaTeX_Fraktur-Regular.woff2",
+  "./vendor/katex/fonts/KaTeX_Main-Bold.woff2",
+  "./vendor/katex/fonts/KaTeX_Main-BoldItalic.woff2",
+  "./vendor/katex/fonts/KaTeX_Main-Italic.woff2",
+  "./vendor/katex/fonts/KaTeX_Main-Regular.woff2",
+  "./vendor/katex/fonts/KaTeX_Math-BoldItalic.woff2",
+  "./vendor/katex/fonts/KaTeX_Math-Italic.woff2",
+  "./vendor/katex/fonts/KaTeX_SansSerif-Bold.woff2",
+  "./vendor/katex/fonts/KaTeX_SansSerif-Italic.woff2",
+  "./vendor/katex/fonts/KaTeX_SansSerif-Regular.woff2",
+  "./vendor/katex/fonts/KaTeX_Script-Regular.woff2",
+  "./vendor/katex/fonts/KaTeX_Size1-Regular.woff2",
+  "./vendor/katex/fonts/KaTeX_Size2-Regular.woff2",
+  "./vendor/katex/fonts/KaTeX_Size3-Regular.woff2",
+  "./vendor/katex/fonts/KaTeX_Size4-Regular.woff2",
+  "./vendor/katex/fonts/KaTeX_Typewriter-Regular.woff2"
 ];
 
 self.addEventListener("install", (event) => {
@@ -72,7 +110,15 @@ self.addEventListener("fetch", (event) => {
   }
 
   // App files: cache first, so the app opens instantly and offline.
-  event.respondWith(
-    caches.match(request, { ignoreSearch: true }).then((cached) => cached || fetch(request))
-  );
+  // Anything not in the list (e.g. maths fonts) is cached the first time it loads.
+  event.respondWith((async () => {
+    const cached = await caches.match(request, { ignoreSearch: true });
+    if (cached) return cached;
+    const response = await fetch(request);
+    if (response.ok) {
+      const cache = await caches.open(SHELL_CACHE);
+      cache.put(request, response.clone());
+    }
+    return response;
+  })());
 });

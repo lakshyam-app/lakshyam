@@ -21,7 +21,11 @@ export function t(key, vars = {}) {
   const pick = (dict) => key.split(".").reduce((node, part) => node?.[part], dict);
   let value = pick(LOCALES[current]) ?? pick(en) ?? key;
   if (typeof value === "function") value = value(vars);
-  return String(value).replace(/\{(\w+)\}/g, (_, name) => (name in vars ? vars[name] : `{${name}}`));
+  return String(value).replace(/\{(\w+)\}/g, (_, name) => {
+    if (!(name in vars)) return `{${name}}`;
+    const v = vars[name];
+    return typeof v === "number" ? formatNumber(v) : v;
+  });
 }
 
 /** Numbers formatted for the current language (e.g. 1,234). */

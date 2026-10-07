@@ -2,7 +2,21 @@
 export default {
   app: {
     name: "Lakshyam",
-    tagline: "for Kerala PSC preparation"
+    tagline: "for Kerala PSC preparation",
+    loading: "Opening your study space…",
+    dbError: "This browser couldn’t open the app’s storage. Open Lakshyam in Chrome (not in private mode) and try again."
+  },
+  common: {
+    back: "Back",
+    cancel: "Cancel",
+    close: "Close",
+    done: "Done",
+    showMore: "Show {n} more",
+    questions: (v) => (v.n === 1 ? "{n} question" : "{n} questions"),
+    topics: (v) => (v.n === 1 ? "{n} topic" : "{n} topics"),
+    papers: (v) => (v.n === 1 ? "{n} paper" : "{n} papers"),
+    tests: (v) => (v.n === 1 ? "{n} test" : "{n} tests"),
+    searchPlaceholder: "Search"
   },
   tabs: {
     today: "Today",
@@ -23,13 +37,34 @@ export default {
   today: {
     goalLabel: "Today’s goal",
     goalProgress: "{done} of {goal} questions",
-    welcomeTitle: "Your new study space is ready",
-    welcomeBody: "Next update: bring over your papers, tests and notes from PSC Exam Vault in one step. Your old app keeps working exactly as it is.",
+    welcomeTitle: "Bring your study data over",
+    welcomeBody: "Pick the backup file you exported from PSC Exam Vault. You’ll see exactly what comes in before anything is saved. Your old app stays as it is.",
+    importButton: "Import from PSC Exam Vault",
+    readyTitle: "Your data is here",
+    readyBody: "{papers} and {questions} in {syllabus}. Tests, daily plans and progress arrive in the next updates.",
+    openLibrary: "Open Library",
     offlineReady: "Works offline on this phone"
   },
+  syllabus: {
+    title: "Syllabus",
+    hint: "Papers, topics and progress show for the syllabus you pick."
+  },
   library: {
+    views: { subjects: "Subjects", topics: "Topics", papers: "Papers" },
     emptyTitle: "Your papers and questions will live here",
-    emptyBody: "Subjects, topics, papers and question banks appear after you import your data."
+    emptyBody: "Import your backup from PSC Exam Vault to see subjects, topics and papers.",
+    nothingFound: "Nothing matches “{q}”.",
+    studied: "Studied {n}×",
+    inSubject: "{subject}",
+    noQuestions: "No questions here yet."
+  },
+  question: {
+    number: "Q{n}",
+    deleted: "Deleted by PSC in the official answer key",
+    noAnswer: "No correct answer marked yet",
+    explanation: "Explanation",
+    flagged: "Flagged",
+    difficulty: { E: "Easy", M: "Medium", D: "Hard" }
   },
   progress: {
     emptyTitle: "Your progress will show here",
@@ -40,13 +75,127 @@ export default {
     emptyBody: "Notes you write on papers, subjects and topics will be collected here."
   },
   search: {
-    soon: "Search arrives with your data in the next update."
+    soon: "Search arrives in the next update."
   },
-  syllabus: {
-    soon: "Syllabuses arrive with your data in the next update."
+  import: {
+    reading: "Reading the file…",
+    checking: "Checking everything in the file…",
+    notJson: "This file isn’t a backup file (it isn’t valid JSON). Pick the .json file you exported.",
+    readFailed: "The phone couldn’t read this file. Try picking it again.",
+    notBackup: "This file isn’t a PSC Exam Vault or Lakshyam backup. In PSC Exam Vault use Data → Export full backup, then pick that file.",
+    reviewTitle: "Check before importing",
+    fromFile: "From {file}",
+    whatComes: "What will come in",
+    rows: {
+      syllabuses: "Syllabuses",
+      papers: "Question papers",
+      questions: "Questions",
+      aiQuestions: "AI practice questions (kept separate)",
+      deleted: "Questions deleted by PSC",
+      noAnswer: "Questions without an answer yet",
+      explanations: "Questions with explanations",
+      attempts: "Tests in your history",
+      studied: "Topics with studied counts",
+      labels: "Colour labels",
+      lists: "Topic lists",
+      banks: "Question banks",
+      notes: "Notes",
+      flashcards: "Flashcards",
+      days: "Study days (streak)"
+    },
+    labelsPerSyllabus: "{n} after copying to each syllabus that uses the topic",
+    namesTitle: "Names tidied up",
+    namesBody: "These spellings were the same topic or subject written differently. They are joined under one name; nothing is lost.",
+    dupTitle: "Possibly the same (not changed)",
+    dupBody: "These look alike but were left as they are. You can merge them later in Library.",
+    warnTitle: "Worth knowing",
+    skipTitle: "Not imported",
+    noneSkipped: "Nothing was skipped.",
+    notCarriedTitle: "Not in the backup file",
+    notCarried: "AI keys (add them again in Settings when AI arrives), study PDFs, AI style guides, app display settings, and custom topics that have no questions yet.",
+    modeTitle: "Lakshyam already has data",
+    modeMerge: "Add and update",
+    modeMergeHint: "Matching papers, questions and tests are updated. Everything else stays.",
+    modeReplace: "Replace everything",
+    modeReplaceHint: "Lakshyam’s current data is replaced by this file.",
+    safetyNote: "A safety copy of Lakshyam’s current data is kept, so you can undo this from Settings.",
+    importButton: "Import",
+    restoreButton: "Restore",
+    working: "Saving… keep the app open",
+    verifiedTitle: "Imported and verified",
+    verifiedBody: "Every count was read back from the phone’s storage and matches the file.",
+    problemTitle: "Imported, but some counts don’t match",
+    problemBody: "The items below differ from the file. Your old app and the file are unchanged. You can undo this import in Settings.",
+    failedTitle: "Nothing was changed",
+    failedBody: "Saving stopped part-way, so the phone rolled it back. Your data is as it was. Error: {error}",
+    backupNow: "Back up Lakshyam now",
+    backupHint: "Recommended: keep a Lakshyam backup from day one.",
+    checkRow: {
+      syllabi: "Syllabuses", subjects: "Subjects", topics: "Topics", papers: "Papers", questions: "Questions",
+      flashcards: "Flashcards", questionState: "Flags & difficulty", topicState: "Studied counts",
+      attempts: "Tests", sets: "Question banks", topicLists: "Topic lists", labels: "Labels", notes: "Notes",
+      filterTemplates: "Saved exam filters", flashcardState: "Flashcard progress", activity: "Study days",
+      settings: "Settings", questionsPerPaper: "Papers with a wrong question count", attemptNetTotal: "Total of all test scores"
+    },
+    warn: {
+      "syllabus-created": "A paper pointed to a syllabus that didn’t exist, so it was created.",
+      "question-no-id": "Some questions had no ID; one was given based on their position.",
+      "question-no-subject": "Some questions had no subject; they are under “Unclassified”.",
+      "answer-f-or-deleted": "These questions have 6 options and answer F. The old app may have shown them as deleted; they are kept with answer F. Please check them.",
+      "answer-out-of-range": "These questions had an answer that doesn’t match any option; the answer was left empty.",
+      "paper-no-questions": "These papers had no questions list.",
+      "bank-test-syllabus": "Bank tests were moved to the syllabus most of their questions belong to (they used to show in every syllabus).",
+      "timing-removed": "These tests had wrong timing from the old scroll view (all the time on question 1); that timing was left out.",
+      "score-computed": "These older tests had no score saved; it was calculated from right/wrong counts with the syllabus marking.",
+      "score-mismatch": "The saved score differs from the one calculated now; the saved score was kept.",
+      "answer-question-missing": "{n} answers in your test history point to questions that no longer exist. The answers are kept for your stats.",
+      "bank-question-missing": "Some bank questions no longer exist and were left out of the bank.",
+      "progress-merged": "Studied counts for two spellings of the same topic were added together."
+    },
+    skip: {
+      "paper-no-id": "Papers without an ID",
+      "paper-duplicate-id": "Papers with the same ID as an earlier one",
+      "question-not-object": "Broken question entries",
+      "question-duplicate-id": "Questions repeated inside the same paper",
+      "question-no-text": "Questions with no text",
+      "question-no-options": "Questions with fewer than 2 options",
+      "attempt-no-id": "Tests without an ID",
+      "attempt-duplicate-id": "Tests repeated in the file",
+      "label-bad": "Labels that couldn’t be read",
+      "progress-bad-key": "Studied counts that couldn’t be matched to a topic",
+      "flashcard-bad": "Flashcards without text"
+    },
+    restoreTitle: "Restore this backup?",
+    restoreFrom: "Backup made on {date}",
+    restoreDamaged: "This file was changed or damaged after it was made. Restoring it may bring back wrong data.",
+    restoreNewer: "This backup was made by a newer version of Lakshyam. Update the app first (Settings → Check for update).",
+    restoreSkipped: "{n} damaged records will be left out."
   },
   settings: {
     title: "Settings",
+    sectionData: "Your data",
+    dataSummary: "{papers}, {questions}, {tests} on this phone.",
+    importOld: "Import from PSC Exam Vault",
+    importOldHint: "Pick the backup file exported from PSC Exam Vault (Data → Export full backup).",
+    backupNow: "Back up now",
+    lastBackup: "Last backup: {when}",
+    neverBackedUp: "No backup made yet",
+    restore: "Restore a Lakshyam backup",
+    undo: "Undo a recent import or restore",
+    undoTitle: "Safety copies",
+    undoBody: "Taken automatically before each import, restore or erase. Tap one to put your data back exactly as it was then.",
+    undoNone: "No safety copies yet.",
+    undoConfirm: "Put data back as it was on {when}?",
+    undoConfirmBody: "Lakshyam’s current data will be replaced by this copy. A new safety copy of the current data is kept first.",
+    undoButton: "Put it back",
+    undoDone: "Data put back as it was on {when}",
+    reason: { import: "Before import", restore: "Before restore", undo: "Before undo", erase: "Before erase" },
+    erase: "Erase Lakshyam’s data",
+    eraseTitle: "Erase all study data in Lakshyam?",
+    eraseBody: "Papers, questions, tests and notes are removed from Lakshyam only. PSC Exam Vault is not touched. A safety copy is kept, so you can undo this.",
+    eraseButton: "Erase",
+    erased: "Lakshyam’s data was erased",
+    backupSaved: "Backup saved to Downloads",
     sectionStorage: "Storage on this phone",
     persistentOn: "Protected from automatic clean-up",
     persistentOff: "Not protected yet. Android may clear app data when the phone is low on space.",
@@ -64,7 +213,7 @@ export default {
     checking: "Checking…",
     offlineNow: "You’re offline. Connect to check for updates.",
     comingTitle: "Coming in later updates",
-    coming: "Import from PSC Exam Vault, backup and restore, syllabuses and marking, AI keys, Malayalam names."
+    coming: "Tests, progress insights, editing, AI keys and Malayalam names."
   },
   update: {
     ready: "A new version is ready",

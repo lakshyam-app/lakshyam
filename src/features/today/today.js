@@ -1,7 +1,11 @@
-/* Today: the home screen. Phase 0 shows the greeting, an empty goal ring
-   and what comes next. Next-best-step, streak and tests arrive later. */
-import { html } from "../../core/dom.js";
+/* Today: the home screen. Phase 1 shows the greeting, the goal ring, and either
+   the import invitation or a short summary of the imported data.
+   Next-best-step, streak and quick tests arrive in Phase 5. */
+import { html, onAction } from "../../core/dom.js";
 import { t, formatNumber } from "../../core/i18n.js";
+import { go } from "../../core/router.js";
+import * as store from "../../data/store.js";
+import { startImport } from "../import/import-flow.js";
 
 const DAILY_GOAL = 30; // becomes a setting in Phase 5
 
@@ -27,6 +31,24 @@ function goalRing(done, goal) {
   </svg>`;
 }
 
+function dataPanel() {
+  if (store.isEmpty()) {
+    return html`<div class="panel">
+      <h2>${t("today.welcomeTitle")}</h2>
+      <p>${t("today.welcomeBody")}</p>
+      <button type="button" class="btn" data-action="import">${t("today.importButton")}</button>
+    </div>`;
+  }
+  const syllabus = store.currentSyllabus();
+  const papers = store.papersOf(syllabus.id).length;
+  const questions = store.questionsFor({ syllabusId: syllabus.id }).length;
+  return html`<div class="panel">
+    <h2>${t("today.readyTitle")}</h2>
+    <p>${t("today.readyBody", { papers: t("common.papers", { n: papers }), questions: t("common.questions", { n: questions }), syllabus: syllabus.name })}</p>
+    <button type="button" class="btn btn-quiet" data-action="library">${t("today.openLibrary")}</button>
+  </div>`;
+}
+
 export const todayScreen = {
   id: "today",
   tab: 1,
@@ -41,11 +63,11 @@ export const todayScreen = {
             <p class="goal-sub">${t("today.goalProgress", { done: 0, goal: DAILY_GOAL })}</p>
           </div>
         </div>
-        <div class="panel">
-          <h2>${t("today.welcomeTitle")}</h2>
-          <p>${t("today.welcomeBody")}</p>
-          <p class="hint">${t("today.offlineReady")}</p>
-        </div>
+        ${dataPanel()}
       </section>`;
+    onAction(container, {
+      import: startImport,
+      library: () => go("library")
+    });
   }
 };

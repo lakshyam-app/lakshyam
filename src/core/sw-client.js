@@ -7,6 +7,7 @@ let registration = null;
 
 export async function registerServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
+  const hadController = Boolean(navigator.serviceWorker.controller);
   try {
     registration = await navigator.serviceWorker.register("sw.js", { scope: "./" });
   } catch {
@@ -21,9 +22,11 @@ export async function registerServiceWorker() {
     });
   });
 
+  // Reload only when a NEW version takes over. On the very first visit the worker
+  // also "takes control", and reloading then would interrupt whatever the user is doing.
   let reloading = false;
   navigator.serviceWorker.addEventListener("controllerchange", () => {
-    if (reloading) return;
+    if (!hadController || reloading) return;
     reloading = true;
     location.reload();
   });

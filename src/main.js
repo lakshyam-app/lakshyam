@@ -1,56 +1,89 @@
-/* Lakshyam start-up: wires the shell (top bar, tabs), the screens and the
-   service worker. Each feature only registers its screen here. */
+/* Lakshyam start-up: opens the data, wires the shell (top bar, tabs),
+   registers screens and the service worker. */
 import { html, onAction } from "./core/dom.js";
 import { t, setLocale } from "./core/i18n.js";
-import { registerScreen, listTabs, startRouter, go } from "./core/router.js";
+import { registerScreen, listTabs, startRouter, rerender, go, tabFor } from "./core/router.js";
 import { registerServiceWorker } from "./core/sw-client.js";
 import { requestPersistence } from "./core/storage-health.js";
 import { toast } from "./core/toast.js";
 import { icons } from "./core/icons.js";
+import { openSheet, closeSheet } from "./core/sheet.js";
+import * as store from "./data/store.js";
 
 import { todayScreen } from "./features/today/today.js";
-import { libraryScreen } from "./features/library/library.js";
+import { libraryScreen, subjectScreen, topicScreen, paperScreen } from "./features/library/library.js";
 import { progressScreen } from "./features/progress/progress.js";
 import { notesScreen } from "./features/notes/notes.js";
 import { settingsScreen } from "./features/settings/settings.js";
 
-[todayScreen, libraryScreen, progressScreen, notesScreen, settingsScreen].forEach(registerScreen);
+[todayScreen, libraryScreen, subjectScreen, topicScreen, paperScreen, progressScreen, notesScreen, settingsScreen]
+  .forEach(registerScreen);
 
 function renderTabbar(activeId) {
-  const bar = document.getElementById("tabbar");
-  bar.innerHTML = html`${listTabs().map((tab) => html`
-    <button type="button" class="tab ${tab.id === activeId ? "active" : ""}"
-        data-action="go" data-to="${tab.id}" aria-current="${tab.id === activeId ? "page" : "false"}">
+  const lit = tabFor(activeId);
+  document.getElementById("tabbar").innerHTML = html`${listTabs().map((tab) => html`
+    <button type="button" class="tab ${tab.id === lit ? "active" : ""}"
+        data-action="go" data-to="${tab.id}" aria-current="${tab.id === lit ? "page" : "false"}">
       <span class="tab-icon">${icons[tab.id]}</span>
       <span>${t(`tabs.${tab.id}`)}</span>
     </button>`)}`;
 }
 
 function renderTopbar(activeId) {
-  document.getElementById("syllabusName").textContent = t("top.noSyllabus");
+  const syllabus = store.currentSyllabus();
+  document.getElementById("syllabusName").textContent = syllabus ? syllabus.name : t("top.noSyllabus");
   document.getElementById("searchBtn").setAttribute("aria-label", t("top.search"));
   const settings = document.getElementById("settingsBtn");
   settings.setAttribute("aria-label", t("top.settings"));
   settings.classList.toggle("active", activeId === "settings");
 }
 
-function boot() {
+function openSyllabusPicker() {
+  const list = store.syllabi();
+  if (!list.length) { go("settings"); return; }
+  const currentId = store.currentSyllabus()?.id;
+  openSheet(html`<h2>${t("syllabus.title")}</h2>
+    <p class="hint">${t("syllabus.hint")}</p>
+    <div class="rows">${list.map((s) => html`
+      <button type="button" class="row ${s.id === currentId ? "is-current" : ""}" data-action="pick" data-id="${s.id}">
+        <span class="row-main"><span class="row-title">${s.name}</span>
+          <span class="row-sub">${t("common.papers", { n: store.papersOf(s.id).length })}</span></span>
+        ${s.id === currentId ? html`<span class="tick">✓</span>` : ""}
+      </button>`)}</div>`, {
+    pick: async (el) => {
+      closeSheet();
+      if (el.dataset.id !== currentId) await store.setSetting("currentSyllabusId", el.dataset.id);
+    }
+  }, { label: t("syllabus.title") });
+}
+
+async function boot() {
   setLocale("en");
   document.title = t("app.name");
+  const screen = document.getElementById("screen");
+  screen.innerHTML = html`<p class="hint pad">${t("app.loading")}</p>`;
+
+  try {
+    await store.load();
+  } catch {
+    screen.innerHTML = html`<section class="empty"><p>${t("app.dbError")}</p></section>`;
+    return;
+  }
 
   onAction(document.getElementById("app"), {
     go: (el) => go(el.dataset.to),
     "open-search": () => toast(t("search.soon")),
-    "open-syllabus": () => toast(t("syllabus.soon"))
+    "open-syllabus": openSyllabusPicker
   });
 
-  startRouter(document.getElementById("screen"), (activeId) => {
+  startRouter(screen, (activeId) => {
     renderTabbar(activeId);
     renderTopbar(activeId);
   });
+  // Any data change (import, restore, syllabus switch) redraws the screen.
+  store.onChange(() => rerender());
 
   registerServiceWorker();
-  // Quietly ask once; Chrome decides based on how the app is used.
   requestPersistence();
 }
 
