@@ -4,7 +4,7 @@
      (Other apps on the same site keep their caches.)
    - A new version waits until the user taps "Refresh" in the app. */
 
-const VERSION = "0.5.0";
+const VERSION = "0.6.0";
 const PREFIX = "lakshyam-";
 const SHELL_CACHE = `${PREFIX}shell-${VERSION}`;
 
@@ -44,6 +44,7 @@ const SHELL_FILES = [
   "./src/data/store.js",
   "./src/data/taxonomy-seed.js",
   "./src/data/tests.js",
+  "./src/domain/habits.js",
   "./src/domain/scoring.js",
   "./src/domain/stats.js",
   "./src/domain/study.js",

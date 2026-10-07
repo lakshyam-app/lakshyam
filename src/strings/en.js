@@ -55,7 +55,34 @@ export default {
     openLibrary: "Open Library",
     offlineReady: "Works offline on this phone",
     continue: "Continue: {label}",
-    startTest: "Start a test"
+    startTest: "Start a test",
+    greetName: "{greeting}, {name}",
+    goalMet: "Goal reached today. Well done!",
+    changeGoal: "Change goal",
+    backupAgo: (v) => (v.n === 1 ? "Last backup 1 day ago" : "Last backup {n} days ago"),
+    backupNever: "No backup of Lakshyam yet"
+  },
+  habits: {
+    days: (v) => (v.n === 1 ? "1 day" : "{n} days"),
+    streakLabel: "Study streak: {n} days in a row",
+    weekLabel: "Studied on {n} days this week",
+    dow: { 0: "M", 1: "T", 2: "W", 3: "T", 4: "F", 5: "S", 6: "S" },
+    doneToday: "Studied today. See you tomorrow!",
+    keepGoing: "Study a little today to keep it going.",
+    getBack: "Get back today: one Quick 10 is enough.",
+    start: "Take a test or mark a topic studied to start a streak."
+  },
+  next: {
+    kicker: { due: "Due for review", weak: "Worth practising", new: "Not tried yet" },
+    dueDays: (v) => (v.n === 1 ? "due 1 day ago" : "due {n} days ago"),
+    dueToday: "due today",
+    weak: "{pct}% right in {n} answers",
+    new: "You haven’t answered these yet",
+    quick: "Quick 10",
+    open: "Open topic",
+    another: "Another suggestion",
+    dueTitle: (v) => (v.n === 1 ? "Due for review (1)" : "Due for review ({n})"),
+    dueHint: "Topics you marked studied come back after 1, 2, 4, 7, 14, 30 and 60 days."
   },
   syllabus: {
     title: "Syllabus",
@@ -786,6 +813,16 @@ export default {
     eraseButton: "Erase",
     erased: "Lakshyam’s data was erased",
     backupSaved: "Backup saved to Downloads",
+    sectionToday: "Today",
+    goal: "Daily goal (questions answered in tests)",
+    goalOther: "Other…",
+    goalHint: "Counts questions you answer in tests on this phone’s date.",
+    goalInvalid: "Enter a number from 1 to 500.",
+    name: "Your name (for the greeting, optional)",
+    namePlaceholder: "e.g. Sachin",
+    showStreak: "Show the streak and this week",
+    showGoal: "Show today’s goal",
+    saved: "Saved",
     sectionStorage: "Storage on this phone",
     persistentOn: "Protected from automatic clean-up",
     persistentOff: "Not protected yet. Android may clear app data when the phone is low on space.",
@@ -803,7 +840,7 @@ export default {
     checking: "Checking…",
     offlineNow: "You’re offline. Connect to check for updates.",
     comingTitle: "Coming in later updates",
-    coming: "Daily plan and streak, AI keys, study PDFs and Malayalam names."
+    coming: "AI keys and AI help, study PDFs and Malayalam names."
   },
   update: {
     ready: "A new version is ready",

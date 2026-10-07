@@ -11,6 +11,7 @@ import { downloadBackup } from "../../data/backup.js";
 import { takeSnapshot, listSnapshots, restoreSnapshot } from "../../data/snapshots.js";
 import { startImport } from "../import/import-flow.js";
 import { syllabiBlock, addSyllabusFlow, editSyllabusFlow } from "./syllabi.js";
+import { runFlow, askText } from "../../core/dialogs.js";
 
 const when = (ms) => new Date(ms).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 
@@ -100,10 +101,21 @@ function confirmErase() {
 
 export const settingsScreen = {
   id: "settings",
-  async render(container) {
+  async render(container, params = {}) {
+    const goalNow = Number(store.setting("dailyGoal", 30)) || 30;
     container.innerHTML = html`
       <section class="settings">
         <h1>${t("settings.title")}</h1>
+        <div class="group" id="sec-today">
+          <h2>${t("settings.sectionToday")}</h2>
+          <p class="field-label">${t("settings.goal")}</p>
+          <div class="chip-wrap">${[10, 20, 30, 50, 75, 100].map((n) => html`<button type="button" class="pill ${goalNow === n ? "on" : ""}" data-action="goal" data-n="${n}">${n}</button>`)}
+            <button type="button" class="pill ${[10, 20, 30, 50, 75, 100].includes(goalNow) ? "" : "on"}" data-action="goal-custom">${[10, 20, 30, 50, 75, 100].includes(goalNow) ? t("settings.goalOther") : goalNow}</button></div>
+          <p class="hint">${t("settings.goalHint")}</p>
+          <label class="field-label">${t("settings.name")}<input class="field" id="userName" type="text" value="${store.setting("userName", "")}" placeholder="${t("settings.namePlaceholder")}" autocomplete="off"></label>
+          <label class="switch-row"><input type="checkbox" id="showStreak" ${store.setting("showStreak", true) !== false ? "checked" : ""}><span>${t("settings.showStreak")}</span></label>
+          <label class="switch-row"><input type="checkbox" id="showGoal" ${store.setting("showGoal", true) !== false ? "checked" : ""}><span>${t("settings.showGoal")}</span></label>
+        </div>
         <div class="group">
           <h2>${t("settings.sectionData")}</h2>
           ${dataBlock()}
@@ -134,6 +146,10 @@ export const settingsScreen = {
       </section>`;
 
     container.querySelector("#diffToggle").addEventListener("change", (e) => store.setSetting("difficultyEnabled", e.target.checked));
+    container.querySelector("#showStreak").addEventListener("change", (e) => store.setSetting("showStreak", e.target.checked));
+    container.querySelector("#showGoal").addEventListener("change", (e) => store.setSetting("showGoal", e.target.checked));
+    container.querySelector("#userName").addEventListener("change", (e) => store.quietly(() => store.setSetting("userName", e.target.value.trim().slice(0, 40))).then(() => toast(t("settings.saved"))));
+    if (params.section) container.querySelector(`#sec-${params.section}`)?.scrollIntoView({ block: "start" });
 
     const refreshStorage = async () => {
       const block = container.querySelector("#storageBlock");
@@ -144,6 +160,13 @@ export const settingsScreen = {
     onAction(container, {
       import: startImport,
       undo: openUndo,
+      goal: (el) => store.setSetting("dailyGoal", Number(el.dataset.n)),
+      "goal-custom": () => runFlow(async () => {
+        const v = await askText({ title: t("settings.goal"), hint: t("settings.goalHint"), value: String(goalNow), inputMode: "numeric" });
+        const n = Math.round(Number(v));
+        if (v !== null && n >= 1 && n <= 500) await store.setSetting("dailyGoal", n);
+        else if (v !== null) toast(t("settings.goalInvalid"));
+      }),
       "syl-add": addSyllabusFlow,
       "syl-edit": (el) => editSyllabusFlow(el.dataset.id),
       erase: confirmErase,

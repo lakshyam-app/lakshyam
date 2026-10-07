@@ -654,3 +654,35 @@ body.in-test .pager-bar { bottom: 0; padding-bottom: calc(8px + env(safe-area-in
 .grid th[scope="row"] { text-align: left; font-weight: 500; white-space: normal; min-width: 9em; }
 .grid thead th { position: sticky; top: 0; background: var(--surface); }
 svg.spark { width: 100%; height: 56px; }
+
+/* ======================= Phase 5: Today ======================= */
+.today { gap: 16px; }
+.habits { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 4px 14px; }
+.habits .hint { grid-column: 1 / -1; }
+.streak { font-weight: 700; font-size: 1.0625rem; font-variant-numeric: tabular-nums; }
+.week { display: flex; gap: 6px; justify-content: flex-end; }
+.wd {
+  width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%;
+  font-size: 0.75rem; font-weight: 600; color: var(--muted); border: 1px solid var(--line);
+}
+.wd.on { background: var(--gold); border-color: var(--gold); color: #fff; }
+.wd.is-today { outline: 2px solid var(--text); outline-offset: 1px; }
+.wd.future { opacity: 0.45; border-style: dashed; }
+.goal-text { display: grid; gap: 2px; }
+.goal-text .link { min-height: 32px; font-size: 0.875rem; }
+.goal-ring.met .goal-arc { stroke: var(--gold); }
+.goal-ring.celebrate { animation: goal-pop 900ms ease-out 1; }
+@keyframes goal-pop {
+  0% { transform: scale(1); filter: drop-shadow(0 0 0 transparent); }
+  40% { transform: scale(1.08); filter: drop-shadow(0 0 10px var(--gold)); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 0 transparent); }
+}
+.next-card {
+  display: grid; gap: 6px; padding: 16px;
+  background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--brand);
+  border-radius: var(--radius-panel);
+}
+.next-card h2 { font-size: 1.25rem; }
+.kicker { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--brand); }
+.due-row { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--surface); }
+.backup-line { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 0.9375rem; }

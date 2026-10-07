@@ -28,17 +28,37 @@ const defaults = () => ({ timerOn: false, layout: "single", count: 25, ...(store
  * — the listing the sheet was opened from.
  */
 export async function openStartTest(preset = null) {
+  if (await clearForNewTest()) startSheet(preset);
+}
+
+/** If a test is unfinished, asks to continue it or discard it. True = OK to start a new one. */
+async function clearForNewTest() {
   const active = tests.activeTest();
-  if (active) {
-    const choice = await runFlow(() => chooseAction({ title: t("start.unfinishedTitle"), sub: active.scope?.label, items: [
-      { id: "continue", label: t("start.continue"), sub: progressText(active) },
-      { id: "discard", label: t("start.discardAndNew"), danger: true }
-    ] }));
-    if (choice === "continue") return go("test");
-    if (choice !== "discard") return;
-    await tests.discardTest(active);
-  }
-  startSheet(preset);
+  if (!active) return true;
+  const choice = await runFlow(() => chooseAction({ title: t("start.unfinishedTitle"), sub: active.scope?.label, items: [
+    { id: "continue", label: t("start.continue"), sub: progressText(active) },
+    { id: "discard", label: t("start.discardAndNew"), danger: true }
+  ] }));
+  if (choice === "continue") { go("test"); return false; }
+  if (choice !== "discard") return false;
+  await tests.discardTest(active);
+  return true;
+}
+
+/** Quick 10: starts at once on one topic, with your remembered timer and layout. */
+export async function quickTest(topicId, n = 10) {
+  const syllabus = store.currentSyllabus();
+  const topic = store.topic(topicId);
+  const pool = store.questionsFor({ syllabusId: syllabus.id, topicId }).filter(isGradable);
+  if (!topic || !pool.length) { toast(t("start.noneToStart")); return; }
+  if (!(await clearForNewTest())) return;
+  const questions = sampleRandom(pool, n);
+  const d = defaults();
+  await tests.startTest({
+    syllabusId: syllabus.id, scope: { type: "topic", ref: topicId, label: topic.name },
+    questionIds: questions.map((q) => q.id), timerMinutes: d.timerOn ? suggestedMinutes(questions.length) : null, layout: d.layout
+  });
+  go("test");
 }
 
 export function progressText(attempt) {
