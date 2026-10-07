@@ -255,6 +255,13 @@ export default {
     subjectName: "Subject name",
     topicName: "Topic name"
   },
+  paperFilter: {
+    label: "Showing: {what}",
+    title: "Show questions from",
+    all: "All subjects",
+    allTopics: "All topics of this subject",
+    topicSub: "Pick a topic, or all of them"
+  },
   paperMenu: {
     answerKey: "Add answer key",
     explanations: "Add explanations",
@@ -274,6 +281,8 @@ export default {
     bankTitle: "Import questions into {bank}",
     bankHint: "Same JSON format as a question paper. The questions go into this bank only, not under Papers.",
     chooseFile: "Choose file",
+    aiSteps: "Using an AI? Copy the instructions, paste them into the AI chat with the PDF, then bring its JSON back here. They list your own subjects and topics, so questions land in the right place.",
+    copyAi: "Copy instructions for AI",
     or: "or paste it here",
     pastePlaceholder: "{ \"paper\": { … }, \"questions\": [ … ] }",
     pasted: "Pasted text",
@@ -803,6 +812,9 @@ export default {
     noGuesses: "Mark some guesses (🤔) in a test first."
   },
   pdf: {
+    unsavedTitle: "Leave without saving?",
+    unsavedBody: "You changed this page’s text. Leaving now loses the change.",
+    unsavedLeave: "Leave",
     title: "Study PDFs",
     loading: "Loading…",
     change: "Change",

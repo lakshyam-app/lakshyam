@@ -9,6 +9,7 @@ import { html, onAction } from "../../core/dom.js";
 import { t, dateLocale } from "../../core/i18n.js";
 import { go, current, rerender } from "../../core/router.js";
 import { runFlow, chooseAction, askText, confirmAction } from "../../core/dialogs.js";
+import { closeSheet } from "../../core/sheet.js";
 import { toast } from "../../core/toast.js";
 import { typesetMath } from "../../core/math.js";
 import { copyText } from "../../core/clipboard.js";
@@ -259,10 +260,17 @@ function drawPage(container, rec, n) {
     ${nextNeed ? html`<button type="button" class="link" data-action="to" data-n="${nextNeed}">${t("pdf.nextNeed", { n: nextNeed })} ›</button>` : ""}
     ${pic ? html`<img class="page-pic" src="${pic}" alt="${t("pdf.pageOf", { n, of: rec.pages.length })}">` : ""}`;
   const out = container.querySelector("#pgOut");
-  container.querySelector("#pgNum").addEventListener("change", (e) => go("pdf-page", { id: rec.id, n: Math.max(1, Math.min(rec.pages.length, Number(e.target.value) || n)) }));
+  // Leaving with unsaved changes asks first.
+  const dirty = () => { const ta = container.querySelector("#pgText"); return ta && T.cleanText(ta.value) !== T.cleanText(p.t); };
+  const leave = async (fn) => {
+    if (dirty() && !(await confirmAction({ title: t("pdf.unsavedTitle"), body: t("pdf.unsavedBody"), confirmLabel: t("pdf.unsavedLeave"), danger: true }))) { closeSheet(); return; }
+    fn(); // go() closes the dialog itself; closing it first would race its Back with the move
+  };
+  container.querySelector("#pgNum").addEventListener("change", (e) => leave(() => go("pdf-page", { id: rec.id, n: Math.max(1, Math.min(rec.pages.length, Number(e.target.value) || n)) })));
   onAction(container, {
     ...backHandler,
-    to: (el) => go("pdf-page", { id: rec.id, n: el.dataset.n }),
+    to: (el) => leave(() => go("pdf-page", { id: rec.id, n: el.dataset.n })),
+    back: (el) => leave(() => backHandler.back(el)),
     save: async () => {
       const text = T.cleanText(container.querySelector("#pgText").value);
       if (text === T.cleanText(p.t) && p.src !== "scan" && p.src !== "garbled") { toast(t("pdf.noChange")); return; }
@@ -271,12 +279,14 @@ function drawPage(container, rec, n) {
     },
     pic: async (el) => {
       const key = `${rec.id}|${n}`;
-      if (pagePicture.has(key)) { pagePicture.delete(key); drawPage(container, rec, n); return; }
+      const draft = container.querySelector("#pgText").value; // keep what you typed across the redraw
+      const redraw = () => { drawPage(container, rec, n); const ta = container.querySelector("#pgText"); if (ta) ta.value = draft; };
+      if (pagePicture.has(key)) { pagePicture.delete(key); redraw(); return; }
       el.disabled = true; el.textContent = t("pdf.loading");
       try {
         const doc = await openStoredPdf(rec);
         try { pagePicture.clear(); pagePicture.set(key, await renderPageJpeg(doc, n, { width: 1100, quality: 0.8 })); } finally { doc.destroy(); }
-        if (container.isConnected) drawPage(container, rec, n);
+        if (container.isConnected) redraw();
       } catch (e) { out.innerHTML = html`<p class="warn-box">${errorText(e)}</p>`; el.disabled = false; }
     },
     ai: async (el) => {

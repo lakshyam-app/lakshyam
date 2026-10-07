@@ -32,7 +32,7 @@ export function openSheet(content, handlers = {}, { dismissible = true, label = 
   const backdrop = root.firstElementChild;
   const body = backdrop.querySelector(".sheet-body");
 
-  current = { dismissible, onClose, onPop: () => closeSheet(true) };
+  current = { dismissible, onClose, onPop: () => closeSheet(true), returnTo: document.activeElement };
   if (backPending) pushWaiting = true; else pushEntry();
 
   backdrop.addEventListener("click", (event) => {
@@ -40,6 +40,11 @@ export function openSheet(content, handlers = {}, { dismissible = true, label = 
   });
   onAction(body, handlers);
   requestAnimationFrame(() => backdrop.classList.add("open"));
+  // Screen readers and keyboards: move focus into the sheet; Escape closes it.
+  const dialog = backdrop.querySelector(".sheet");
+  dialog.tabIndex = -1;
+  setTimeout(() => { if (current && !dialog.contains(document.activeElement)) dialog.focus({ preventScroll: true }); }, 30);
+  backdrop.addEventListener("keydown", (event) => { if (event.key === "Escape" && current?.dismissible) closeSheet(); });
   return body;
 }
 
@@ -67,7 +72,7 @@ export function setSheetDismissible(value) {
 export function closeSheet(fromPopState = false) {
   const root = document.getElementById("sheetRoot");
   if (!current) { root.replaceChildren(); return; }
-  const { onPop, onClose } = current;
+  const { onPop, onClose, returnTo } = current;
   current = null;
   window.removeEventListener("popstate", onPop);
   pushWaiting = false;
@@ -81,4 +86,6 @@ export function closeSheet(fromPopState = false) {
   }
   root.replaceChildren();
   onClose?.();
+  // Back to where you were (if it is still on the page).
+  if (returnTo?.isConnected && typeof returnTo.focus === "function") try { returnTo.focus({ preventScroll: true }); } catch { /* ignore */ }
 }

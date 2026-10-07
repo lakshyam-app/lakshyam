@@ -1,0 +1,58 @@
+{
+  "paper": { "id": "sample-2026-demo", "name": "SAMPLE/2026", "post_name": "Demo paper for Lakshyam (made-up questions)" },
+  "questions": [
+    {
+      "id": "q1",
+      "question_text": "Which of the following statements about the Vaikom Satyagraha are correct?\n(i) It began in 1924.\n(ii) It was led only by Sree Narayana Guru.\n(iii) It demanded the right to use the roads near the Vaikom temple.",
+      "options": ["(i) and (ii) only", "(i) and (iii) only", "(ii) and (iii) only", "All of the above"],
+      "correct_answer_index": 1,
+      "subject": "History",
+      "topic": "Social & Religious Reform Movements (Kerala)",
+      "explanation": "The satyagraha began in **1924** and demanded access to the public roads around the temple. Many leaders took part, including T.K. Madhavan and K. Kelappan, so (ii) is wrong.",
+      "difficulty": "M"
+    },
+    {
+      "id": "q2",
+      "question_text": "കേരളത്തിലെ ഏറ്റവും നീളം കൂടിയ നദി ഏത്?",
+      "options": ["പെരിയാർ", "ഭാരതപ്പുഴ", "പമ്പ", "ചാലിയാർ"],
+      "correct_answer_index": 0,
+      "subject": "Geography",
+      "topic": "Kerala Rivers & Climate"
+    },
+    {
+      "id": "q3",
+      "question_text": "Simplify: $\\frac{54\\times54\\times54+46\\times46\\times46}{54\\times54-54\\times46+46\\times46}$",
+      "options": ["8", "100", "54", "46"],
+      "correct_answer_index": 1,
+      "subject": "Simple Arithmetic",
+      "topic": "Numbers & Basic Operations",
+      "explanation": "Use $\\frac{a^3+b^3}{a^2-ab+b^2} = a+b$, so the answer is $54+46 = 100$."
+    },
+    {
+      "id": "q4",
+      "question_text": "Which Article of the Constitution deals with the *Right to Constitutional Remedies*?",
+      "options": ["Article 19", "Article 21", "Article 32", "Article 44"],
+      "correct_answer_index": 2,
+      "subject": "Indian Constitution",
+      "topic": "Fundamental Rights",
+      "difficulty": "E"
+    },
+    {
+      "id": "q5",
+      "question_text": "A question that the official answer key deleted.",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correct_answer_index": null,
+      "deleted_by_psc": true,
+      "subject": "Current Affairs",
+      "topic": "Kerala Current Affairs"
+    },
+    {
+      "id": "q6",
+      "question_text": "Choose the correctly spelt word.",
+      "options": ["Accomodation", "Accommodation", "Acommodation", "Accommadation"],
+      "correct_answer_index": null,
+      "subject": "General English",
+      "topic": "Spelling"
+    }
+  ]
+}

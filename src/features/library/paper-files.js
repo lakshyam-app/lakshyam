@@ -11,16 +11,29 @@ import { autoFix, parseJsonText, validatePaper } from "../../data/paper-json.js"
 import { ids } from "../../data/ids.js";
 import * as store from "../../data/store.js";
 import * as mut from "../../data/mutations.js";
+import { copyText } from "../../core/clipboard.js";
+import { paperInstructions, answerKeyInstructions, explanationsInstructions } from "../../domain/ai-instructions.js";
+import { FALLBACK_TOPIC } from "../../data/taxonomy-seed.js";
 
 const n = (v) => formatNumber(v);
 
+/** Your subjects and topics, in the app's order, for the AI instructions
+    (subjects of this syllabus first, then every other subject). */
+function myTaxonomy(syllabus) {
+  const used = new Set(syllabus ? store.subjectsWithCounts(syllabus.id).map((x) => x.subject.id) : []);
+  return store.all("subjects").slice().sort((a, b) => (used.has(b.id) - used.has(a.id)) || (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name))
+    .map((s) => ({ subject: s.name, topics: store.topicsOf(s.id).slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((x) => x.name) }));
+}
+
 /** Step 1: file or paste. Resolves { raw, name } or null. */
-function getJson({ title, hint }) {
+function getJson({ title, hint, instructions = null }) {
   return new Promise((resolve) => {
     let done = false;
     const finish = (v) => { if (!done) { done = true; resolve(v); } };
     const body = openSheet(html`<h2>${title}</h2>
       <p class="hint">${hint}</p>
+      ${instructions ? html`<div class="ai-steps"><p class="hint">${t("addPaper.aiSteps")}</p>
+        <button type="button" class="btn btn-quiet btn-small" data-action="copy-ai">📋 ${t("addPaper.copyAi")}</button></div>` : ""}
       <button type="button" class="btn" data-action="file">${t("addPaper.chooseFile")}</button>
       <p class="hint center">${t("addPaper.or")}</p>
       <textarea class="field mono" id="jsonPaste" rows="7" placeholder="${t("addPaper.pastePlaceholder")}"></textarea>
@@ -39,6 +52,7 @@ function getJson({ title, hint }) {
         if (!raw.trim()) { body.querySelector("#jsonPaste").focus(); return; }
         finish({ raw, name: t("addPaper.pasted") });
       },
+      "copy-ai": () => copyText(instructions()),
       cancel: () => { finish(null); closeSheet(); }
     }, { label: title, onClose: () => finish(null) });
   });
@@ -71,7 +85,8 @@ export async function addPaperFlow({ bank = null } = {}) {
   const syllabus = store.currentSyllabus();
   const input = await getJson({
     title: bank ? t("addPaper.bankTitle", { bank: bank.name }) : t("addPaper.title"),
-    hint: bank ? t("addPaper.bankHint") : t("addPaper.hint", { syllabus: syllabus?.name || "" })
+    hint: bank ? t("addPaper.bankHint") : t("addPaper.hint", { syllabus: syllabus?.name || "" }),
+    instructions: () => paperInstructions(myTaxonomy(syllabus), { fallback: FALLBACK_TOPIC })
   });
   if (!input) return;
   const read = readJson(input);
@@ -137,7 +152,8 @@ export async function answerKeyFlow(paper, kind) {
   const isKey = kind === "key";
   const input = await getJson({
     title: isKey ? t("answerKey.title") : t("explanations.title"),
-    hint: isKey ? t("answerKey.hint") : t("explanations.hint")
+    hint: isKey ? t("answerKey.hint") : t("explanations.hint"),
+    instructions: isKey ? answerKeyInstructions : explanationsInstructions
   });
   if (!input) return;
   const read = readJson(input);

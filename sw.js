@@ -4,7 +4,7 @@
      (Other apps on the same site keep their caches.)
    - A new version waits until the user taps "Refresh" in the app. */
 
-const VERSION = "0.10.0";
+const VERSION = "1.0.0";
 const PREFIX = "lakshyam-";
 const SHELL_CACHE = `${PREFIX}shell-${VERSION}`;
 // The PDF reader is large (about 1.4 MB), so it is not downloaded with the app.
@@ -21,6 +21,31 @@ const SHELL_FILES = [
   "./icons/icon-512.png",
   "./icons/icon.svg",
   "./icons/maskable-512.png",
+  "./styles/app.css",
+  "./vendor/katex/contrib/auto-render.min.js",
+  "./vendor/katex/katex.min.css",
+  "./vendor/katex/katex.min.js",
+  "./vendor/katex/fonts/KaTeX_AMS-Regular.woff2",
+  "./vendor/katex/fonts/KaTeX_Caligraphic-Bold.woff2",
+  "./vendor/katex/fonts/KaTeX_Caligraphic-Regular.woff2",
+  "./vendor/katex/fonts/KaTeX_Fraktur-Bold.woff2",
+  "./vendor/katex/fonts/KaTeX_Fraktur-Regular.woff2",
+  "./vendor/katex/fonts/KaTeX_Main-Bold.woff2",
+  "./vendor/katex/fonts/KaTeX_Main-BoldItalic.woff2",
+  "./vendor/katex/fonts/KaTeX_Main-Italic.woff2",
+  "./vendor/katex/fonts/KaTeX_Main-Regular.woff2",
+  "./vendor/katex/fonts/KaTeX_Math-BoldItalic.woff2",
+  "./vendor/katex/fonts/KaTeX_Math-Italic.woff2",
+  "./vendor/katex/fonts/KaTeX_SansSerif-Bold.woff2",
+  "./vendor/katex/fonts/KaTeX_SansSerif-Italic.woff2",
+  "./vendor/katex/fonts/KaTeX_SansSerif-Regular.woff2",
+  "./vendor/katex/fonts/KaTeX_Script-Regular.woff2",
+  "./vendor/katex/fonts/KaTeX_Size1-Regular.woff2",
+  "./vendor/katex/fonts/KaTeX_Size2-Regular.woff2",
+  "./vendor/katex/fonts/KaTeX_Size3-Regular.woff2",
+  "./vendor/katex/fonts/KaTeX_Size4-Regular.woff2",
+  "./vendor/katex/fonts/KaTeX_Typewriter-Regular.woff2",
+  "./content/taxonomy-ml.json",
   "./src/ai/client.js",
   "./src/ai/pdf-prompts.js",
   "./src/ai/presets.js",
@@ -57,6 +82,7 @@ const SHELL_FILES = [
   "./src/data/taxonomy-seed.js",
   "./src/data/tests.js",
   "./src/data/timetable.js",
+  "./src/domain/ai-instructions.js",
   "./src/domain/cards.js",
   "./src/domain/diary.js",
   "./src/domain/habits.js",
@@ -118,32 +144,7 @@ const SHELL_FILES = [
   "./src/strings/ml-4.js",
   "./src/strings/ml-5.js",
   "./src/strings/ml-6.js",
-  "./src/strings/ml.js",
-  "./styles/app.css",
-  "./vendor/katex/contrib/auto-render.min.js",
-  "./vendor/katex/katex.min.css",
-  "./vendor/katex/katex.min.js",
-  "./vendor/katex/fonts/KaTeX_AMS-Regular.woff2",
-  "./vendor/katex/fonts/KaTeX_Caligraphic-Bold.woff2",
-  "./vendor/katex/fonts/KaTeX_Caligraphic-Regular.woff2",
-  "./vendor/katex/fonts/KaTeX_Fraktur-Bold.woff2",
-  "./vendor/katex/fonts/KaTeX_Fraktur-Regular.woff2",
-  "./vendor/katex/fonts/KaTeX_Main-Bold.woff2",
-  "./vendor/katex/fonts/KaTeX_Main-BoldItalic.woff2",
-  "./vendor/katex/fonts/KaTeX_Main-Italic.woff2",
-  "./vendor/katex/fonts/KaTeX_Main-Regular.woff2",
-  "./vendor/katex/fonts/KaTeX_Math-BoldItalic.woff2",
-  "./vendor/katex/fonts/KaTeX_Math-Italic.woff2",
-  "./vendor/katex/fonts/KaTeX_SansSerif-Bold.woff2",
-  "./vendor/katex/fonts/KaTeX_SansSerif-Italic.woff2",
-  "./vendor/katex/fonts/KaTeX_SansSerif-Regular.woff2",
-  "./vendor/katex/fonts/KaTeX_Script-Regular.woff2",
-  "./vendor/katex/fonts/KaTeX_Size1-Regular.woff2",
-  "./vendor/katex/fonts/KaTeX_Size2-Regular.woff2",
-  "./vendor/katex/fonts/KaTeX_Size3-Regular.woff2",
-  "./vendor/katex/fonts/KaTeX_Size4-Regular.woff2",
-  "./vendor/katex/fonts/KaTeX_Typewriter-Regular.woff2",
-  "./content/taxonomy-ml.json"
+  "./src/strings/ml.js"
 ];
 
 self.addEventListener("install", (event) => {

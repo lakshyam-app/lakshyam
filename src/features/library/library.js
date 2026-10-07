@@ -468,18 +468,26 @@ export const topicScreen = {
 
 /* ---------- Paper ---------- */
 
+// Per paper: show only one subject (and optionally one topic). Kept while the app is open.
+const paperFilter = new Map();
+
 export const paperScreen = {
   id: "paper",
   parent: "library",
   render(container, { id }) {
     const paper = store.paper(id);
     if (!paper) return go("library", { view: "papers" });
-    const questions = store.questionsOfPaper(id);
-    const key = `paper:${id}`;
+    const all = store.questionsOfPaper(id);
+    const f = paperFilter.get(id) || {};
+    const questions = all.filter((q) => (!f.subjectId || q.subjectId === f.subjectId) && (!f.topicId || q.topicId === f.topicId));
+    const key = `paper:${id}${f.subjectId ? `:${f.subjectId}` : ""}${f.topicId ? `:${f.topicId}` : ""}`;
+    const filterLabel = f.topicId ? nameLabel(store.topic(f.topicId)) : f.subjectId ? nameLabel(store.subject(f.subjectId)) : t("paperFilter.all");
     container.innerHTML = html`${header({
       backTo: "library", backParams: { view: "papers" }, backLabel: t("library.views.papers"),
-      title: paper.name, sub: [paper.postName, t("common.questions", { n: questions.length })].filter(Boolean).join(" · "), menu: true
+      title: paper.name, sub: [paper.postName, t("common.questions", { n: all.length })].filter(Boolean).join(" · "), menu: true
     })}
+    ${all.length ? html`<div class="toolbar"><button type="button" class="pill ${f.subjectId ? "on" : ""}" data-action="pfilter">${t("paperFilter.label", { what: filterLabel })} ▾</button>
+      ${f.subjectId ? html`<span class="hint">${t("exams.showing", { n: questions.length, of: all.length })}</span>` : ""}</div>` : ""}
     ${questions.length ? html`<div class="actions-row"><button type="button" class="btn" data-action="practice">${playIcon} ${t("practice.button")}</button></div>` : ""}
     ${noteBlock("paper", id)}
     <div id="qHost"></div>`;
@@ -487,7 +495,27 @@ export const paperScreen = {
       ...backHandler,
       practice: () => practice(key, questions, { type: "paper", ref: id, label: paper.name }, true),
       "note-edit": () => editNote("paper", id, paper.name),
-      menu: () => paperMenu(paper, questions, key)
+      menu: () => paperMenu(paper, questions, key),
+      pfilter: () => runFlow(async () => {
+        const bySub = new Map(); all.forEach((q) => bySub.set(q.subjectId, (bySub.get(q.subjectId) || 0) + 1));
+        const sid = await chooseAction({ title: t("paperFilter.title"), items: [
+          { id: "__all", label: t("paperFilter.all"), sub: t("common.questions", { n: all.length }), current: !f.subjectId },
+          ...[...bySub.entries()].sort((a, b) => b[1] - a[1]).map(([sId, n]) => ({ id: sId, label: nameLabel(store.subject(sId)) || "—", sub: t("common.questions", { n }), current: f.subjectId === sId && !f.topicId }))
+        ] });
+        if (!sid) return;
+        if (sid === "__all") { paperFilter.delete(id); store.touch(); return; }
+        const byTop = new Map(); all.filter((q) => q.subjectId === sid).forEach((q) => byTop.set(q.topicId, (byTop.get(q.topicId) || 0) + 1));
+        let tid = null;
+        if (byTop.size > 1) {
+          tid = await chooseAction({ title: nameLabel(store.subject(sid)), sub: t("paperFilter.topicSub"), items: [
+            { id: "__all", label: t("paperFilter.allTopics"), sub: t("common.questions", { n: [...byTop.values()].reduce((a, b) => a + b, 0) }) },
+            ...[...byTop.entries()].sort((a, b) => b[1] - a[1]).map(([tId, n]) => ({ id: tId, label: nameLabel(store.topic(tId)) || "—", sub: t("common.questions", { n }), current: f.topicId === tId }))
+          ] });
+          if (!tid) return;
+        }
+        paperFilter.set(id, { subjectId: sid, topicId: tid && tid !== "__all" ? tid : null });
+        store.touch();
+      })
     });
     mountQuestions(container.querySelector("#qHost"), { key, questions, showPaper: false, examFilter: false });
   }

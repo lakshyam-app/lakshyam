@@ -2,7 +2,8 @@
    The file format is exactly the one PSC Exam Vault used, so existing files work:
      { "paper": { "id", "name", "post_name"? },
        "questions": [{ "id", "question_text", "options", "correct_answer_index",
-                       "subject", "topic", "explanation"?, "original_number"?, "difficulty"? }] }
+                       "subject", "topic", "explanation"?, "original_number"?, "difficulty"?,
+                       "deleted_by_psc"? (true = deleted in the official key; the old sentinel 5 also works) }] }
    Pure functions: nothing here touches the database. */
 import { ids, nameKey } from "./ids.js";
 
@@ -91,6 +92,7 @@ function printedNumber(q) {
 }
 
 function answerFrom(q, optionCount) {
+  if (q.deleted_by_psc === true) return { answerIndex: null, status: "deleted_by_psc" };
   const ci = q.correct_answer_index;
   if (ci === null || ci === undefined || ci === "") return { answerIndex: null, status: "active" };
   const n = Number(ci);

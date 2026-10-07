@@ -1,6 +1,9 @@
 // മലയാളം — part 3 (pdf, names, diffTimes, insights, exam).
 export default {
   pdf: {
+    unsavedTitle: "സേവ് ചെയ്യാതെ പോകണോ?",
+    unsavedBody: "ഈ പേജിന്റെ ടെക്സ്റ്റ് മാറ്റി. ഇപ്പോൾ പോയാൽ മാറ്റം നഷ്ടമാകും.",
+    unsavedLeave: "പോകുക",
     title: "പഠന PDF-കൾ",
     loading: "ലോഡ് ചെയ്യുന്നു…",
     change: "മാറ്റുക",
