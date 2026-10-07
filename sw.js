@@ -4,7 +4,7 @@
      (Other apps on the same site keep their caches.)
    - A new version waits until the user taps "Refresh" in the app. */
 
-const VERSION = "0.6.0";
+const VERSION = "0.7.0";
 const PREFIX = "lakshyam-";
 const SHELL_CACHE = `${PREFIX}shell-${VERSION}`;
 
@@ -16,6 +16,9 @@ const SHELL_FILES = [
   "./icons/icon-512.png",
   "./icons/icon.svg",
   "./icons/maskable-512.png",
+  "./src/ai/client.js",
+  "./src/ai/presets.js",
+  "./src/ai/prompts.js",
   "./src/core/charts.js",
   "./src/core/clipboard.js",
   "./src/core/dialogs.js",
@@ -44,12 +47,17 @@ const SHELL_FILES = [
   "./src/data/store.js",
   "./src/data/taxonomy-seed.js",
   "./src/data/tests.js",
+  "./src/domain/cards.js",
   "./src/domain/habits.js",
   "./src/domain/scoring.js",
   "./src/domain/stats.js",
   "./src/domain/study.js",
   "./src/domain/testing.js",
   "./src/domain/text.js",
+  "./src/features/ai/ai-actions.js",
+  "./src/features/ai/ai-settings.js",
+  "./src/features/ai/ai-ui.js",
+  "./src/features/ai/content.js",
   "./src/features/import/import-flow.js",
   "./src/features/library/banks.js",
   "./src/features/library/library.js",

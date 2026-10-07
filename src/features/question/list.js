@@ -15,6 +15,8 @@ import { copyQuestion } from "./copy.js";
 import { pickTopic } from "../library/topic-picker.js";
 import { pickExams } from "./exam-filter.js";
 import { mountCards, forgetPlace } from "./pager.js";
+import { can } from "../../core/entitlements.js";
+import { aiHelp } from "../ai/ai-actions.js";
 
 const examsBy = new Map();   // listing key → Set of included paper IDs (none = all)
 const sortBy = new Map();    // listing key → "none" | "diff-asc" | "diff-desc"
@@ -55,7 +57,7 @@ function papersIn(questions) {
  * Card actions shared by every list of question cards (Library, results, search).
  * view: { refresh(id), remove(id) } from mountCards. onOption(q, i) handles option taps (optional).
  */
-export function bindCardActions(host, { view, bank = null, onOption = null, onReveal = null }) {
+export function bindCardActions(host, { view, bank = null, onOption = null, onReveal = null, selectedFor = null }) {
   const quiet = (fn, qid) => store.quietly(fn).then(() => view.refresh(qid));
   const qOf = (el) => store.question(el.closest("[data-qid]").dataset.qid);
   onAction(host, {
@@ -67,7 +69,7 @@ export function bindCardActions(host, { view, bank = null, onOption = null, onRe
       toast(on ? t("question.flaggedToast") : t("question.unflaggedToast"));
     },
     "q-diff": (el) => runFlow(() => chooseDifficulty(qOf(el), quiet)),
-    "q-menu": (el) => runFlow(() => questionMenu(qOf(el), { bank, quiet, removeCard: (id) => view.remove(id) }))
+    "q-menu": (el) => { const q = qOf(el); return runFlow(() => questionMenu(q, { bank, quiet, removeCard: (id) => view.remove(id), selected: selectedFor?.(q) })); }
   });
 }
 
@@ -160,13 +162,14 @@ async function chooseDifficulty(q, quiet) {
   await quiet(() => mut.setDifficulty(q.id, id === "clear" ? null : id), q.id);
 }
 
-export async function questionMenu(q, { bank, quiet, removeCard }) {
+export async function questionMenu(q, { bank, quiet, removeCard, selected }) {
   const state = store.questionState(q.id);
   const deleted = q.status === "deleted_by_psc";
   const id = await chooseAction({
     title: q.number ? t("question.number", { n: q.number }) : t("question.question"),
     sub: [store.subject(q.subjectId)?.name, store.topic(q.topicId)?.name].filter(Boolean).join(" › "),
     items: [
+      can("ai") ? { id: "ai", label: Number.isInteger(selected) && selected !== q.answerIndex ? `🤖 ${t("ai.explainMistake")}` : `🤖 ${t("ai.help")}` } : null,
       { id: "flag", label: state?.flagged ? t("question.unflag") : t("question.flag") },
       { id: "difficulty", label: t("question.setDifficulty") },
       { id: "answer", label: t("question.setAnswer") },
@@ -180,6 +183,7 @@ export async function questionMenu(q, { bank, quiet, removeCard }) {
     ]
   });
   switch (id) {
+    case "ai": aiHelp(q, { selected }); return; // opens its own sheet once this menu has closed
     case "flag": return quiet(() => mut.setFlag(q.id, !state?.flagged), q.id);
     case "difficulty": return chooseDifficulty(q, quiet);
     case "answer": {

@@ -19,6 +19,8 @@ import { topicMenu, labelFor, labelDot, LABELS, renameTopicFlow, renameSubjectFl
 import { addPaperFlow, answerKeyFlow } from "./paper-files.js";
 import { banksRows } from "./banks.js";
 import { openStartTest } from "../test/start-sheet.js";
+import { contentSwitch, contentHandler, renderAiPanel, renderCardsPanel, aiQuestions, cardsOf } from "../ai/content.js";
+import { generateQuestions } from "../ai/ai-actions.js";
 import { testsFor } from "../progress/progress.js";
 
 /** ▶ Practice from a listing: the questions as shown (exam filter and sort applied). */
@@ -310,16 +312,26 @@ export const backHandler = { back: (el) => go(el.dataset.to, JSON.parse(el.datas
 export const subjectScreen = {
   id: "subject",
   parent: "library",
-  render(container, { id }) {
+  render(container, { id, mode = "pyq" }) {
     const subject = store.subject(id);
     if (!subject) return go("library");
     const syllabus = store.currentSyllabus();
     const topics = store.topicsWithCounts(syllabus.id, id).sort((a, b) => a.topic.order - b.topic.order || b.count - a.count);
     const total = topics.reduce((n, x) => n + x.count, 0);
-    container.innerHTML = html`${header({
+    const counts = { pyq: total, ai: aiQuestions(syllabus.id, { subjectId: id }).length, cards: cardsOf(syllabus.id, { subjectId: id }).length };
+    const head = html`${header({
       backTo: "library", backParams: { view: "subjects" }, backLabel: t("library.views.subjects"),
-      title: subject.name, sub: `${t("common.questions", { n: total })} · ${t("common.topics", { n: topics.length })}`, menu: true
-    })}
+      title: subject.name, sub: `${t("common.questions", { n: total })} · ${t("common.topics", { n: topics.length })}`, menu: mode === "pyq"
+    })}${contentSwitch(mode, counts, "subject", { id })}`;
+    if (mode !== "pyq") {
+      container.innerHTML = html`${head}<div id="aiHost"></div>`;
+      onAction(container, { ...backHandler, ...contentHandler });
+      const host = container.querySelector("#aiHost");
+      if (mode === "ai") renderAiPanel(host, { syllabus, scope: { subjectId: id }, label: subject.name });
+      else renderCardsPanel(host, { syllabus, scope: { subjectId: id } });
+      return;
+    }
+    container.innerHTML = html`${head}
     ${total ? html`<div class="actions-row"><button type="button" class="btn" data-action="practice">${playIcon} ${t("practice.button")}</button></div>` : ""}
     ${noteBlock("subject", id)}
     <div class="rows" id="subRows">
@@ -337,7 +349,7 @@ export const subjectScreen = {
       })}
     </div>`;
     onAction(container, {
-      ...backHandler,
+      ...backHandler, ...contentHandler,
       open: (el) => go("topic", { id: el.dataset.id }),
       all: () => go("subject-all", { id }),
       practice: () => practice(`subject-all:${id}`, store.questionsFor({ syllabusId: syllabus.id, subjectId: id }), { type: "subject", ref: id, label: subject.name }),
@@ -382,7 +394,7 @@ export const subjectAllScreen = {
 export const topicScreen = {
   id: "topic",
   parent: "library",
-  render(container, { id }) {
+  render(container, { id, mode = "pyq" }) {
     const topic = store.topic(id);
     if (!topic) return go("library");
     const subject = store.subject(topic.subjectId);
@@ -393,10 +405,21 @@ export const topicScreen = {
     const done = testsFor(syllabus.id, "topic", id).sort((a, b) => b.submittedAt - a.submittedAt);
     const sub = [t("common.questions", { n: questions.length }), st?.studiedCount ? t("library.studied", { n: st.studiedCount }) : t("library.notStudied")]
       .filter(Boolean).join(" · ");
-    container.innerHTML = html`${header({
+    const counts = { pyq: questions.length, ai: aiQuestions(syllabus.id, { topicId: id }).length, cards: cardsOf(syllabus.id, { topicId: id }).length };
+    const head = html`${header({
       backTo: "subject", backParams: { id: topic.subjectId }, backLabel: subject?.name || t("common.back"),
       title: html`${labelDot(label)}${topic.name}`, sub, menu: true
-    })}
+    })}${contentSwitch(mode, counts, "topic", { id })}`;
+    const aiItem = { id: "ai-gen", label: t("ai.makeQuestions"), run: () => { generateQuestions(topic); } };
+    if (mode !== "pyq") {
+      container.innerHTML = html`${head}<div id="aiHost"></div>`;
+      onAction(container, { ...backHandler, ...contentHandler, menu: () => topicMenu(topic, { onPage: true, extra: [aiItem] }) });
+      const host = container.querySelector("#aiHost");
+      if (mode === "ai") renderAiPanel(host, { syllabus, scope: { topicId: id }, topic, label: topic.name });
+      else renderCardsPanel(host, { syllabus, scope: { topicId: id } });
+      return;
+    }
+    container.innerHTML = html`${head}
     ${done.length ? html`<button type="button" class="link" data-action="tests">${t("practice.testsDone", { n: done.length, last: Math.round((done[0].counts.correct / Math.max(1, done[0].counts.total)) * 100) })} ›</button>` : ""}
     <div class="actions-row">
       ${questions.length ? html`<button type="button" class="btn" data-action="practice">${playIcon} ${t("practice.button")}</button>` : ""}
@@ -406,7 +429,7 @@ export const topicScreen = {
     <div id="qHost"></div>`;
     const key = `topic:${id}`;
     onAction(container, {
-      ...backHandler,
+      ...backHandler, ...contentHandler,
       studied: () => markStudied(syllabus.id, topic),
       practice: () => practice(key, questions, { type: "topic", ref: id, label: topic.name }),
       tests: () => (done.length === 1 ? go("result", { id: done[0].id }) : go("tests", { type: "topic", ref: id })),
@@ -414,7 +437,8 @@ export const topicScreen = {
       menu: () => topicMenu(topic, { onPage: true, extra: [
         st?.studiedCount ? { id: "minus", label: t("studied.minus", { n: st.studiedCount }), run: () => mut.addStudied(syllabus.id, id, -1) } : null,
         { id: "copy", label: t("listing.copy"), run: () => copyQuestions(visibleQuestions(key, questions), `${subject?.name} — ${topic.name}`) },
-        { id: "note", label: t("notes.myNote"), run: () => editNote("topic", id, topic.name) }
+        { id: "note", label: t("notes.myNote"), run: () => editNote("topic", id, topic.name) },
+        aiItem
       ].filter(Boolean) })
     });
     mountQuestions(container.querySelector("#qHost"), { key, questions, showPaper: true });

@@ -442,3 +442,45 @@ export async function deleteSyllabus(syllabus) {
   }
   await store.apply(changes);
 }
+
+/* ---------- AI content (kept apart from PYQs) ---------- */
+
+/** Adds text to the end of a listing's note (creating it if needed). */
+export function appendNote(target, label, text) {
+  const prev = store.byId("notes", ids.note(target.type, target.id));
+  const merged = prev ? `${prev.text}\n\n${text}` : text;
+  return saveNote(target, prev?.label || label, merged);
+}
+
+/** Saves reviewed AI questions into this syllabus's AI paper (never mixed with PYQs). */
+export async function saveAiQuestions(syllabus, subjectId, topicId, items) {
+  const existing = store.papersOf(syllabus.id, "ai")[0];
+  const paper = existing || {
+    id: `pap:ai-${syllabus.id.replace(/\W+/g, "")}`, oldId: `ai-${syllabus.id}`, kind: "ai", syllabusId: syllabus.id,
+    name: "AI practice questions", postName: "AI-generated", source: "ai", questionCount: 0
+  };
+  let n = paper.questionCount || 0;
+  const questions = items.map((x) => {
+    n++;
+    return {
+      id: newId("q"), paperId: paper.id, oldId: `ai${n}`, order: n, number: `AI-${n}`, text: x.text, options: x.options,
+      answerIndex: x.answerIndex, status: "active", explanation: x.explanation || "", subjectId, topicId,
+      lang: /[ഀ-ൿ]/.test(x.text) ? "ml" : "en", difficultyHint: x.difficulty || null, source: "ai", sourceRef: null
+    };
+  });
+  await store.apply({ papers: { put: [copy(paper, { questionCount: n })] }, questions: { put: questions } });
+  return questions;
+}
+
+/* ---------- flashcards ---------- */
+
+export function saveCardState(state) {
+  return store.apply({ flashcardState: { put: [copy(state)] } });
+}
+
+export async function deleteCards(cardIds) {
+  const cards = cardIds.map((id) => store.byId("flashcards", id)).filter(Boolean);
+  const states = cardIds.map((id) => store.byId("flashcardState", id)).filter(Boolean);
+  await store.apply({ flashcards: { delete: cards.map((c) => c.id) }, flashcardState: { delete: states.map((s) => s.id) } });
+  return { flashcards: cards, flashcardState: states };
+}

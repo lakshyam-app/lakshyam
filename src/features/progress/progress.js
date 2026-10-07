@@ -19,6 +19,7 @@ import { openStartTest, progressText } from "../test/start-sheet.js";
 import * as tests from "../../data/tests.js";
 import { difficultyOf } from "../question/card.js";
 import { statsContext, finishedTests, prefs, PERIODS } from "./data.js";
+import { studyPlan } from "../ai/ai-actions.js";
 
 export { finishedTests };
 /** Tests of a listing (e.g. a topic page's "3 tests ›"). */
@@ -232,6 +233,7 @@ export const progressScreen = {
         <button type="button" class="row" data-action="go" data-to="stats-tables"><span class="row-main"><span class="row-title">${t("stats.tables")}</span><span class="row-sub">${t("stats.tablesSub")}</span></span>${chev}</button>
       </div>
       <button type="button" class="btn wide" data-action="start">${t("today.startTest")}</button>
+      ${ctx.mode === "pyq" ? html`<button type="button" class="btn btn-quiet wide" data-action="plan">🤖 ${t("ai.planTitle")}</button>` : ""}
     </section>`;
 
     onAction(container, {
@@ -249,7 +251,8 @@ export const progressScreen = {
       subject: (el) => go("stats-subject", { id: el.dataset.id }),
       go: (el) => go(el.dataset.to),
       continue: () => go("test"),
-      start: () => openStartTest()
+      start: () => openStartTest(),
+      plan: () => studyPlan()
     });
   }
 };

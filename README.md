@@ -17,8 +17,9 @@ file you choose.
 | 3 | Tests (all sources, timer, both layouts, guesses, resume), results, test history, syllabus marking | Done |
 | 4 | Progress: per-100 score, insights, where marks go, subject → topic drill-down, detailed tables, PYQ/AI, counting basis, start fresh | Done |
 | 5 | Today: what to study next with Quick 10, daily goal, streak on local dates, due reviews, backup reminder | Done |
-| 6 | AI | Next |
-| 7–9 | PDFs, Malayalam names, polish | Planned |
+| 6 | AI: presets with fallback, explain / my mistake / memory trick / revision note, practice questions (reviewed, kept apart), study plan, tricks, guess coach, flashcards with spaced review | Done |
+| 7 | Study PDFs | Next |
+| 8–9 | Malayalam names, polish | Planned |
 
 The full plan is in [`docs/redesign-brief.md`](docs/redesign-brief.md).
 

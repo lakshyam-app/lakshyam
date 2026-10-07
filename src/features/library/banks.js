@@ -19,6 +19,7 @@ import { copyQuestions } from "../question/copy.js";
 import { noteBlock, editNote } from "../notes/note-editor.js";
 import { addPaperFlow } from "./paper-files.js";
 import { openStartTest } from "../test/start-sheet.js";
+import { wrongTricks } from "../ai/ai-actions.js";
 import { pickTopic } from "./topic-picker.js";
 import { header, backHandler, chev } from "./library.js";
 
@@ -68,10 +69,19 @@ export function banksRows(syllabusId, q) {
   const user = store.all("sets").filter((b) => b.kind === "user").sort((a, b) => a.name.localeCompare(b.name))
     .map((b) => bankInfo(b.id, syllabusId)).filter((b) => !q || b.name.toLowerCase().includes(q));
   const autos = [bankInfo(AUTO.flagged, syllabusId), bankInfo(AUTO.wrong, syllabusId)].filter((b) => !q || b.name.toLowerCase().includes(q));
+  // AI questions and flashcards (kept apart from PYQs) are reached from here too.
+  const nAi = store.questionsFor({ syllabusId, source: "ai" }).length;
+  const nCards = store.all("flashcards").filter((c) => c.syllabusId === syllabusId).length;
+  const hub = (kind, label, n) => html`<button type="button" class="row" data-action="open" data-to="ai-hub" data-id="${kind}">
+    <span class="row-main"><span class="row-title">${label}</span><span class="row-sub">${t("ai.separateShort")}</span></span>
+    <span class="row-count">${n}</span>${chev}</button>`;
   return [
     ...autos.map((b) => row(b)),
     user.length ? html`<h3 class="rows-head">${t("banks.yours")}</h3>` : "",
-    ...user.map((b) => row(b))
+    ...user.map((b) => row(b)),
+    nAi || nCards ? html`<h3 class="rows-head">${t("ai.hubHead")}</h3>` : "",
+    nAi ? hub("ai", t("ai.hubAi"), nAi) : "",
+    nCards ? hub("cards", t("ai.hubCards"), nCards) : ""
   ].filter(Boolean);
 }
 
@@ -106,6 +116,7 @@ export const bankScreen = {
       "note-edit": () => editNote(noteType, id, info.name),
       menu: () => runFlow(async () => {
         const choice = await chooseAction({ title: info.name, items: info.auto ? [
+          id === AUTO.wrong ? { id: "tricks", label: `🤖 ${t("ai.tricksTitle")}` } : null,
           { id: "copy", label: t("listing.copy") },
           { id: "note", label: t("notes.myNote") }
         ] : [
@@ -122,6 +133,7 @@ export const bankScreen = {
           case "import": return addPaperFlow({ bank: info.bank });
           case "type": return typeQuestionFlow(info.bank);
           case "rename": { const name = await askText({ title: t("banks.rename"), value: info.name }); if (name) await mut.renameBank(info.bank, name); return; }
+          case "tricks": wrongTricks(info.questions); return;
           case "copy": return copyQuestions(visibleQuestions(key, info.questions), info.name);
           case "note": return editNote(noteType, id, info.name);
           case "delete": {

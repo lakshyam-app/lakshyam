@@ -102,7 +102,7 @@ export const resultScreen = {
       key: `result:${id}:${filter}:${sort}`, items: shown.map((x) => x.q), card, layout: listLayout(),
       marks: (q) => stateOf(recFor.get(q.id)), empty: t("results.noneHere")
     });
-    bindCardActions(container, { view });
+    bindCardActions(container, { view, selectedFor: (q) => { const r = recFor.get(q.id); return r ? (r.selected === null ? "none" : r.selected) : undefined; } });
 
     onAction(container, {
       back: () => go("history"),

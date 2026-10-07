@@ -12,6 +12,7 @@ import { takeSnapshot, listSnapshots, restoreSnapshot } from "../../data/snapsho
 import { startImport } from "../import/import-flow.js";
 import { syllabiBlock, addSyllabusFlow, editSyllabusFlow } from "./syllabi.js";
 import { runFlow, askText } from "../../core/dialogs.js";
+import { aiBlock, openAiSettings } from "../ai/ai-settings.js";
 
 const when = (ms) => new Date(ms).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 
@@ -124,6 +125,10 @@ export const settingsScreen = {
           <h2>${t("syllabi.title")}</h2>
           <div class="rows">${syllabiBlock()}</div>
         </div>` : ""}
+        <div class="group" id="sec-ai">
+          <h2>${t("ai.title")}</h2>
+          <div id="aiBlock"></div>
+        </div>
         <div class="group">
           <h2>${t("settings.sectionStorage")}</h2>
           <div id="storageBlock"></div>
@@ -149,7 +154,9 @@ export const settingsScreen = {
     container.querySelector("#showStreak").addEventListener("change", (e) => store.setSetting("showStreak", e.target.checked));
     container.querySelector("#showGoal").addEventListener("change", (e) => store.setSetting("showGoal", e.target.checked));
     container.querySelector("#userName").addEventListener("change", (e) => store.quietly(() => store.setSetting("userName", e.target.value.trim().slice(0, 40))).then(() => toast(t("settings.saved"))));
+    aiBlock().then((markup) => { const el = container.querySelector("#aiBlock"); if (el) el.innerHTML = String(markup); });
     if (params.section) container.querySelector(`#sec-${params.section}`)?.scrollIntoView({ block: "start" });
+    if (params.section === "ai") setTimeout(() => openAiSettings(), 50);
 
     const refreshStorage = async () => {
       const block = container.querySelector("#storageBlock");
@@ -160,6 +167,7 @@ export const settingsScreen = {
     onAction(container, {
       import: startImport,
       undo: openUndo,
+      "ai-settings": () => openAiSettings(),
       goal: (el) => store.setSetting("dailyGoal", Number(el.dataset.n)),
       "goal-custom": () => runFlow(async () => {
         const v = await askText({ title: t("settings.goal"), hint: t("settings.goalHint"), value: String(goalNow), inputMode: "numeric" });

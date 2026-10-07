@@ -8,6 +8,7 @@ import { pickByBasis, isTimed, isAnswered, guessSummary, markingInfo, avgDifficu
 import * as store from "../../data/store.js";
 import { difficultyOf } from "../question/card.js";
 import { statsContext } from "./data.js";
+import { guessCoach } from "../ai/ai-actions.js";
 
 const TABS = ["time", "difficulty", "level", "guess"];
 const LV = ["E", "M", "D"];
@@ -105,7 +106,8 @@ function guessTab(ctx) {
   const mk = markingInfo(ctx.marking);
   const recs = pickByBasis(ctx.records, ctx.basis, (r) => r.guessed && isAnswered(r));
   const all = guessSummary(recs, ctx.marking);
-  const head = html`<p class="hint">${t("tables.breakEven", { pos: mk.pos, pen: Math.round(mk.pen * 100) / 100, be: Math.round(mk.breakEven * 1000) / 10 })}</p>`;
+  const head = html`<p class="hint">${t("tables.breakEven", { pos: mk.pos, pen: Math.round(mk.pen * 100) / 100, be: Math.round(mk.breakEven * 1000) / 10 })}</p>
+    ${ctx.mode === "pyq" ? html`<button type="button" class="btn btn-quiet" data-action="coach">🎓 ${t("ai.coachTitle")}</button>` : ""}`;
   if (!all.n) return html`${head}<p class="hint pad">${t("tables.noGuesses")}</p>`;
   const groups = groupBy(recs, (r) => (guessView.scope === "subject" ? r.subjectId : r.topicId));
   const rows = [...groups.entries()].map(([k, xs]) => ({ k, ...guessSummary(xs, ctx.marking) }))
@@ -143,6 +145,7 @@ export const statsTablesScreen = {
     onAction(container, {
       back: () => go("progress"),
       tab: (el) => go("stats-tables", { tab: el.dataset.t }),
+      coach: () => guessCoach(),
       "g-scope": (el) => { guessView.scope = el.dataset.v; go("stats-tables", { tab: "guess" }); },
       "g-sort": () => { const order = ["net-asc", "net-desc", "count"]; guessView.sort = order[(order.indexOf(guessView.sort) + 1) % order.length]; go("stats-tables", { tab: "guess" }); }
     });
