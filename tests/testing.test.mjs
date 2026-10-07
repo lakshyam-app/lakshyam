@@ -86,3 +86,58 @@ test("first-try basis and weak topics", () => {
   assert.equal(weak[0].topicId, "T1");
   assert.equal(weak.find((w) => w.topicId === "T3").accuracy, null);
 });
+
+import { summarize, guessSummary, markingInfo, avgDifficulty, findInsights, testTrend } from "../src/domain/stats.js";
+
+const rec = (questionId, topicId, opts = {}) => ({ questionId, topicId, subjectId: opts.s || "S", graded: true, selected: opts.sel === undefined ? 0 : opts.sel, isCorrect: Boolean(opts.ok), guessed: Boolean(opts.g), timeMs: opts.ms || null, at: opts.at || 1 });
+
+test("summary per 100 uses each question once and counts blanks", () => {
+  const m = { pos: 1, negNum: 1, negDen: 3 };
+  const recs = [rec("a", "T", { ok: true }), rec("b", "T"), rec("c", "T", { sel: null }), rec("d", "T", { ok: true }), rec("a", "T", { at: 2 })];
+  const s = summarize(recs, m);
+  assert.equal(s.n, 4);
+  assert.equal(s.right, 2); assert.equal(s.wrong, 1); assert.equal(s.blank, 1);
+  assert.equal(s.per100, 41.67);       // (2 − ⅓) / 4 × 100
+  assert.equal(s.accuracy, 2 / 3);
+  assert.equal(s.attempted, 0.75);
+  assert.equal(summarize(recs, m, "latest").right, 1);
+});
+
+test("guessing break-even and summary", () => {
+  assert.equal(markingInfo({ pos: 1, negNum: 1, negDen: 3 }).breakEven, 0.25);
+  const g = guessSummary([rec("a", "T", { g: true, ok: true }), rec("b", "T", { g: true }), rec("c", "T", { g: true })], { pos: 1, negNum: 1, negDen: 3 });
+  assert.deepEqual(g, { n: 3, right: 1, wrong: 2, net: 0.33, acc: 1 / 3 });
+});
+
+test("average difficulty out of 9", () => {
+  assert.deepEqual(avgDifficulty(["E", "D", null]), { avg: 6, count: 2, total: 3 });
+  assert.equal(avgDifficulty([null]), null);
+});
+
+test("insights fire only with enough data", () => {
+  const counts = new Map([["T1", 50], ["T2", 40], ["T3", 10]]);
+  const m = { pos: 1, negNum: 1, negDen: 3 };
+  const few = findInsights({ records: [rec("q1", "T1")], questionCountByTopic: counts, marking: m });
+  assert.ok(!few.some((i) => i.kind === "weakest"));
+  assert.equal(few.find((i) => i.kind === "untouched").topicId, "T2");
+  const recs = [];
+  for (let i = 0; i < 6; i++) recs.push(rec(`w${i}`, "T1", { ok: i === 0 }));
+  for (let i = 0; i < 12; i++) recs.push(rec(`g${i}`, "T2", { g: true, ok: i < 2, s: "Phys" }));
+  const all = findInsights({ records: recs, questionCountByTopic: counts, marking: m });
+  assert.equal(all[0].kind, "weakest");
+  assert.equal(all[0].topicId, "T1");
+  const guess = all.find((i) => i.kind === "guessing");
+  assert.equal(guess.subjectId, "Phys");
+  assert.ok(guess.net < 0);
+  const day = 86400000; const now = 40 * day;
+  const trendRecs = [];
+  for (let i = 0; i < 8; i++) trendRecs.push(rec(`p${i}`, "T3", { ok: i < 3, at: now - 20 * day }));
+  for (let i = 0; i < 8; i++) trendRecs.push(rec(`r${i}`, "T3", { ok: i < 7, at: now - 2 * day }));
+  const tr = findInsights({ records: trendRecs, questionCountByTopic: counts, marking: m, now });
+  assert.ok(tr.some((i) => i.kind === "improving" && i.topicId === "T3"));
+});
+
+test("trend has one point per test", () => {
+  const atts = [{ id: "b", submittedAt: 2, answers: [rec("x", "T", { ok: true })] }, { id: "a", submittedAt: 1, answers: [rec("y", "T"), rec("z", "T", { ok: true })] }];
+  assert.deepEqual(testTrend(atts).map((p) => [p.id, p.value]), [["a", 0.5], ["b", 1]]);
+});

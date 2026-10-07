@@ -15,8 +15,9 @@ file you choose.
 | 1 | Data layer, import from PSC Exam Vault (checked + verified), backup/restore, undo, read-only Library | Done |
 | 2 | Library editing, notes, search, banks, add paper / answer key / explanations | Done |
 | 3 | Tests (all sources, timer, both layouts, guesses, resume), results, test history, syllabus marking | Done |
-| 4 | Progress insights | Next |
-| 5–9 | Habits, AI, PDFs, Malayalam names, polish | Planned |
+| 4 | Progress: per-100 score, insights, where marks go, subject → topic drill-down, detailed tables, PYQ/AI, counting basis, start fresh | Done |
+| 5 | Today and habits | Next |
+| 6–9 | AI, PDFs, Malayalam names, polish | Planned |
 
 The full plan is in [`docs/redesign-brief.md`](docs/redesign-brief.md).
 

@@ -33,7 +33,7 @@ export const resultScreen = {
   parent: "progress",
   render(container, { id, fresh }) {
     const a = store.byId("attempts", id);
-    if (!a || a.status === "in_progress") return go("progress");
+    if (!a || a.status === "in_progress") return go("history");
     const c = a.counts;
     const recs = a.answers.map((r) => ({ r, q: store.question(r.questionId) })).filter((x) => x.q);
     const missing = a.answers.length - recs.length;
@@ -105,7 +105,7 @@ export const resultScreen = {
     bindCardActions(container, { view });
 
     onAction(container, {
-      back: () => go("progress", { view: "history" }),
+      back: () => go("history"),
       filter: (el) => { filterBy.set(id, el.dataset.f); forgetPlace(`result:${id}`); go("result", { id }); },
       sort: () => runFlow(async () => {
         const s = await chooseAction({ title: t("sort.title"), items: ["test", "slow", "fast", "hard"].map((x) => ({ id: x, label: t(`results.sort.${x}`), current: x === sort })) });
@@ -124,7 +124,7 @@ export const resultScreen = {
           if (!ok) return;
           const removed = await store.quietly(() => tests.deleteAttempt(a));
           toast(t("results.deleted"), { actionLabel: t("common.undo"), onAction: () => tests.restoreAttempt(removed), duration: 8000 });
-          go("progress", { view: "history" });
+          go("history");
         }
       })
     });

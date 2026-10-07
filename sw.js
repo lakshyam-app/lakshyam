@@ -4,7 +4,7 @@
      (Other apps on the same site keep their caches.)
    - A new version waits until the user taps "Refresh" in the app. */
 
-const VERSION = "0.4.0";
+const VERSION = "0.5.0";
 const PREFIX = "lakshyam-";
 const SHELL_CACHE = `${PREFIX}shell-${VERSION}`;
 
@@ -16,6 +16,7 @@ const SHELL_FILES = [
   "./icons/icon-512.png",
   "./icons/icon.svg",
   "./icons/maskable-512.png",
+  "./src/core/charts.js",
   "./src/core/clipboard.js",
   "./src/core/dialogs.js",
   "./src/core/dom.js",
@@ -56,7 +57,10 @@ const SHELL_FILES = [
   "./src/features/library/topic-picker.js",
   "./src/features/notes/note-editor.js",
   "./src/features/notes/notes.js",
+  "./src/features/progress/data.js",
+  "./src/features/progress/drill.js",
   "./src/features/progress/progress.js",
+  "./src/features/progress/tables.js",
   "./src/features/question/card.js",
   "./src/features/question/copy.js",
   "./src/features/question/exam-filter.js",
