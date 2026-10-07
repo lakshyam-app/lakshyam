@@ -61,7 +61,8 @@ Settings (⚙) has a search box and eight groups: Study goals & Today · Theme &
 Progress & stats · Syllabuses & marking · AI · Backup & data · About & updates. Search finds a setting in English
 or Malayalam and opens it highlighted.
 
-Theme: Phone setting (follows the phone's light / dark mode), Light or Dark. App language: English / മലയാളം;
+Theme: Phone setting (follows the phone's light / dark mode), Light, Dark or Paper (a warm page with dark text,
+like a printed question paper). App language: English / മലയാളം;
 subject/topic names in English, Malayalam or both.
 
 ---
@@ -142,3 +143,4 @@ and [`docs/feature-check.md`](docs/feature-check.md) for where every old-app fea
 | 8+ | Timetable, countdown, study diary, Smart insights, app in Malayalam and more |
 | 9 | Accessibility, speed check, AI instructions in the app, sample paper, CI, feature check (1.0.0) |
 | 1.1 | Theme choice, clearer question cards (especially dark), Settings in groups with search |
+| 1.2 | Paper theme |

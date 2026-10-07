@@ -152,7 +152,8 @@ const PAGES = {
     const theme = store.setting("theme", "system");
     return html`<div class="group" data-set="theme">
         <h3>${t("setx.theme")}</h3>
-        ${seg(THEMES.map((v) => ({ action: "theme", v, on: theme === v, label: t(`setx.themes.${v}`) })))}
+        <div class="theme-pick" role="group" aria-label="${t("setx.theme")}">${THEMES.map((v) => html`<button type="button" class="${theme === v ? "on" : ""}" data-action="theme" data-v="${v}" aria-pressed="${String(theme === v)}">
+          <span class="tp-swatch tp-${v}" aria-hidden="true"><i></i><i></i></span><span class="tp-name">${t(`setx.themes.${v}`)}</span></button>`)}</div>
         <p class="hint">${t("setx.themeHint")}</p>
       </div>
       <div class="group" data-set="appLang">

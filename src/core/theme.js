@@ -1,7 +1,7 @@
-/* Theme choice: "system" (follow the phone), "light" or "dark".
+/* Theme choice: "system" (follow the phone), "light", "dark" or "paper" (warm, like a printed question paper).
    Stored as the device setting "theme" (kept on restore, like the app language);
    theme-boot.js does the switching and keeps the copy used for the first paint. */
-export const THEMES = ["system", "light", "dark"];
+export const THEMES = ["system", "light", "dark", "paper"];
 
 export function applyTheme(choice) {
   const c = THEMES.includes(choice) ? choice : "system";
