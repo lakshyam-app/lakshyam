@@ -12,6 +12,7 @@ import { richText, letterFor } from "../../domain/text.js";
 import { isGradable } from "../../domain/testing.js";
 import { answerRecords, pickByBasis, accuracyBy, guessSummary, markingInfo, isAnswered, isTimed, weakTopics } from "../../domain/stats.js";
 import * as store from "../../data/store.js";
+import { label as nameLabel } from "../../core/names.js";
 import * as mut from "../../data/mutations.js";
 import * as presets from "../../ai/presets.js";
 import { ask, parseJsonLoose } from "../../ai/client.js";
@@ -52,9 +53,9 @@ export async function aiHelp(q, { selected } = {}) {
         toast(t("ai.savedExplanation"));
         return true;
       } },
-      topic ? { id: "note", label: t("ai.addToNote", { topic: topic.name }), run: async (text) => {
+      topic ? { id: "note", label: t("ai.addToNote", { topic: nameLabel(topic) }), run: async (text) => {
         await mut.appendNote({ type: "topic", id: topic.id }, topic.name, `🤖 ${q.text.slice(0, 80)}\n${text}`);
-        toast(t("ai.addedToNote", { topic: topic.name }));
+        toast(t("ai.addedToNote", { topic: nameLabel(topic) }));
         return true;
       } } : null
     ].filter(Boolean)
@@ -70,7 +71,7 @@ export async function generateQuestions(topic, seedQs = null) {
   const s = { n: 8, lang: subject?.name === "Malayalam" ? "ml" : "en", difficulty: "mixed" };
   const pills = (key, values, label) => html`<div class="chip-wrap">${values.map((v) => html`<button type="button" class="pill ${s[key] === v ? "on" : ""}" data-action="set" data-k="${key}" data-v="${v}">${label(v)}</button>`)}</div>`;
   const draw = () => openSheet(html`<h2>${t("ai.genTitle")}</h2>
-    <p class="hint">${subject?.name || ""} · ${topic.name}${seedQs?.length === 1 ? ` · ${t("ai.genSimilar")}` : ""}</p>
+    <p class="hint">${nameLabel(subject)} · ${nameLabel(topic)}${seedQs?.length === 1 ? ` · ${t("ai.genSimilar")}` : ""}</p>
     <h3>${t("ai.genCount")}</h3>${pills("n", [5, 8, 10, 15], (v) => v)}
     <h3>${t("ai.genLang")}</h3>${pills("lang", ["en", "ml"], (v) => t(`ai.langs.${v}`))}
     <h3>${t("ai.genDiff")}</h3>${pills("difficulty", ["mixed", "E", "M", "D"], (v) => (v === "mixed" ? t("ai.mixed") : t(`question.difficulty.${v}`)))}

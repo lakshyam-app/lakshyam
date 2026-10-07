@@ -5,6 +5,7 @@ import { t } from "../../core/i18n.js";
 import { openSheet, isSheetOpen } from "../../core/sheet.js";
 import { askText } from "../../core/dialogs.js";
 import * as store from "../../data/store.js";
+import { nameHtml, nameMatches, label as nameLabel } from "../../core/names.js";
 import * as mut from "../../data/mutations.js";
 
 const lower = (s) => String(s || "").toLowerCase();
@@ -33,9 +34,9 @@ export function pickTopic({ title, current = null }) {
       }, { label: title, onClose: () => finish(null) });
       const draw = () => {
         const term = lower(q);
-        body.querySelector("#pkRows").innerHTML = html`${subjects().filter((s) => !term || lower(s.name).includes(term)).map((s) => html`
+        body.querySelector("#pkRows").innerHTML = html`${subjects().filter((s) => nameMatches(s, term)).map((s) => html`
           <button type="button" class="menu-item ${s.id === current?.subjectId ? "is-current" : ""}" data-action="subject" data-id="${s.id}">
-            <span class="row-main"><span>${s.name}</span></span><span class="row-count">${store.topicsOf(s.id).length}</span>
+            <span class="row-main"><span>${nameHtml(s)}</span></span><span class="row-count">${store.topicsOf(s.id).length}</span>
           </button>`)}`;
       };
       body.querySelector("#pkSearch").addEventListener("input", (e) => { q = e.target.value; draw(); });
@@ -47,7 +48,7 @@ export function pickTopic({ title, current = null }) {
       let tq = "";
       const body = openSheet(html`<button type="button" class="back" data-action="back">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>${t("picker.subjects")}</span></button>
-        <h2>${subject.name}</h2>
+        <h2>${nameLabel(subject)}</h2>
         <p class="hint">${t("picker.pickTopic")}</p>
         <input type="search" class="search" id="pkSearch" placeholder="${t("common.searchPlaceholder")}" autocomplete="off">
         <div class="menu" id="pkRows"></div>
@@ -55,7 +56,7 @@ export function pickTopic({ title, current = null }) {
         back: subjectStep,
         topic: (el) => finish({ subjectId, topicId: el.dataset.id }),
         "new-topic": async () => {
-          const name = await askText({ title: t("picker.newTopic"), hint: subject.name, placeholder: t("picker.topicName"), confirmLabel: t("common.add") });
+          const name = await askText({ title: t("picker.newTopic"), hint: nameLabel(subject), placeholder: t("picker.topicName"), confirmLabel: t("common.add") });
           if (!name) return isSheetOpen() ? topicStep(subjectId) : finish(null);
           const topic = await store.quietly(() => mut.addTopic(subjectId, name));
           finish({ subjectId, topicId: topic.id });
@@ -63,9 +64,9 @@ export function pickTopic({ title, current = null }) {
       }, { label: title, onClose: () => finish(null) });
       const draw = () => {
         const term = lower(tq);
-        body.querySelector("#pkRows").innerHTML = html`${store.topicsOf(subjectId).filter((x) => !term || lower(x.name).includes(term)).map((x) => html`
+        body.querySelector("#pkRows").innerHTML = html`${store.topicsOf(subjectId).filter((x) => nameMatches(x, term)).map((x) => html`
           <button type="button" class="menu-item ${x.id === current?.topicId ? "is-current" : ""}" data-action="topic" data-id="${x.id}">
-            <span class="row-main"><span>${x.name}</span></span>${x.id === current?.topicId ? html`<span class="tick">✓</span>` : ""}
+            <span class="row-main"><span>${nameHtml(x)}</span></span>${x.id === current?.topicId ? html`<span class="tick">✓</span>` : ""}
           </button>`)}`;
       };
       body.querySelector("#pkSearch").addEventListener("input", (e) => { tq = e.target.value; draw(); });

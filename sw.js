@@ -4,7 +4,7 @@
      (Other apps on the same site keep their caches.)
    - A new version waits until the user taps "Refresh" in the app. */
 
-const VERSION = "0.8.0";
+const VERSION = "0.9.0";
 const PREFIX = "lakshyam-";
 const SHELL_CACHE = `${PREFIX}shell-${VERSION}`;
 // The PDF reader is large (about 1.4 MB), so it is not downloaded with the app.
@@ -36,6 +36,7 @@ const SHELL_FILES = [
   "./src/core/icons.js",
   "./src/core/longpress.js",
   "./src/core/math.js",
+  "./src/core/names.js",
   "./src/core/router.js",
   "./src/core/sheet.js",
   "./src/core/storage-health.js",
@@ -46,6 +47,7 @@ const SHELL_FILES = [
   "./src/data/db.js",
   "./src/data/ids.js",
   "./src/data/import-legacy.js",
+  "./src/data/ml-names.js",
   "./src/data/mutations.js",
   "./src/data/paper-json.js",
   "./src/data/schema.js",
@@ -83,6 +85,7 @@ const SHELL_FILES = [
   "./src/features/question/list.js",
   "./src/features/question/pager.js",
   "./src/features/search/search.js",
+  "./src/features/settings/names.js",
   "./src/features/settings/settings.js",
   "./src/features/settings/syllabi.js",
   "./src/features/test/results.js",
@@ -118,7 +121,8 @@ const SHELL_FILES = [
   "./vendor/katex/fonts/KaTeX_Size2-Regular.woff2",
   "./vendor/katex/fonts/KaTeX_Size3-Regular.woff2",
   "./vendor/katex/fonts/KaTeX_Size4-Regular.woff2",
-  "./vendor/katex/fonts/KaTeX_Typewriter-Regular.woff2"
+  "./vendor/katex/fonts/KaTeX_Typewriter-Regular.woff2",
+  "./content/taxonomy-ml.json"
 ];
 
 self.addEventListener("install", (event) => {

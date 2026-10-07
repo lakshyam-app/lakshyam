@@ -11,6 +11,7 @@ import { chooseAction, runFlow } from "../../core/dialogs.js";
 import { toast } from "../../core/toast.js";
 import { go } from "../../core/router.js";
 import * as store from "../../data/store.js";
+import { nameHtml, label as nameLabel } from "../../core/names.js";
 import * as mut from "../../data/mutations.js";
 import * as tests from "../../data/tests.js";
 import { isGradable, pickQuestions, sampleRandom, shuffle, suggestedMinutes, distributeProportionally, clock } from "../../domain/testing.js";
@@ -224,7 +225,7 @@ function startSheet(preset) {
     if (s.what === "weak") {
       const topics = weakPlan();
       return html`<p class="hint">${t("start.hint.weak", { n: topics.length })}</p>
-        <p class="examples">${topics.map((w) => `${w.topic.name} (${store.subject(w.topic.subjectId)?.name || ""})`).join(" · ")}</p>`;
+        <p class="examples">${topics.map((w) => `${nameLabel(w.topic)} (${nameLabel(store.subject(w.topic.subjectId))})`).join(" · ")}</p>`;
     }
     if (s.what === "wrong") return html`<p class="hint">${size ? t("start.hint.wrong") : t("start.hint.wrongNone")}</p>`;
     if (s.what === "flagged") return html`<p class="hint">${size ? t("start.hint.flagged") : t("start.hint.flaggedNone")}</p>`;
@@ -239,7 +240,7 @@ function startSheet(preset) {
         <button type="button" class="pill ${s.mockExams ? "on" : ""}" data-action="mock-exams">${s.mockExams ? t("exams.some", { n: s.mockExams.size, of: store.papersOf(syllabus.id).length }) : t("exams.all", { n: store.papersOf(syllabus.id).length })} ▾</button>
         <p class="hint">${t("start.perSubject", { n: total })}${s.mockCounts ? html` · <button type="button" class="link inline" data-action="mock-auto">${t("start.autoSplit")}</button>` : ""}</p>
         <div class="subject-counts">${subs.map((x) => html`<div class="sc-row">
-          <span class="row-main"><span>${x.subject.name}</span><span class="row-sub">${t("start.available", { n: x.qs.length })}</span></span>
+          <span class="row-main"><span>${nameHtml(x.subject)}</span><span class="row-sub">${t("start.available", { n: x.qs.length })}</span></span>
           <button type="button" class="icon-sm" data-action="mock-step" data-id="${x.id}" data-d="-1" aria-label="−">−</button>
           <span class="sc-n">${Math.min(counts[x.id] || 0, x.qs.length)}</span>
           <button type="button" class="icon-sm" data-action="mock-step" data-id="${x.id}" data-d="1" aria-label="+">+</button>

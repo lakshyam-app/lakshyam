@@ -734,3 +734,19 @@ details.source summary { color: var(--brand); font-size: 0.875rem; cursor: point
 details.source .quote { white-space: pre-wrap; border-left: 3px solid var(--line); padding: 4px 10px; margin: 4px 0; color: var(--muted); font-size: 0.9375rem; }
 .job-row .row-title { font-size: 0.9375rem; }
 .row[disabled] { opacity: 0.5; }
+
+/* ---------- Phase 8: Malayalam names ---------- */
+[lang="ml"] { line-height: 1.6; }
+.nm2 { display: inline-flex; flex-direction: column; min-width: 0; max-width: 100%; vertical-align: top; }
+.nm2 .nm-en, .nm2 .nm-ml { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nm2 .nm-ml { font-size: 0.85em; font-weight: 400; color: var(--muted); }
+h1 .nm2 .nm-ml, h2 .nm2 .nm-ml { font-size: 0.7em; margin-top: 2px; }
+h1 .nm2 .nm-en, h2 .nm2 .nm-en { white-space: normal; }
+h1 .nm2 .nm-ml, h2 .nm2 .nm-ml { white-space: normal; }
+.name-missing { color: var(--muted); }
+.row-title .nm2 { display: inline-flex; }
+.name-list { margin: 6px 0 0 18px; padding: 0; font-size: 0.9375rem; }
+.name-list li { margin: 2px 0; }
+table.report { width: 100%; border-collapse: collapse; margin: 8px 0; }
+table.report th { text-align: left; font-weight: 400; color: var(--muted); padding: 4px 0; }
+table.report td { text-align: right; font-weight: 600; padding: 4px 0; }

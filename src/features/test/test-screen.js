@@ -14,6 +14,7 @@ import { runFlow, chooseAction, confirmAction } from "../../core/dialogs.js";
 import { richText, letterFor } from "../../domain/text.js";
 import { clock } from "../../domain/testing.js";
 import * as store from "../../data/store.js";
+import { label as nameLabel } from "../../core/names.js";
 import * as mut from "../../data/mutations.js";
 import * as tests from "../../data/tests.js";
 import { mountCards, setPlace } from "../question/pager.js";
@@ -30,7 +31,7 @@ function testCard(q, i, run) {
   const sel = run.answers[q.id];
   const guessed = Boolean(run.guesses[q.id]);
   const flagged = Boolean(store.questionState(q.id)?.flagged);
-  const where = [paper?.name, store.subject(q.subjectId)?.name, store.topic(q.topicId)?.name].filter(Boolean).join(" · ");
+  const where = [paper?.name, nameLabel(store.subject(q.subjectId)), nameLabel(store.topic(q.topicId))].filter(Boolean).join(" · ");
   return html`<article class="qcard tcard ${sel !== undefined ? "is-answered" : ""}" data-qid="${q.id}" data-i="${i}" lang="${q.lang === "ml" ? "ml" : "en"}">
     <header class="qcard-meta"><span class="qcard-where"><strong>${t("test.qOf", { n: i + 1, of: run.questionIds.length })}</strong>${q.number ? ` · ${t("question.paperNumber", { n: q.number })}` : ""}<br>${where}</span>
       <span class="qcard-badges"><button type="button" class="icon-sm ${flagged ? "on" : ""}" data-action="flag" aria-pressed="${String(flagged)}" aria-label="${t("question.flag")}">${star(flagged)}</button></span>

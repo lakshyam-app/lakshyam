@@ -19,8 +19,8 @@ file you choose.
 | 5 | Today: what to study next with Quick 10, daily goal, streak on local dates, due reviews, backup reminder | Done |
 | 6 | AI: presets with fallback, explain / my mistake / memory trick / revision note, practice questions (reviewed, kept apart), study plan, tricks, guess coach, flashcards with spaced review | Done |
 | 7 | Study PDFs: PDF library per topic/subject, page text with AI reading of scanned pages, page editor, style guide from your PYQs, grounded questions / flashcards / revision notes with code-checked source quotes | Done |
-| 8 | Malayalam names | Next |
-| 9 | Polish, docs | Planned |
+| 8 | Malayalam names: English · മലയാളം · Both, names from the Kerala PSC syllabus (checked / for review), name editor, import / export names file, search in both | Done |
+| 9 | Polish, docs | Next |
 
 The full plan is in [`docs/redesign-brief.md`](docs/redesign-brief.md).
 
@@ -44,7 +44,7 @@ src/pdf/                                   Study PDFs: text tools, storage, read
 tests/                                     automatic checks (run with: node --test tests/*.test.mjs)
 src/strings/en.js                          all interface text (translations go here later)
 src/features/<name>/                       one folder per screen
-content/taxonomy-ml.json                   Malayalam subject/topic names (used in Phase 8)
+content/taxonomy-ml.json                   Malayalam subject/topic names from the KPSC syllabus (Settings → Display)
 docs/                                      plan and documentation
 ```
 

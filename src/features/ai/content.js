@@ -13,6 +13,7 @@ import { richText } from "../../domain/text.js";
 import { shuffle } from "../../domain/testing.js";
 import { know, again, isDue } from "../../domain/cards.js";
 import * as store from "../../data/store.js";
+import { nameHtml, label as nameLabel } from "../../core/names.js";
 import * as mut from "../../data/mutations.js";
 import { mountQuestions, visibleQuestions } from "../question/list.js";
 import { copyQuestions } from "../question/copy.js";
@@ -170,7 +171,7 @@ export const aiHubScreen = {
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>${t("library.views.banks")}</span></button></div>
       <h1>${isCards ? t("ai.hubCards") : t("ai.hubAi")}</h1><p class="hint">${isCards ? t("ai.cardsN", { n: items.length }) : t("common.questions", { n: items.length })} · ${t("ai.separateNote")}</p></header>
       <div class="rows">${rows.map((r) => html`<button type="button" class="row" data-action="open" data-id="${r.topic.id}">
-        <span class="row-main"><span class="row-title">${r.topic.name}</span><span class="row-sub">${store.subject(r.topic.subjectId)?.name || ""}</span></span>
+        <span class="row-main"><span class="row-title">${nameHtml(r.topic)}</span><span class="row-sub">${nameLabel(store.subject(r.topic.subjectId))}</span></span>
         <span class="row-count">${r.n}</span><span class="chev-txt">›</span></button>`)}</div>
       ${rows.length ? "" : html`<p class="hint pad">${isCards ? t("ai.noCards") : t("ai.noAi")}</p>`}`;
     onAction(container, {

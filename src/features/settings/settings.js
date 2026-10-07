@@ -13,6 +13,8 @@ import { startImport } from "../import/import-flow.js";
 import { syllabiBlock, addSyllabusFlow, editSyllabusFlow } from "./syllabi.js";
 import { runFlow, askText } from "../../core/dialogs.js";
 import { aiBlock, openAiSettings } from "../ai/ai-settings.js";
+import { namesBlock, namesHandlers } from "./names.js";
+import { can } from "../../core/entitlements.js";
 
 const when = (ms) => new Date(ms).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 
@@ -133,9 +135,10 @@ export const settingsScreen = {
           <h2>${t("settings.sectionStorage")}</h2>
           <div id="storageBlock"></div>
         </div>
-        <div class="group">
+        <div class="group" id="sec-display">
           <h2>${t("settings.sectionDisplay")}</h2>
           <p>${t("settings.theme")}</p>
+          ${can("malayalamNames") ? namesBlock() : ""}
           <label class="switch-row"><input type="checkbox" id="diffToggle" ${store.setting("difficultyEnabled", true) !== false ? "checked" : ""}>
             <span>${t("settings.difficulty")}<span class="row-sub">${t("settings.difficultyHint")}</span></span></label>
         </div>
@@ -167,6 +170,7 @@ export const settingsScreen = {
     onAction(container, {
       import: startImport,
       undo: openUndo,
+      ...namesHandlers,
       "ai-settings": () => openAiSettings(),
       goal: (el) => store.setSetting("dailyGoal", Number(el.dataset.n)),
       "goal-custom": () => runFlow(async () => {

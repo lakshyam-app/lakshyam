@@ -494,3 +494,23 @@ export async function deleteCards(cardIds) {
   await store.apply({ flashcards: { delete: cards.map((c) => c.id) }, flashcardState: { delete: states.map((s) => s.id) } });
   return { flashcards: cards, flashcardState: states };
 }
+
+/* ---------- Malayalam names ---------- */
+
+/** Sets (or clears, with "") one subject/topic's Malayalam name. kind: "subjects" | "topics". */
+export function setMlName(kind, rec, nameMl, status = "review") {
+  const v = String(nameMl || "").trim();
+  const next = copy(rec, v ? { nameMl: v, nameMlStatus: status } : {});
+  if (!v) { delete next.nameMl; delete next.nameMlStatus; }
+  return store.apply({ [kind]: { put: [next] } });
+}
+
+/** Saves many names at once (bulk import). Returns the old records, for Undo. */
+export async function saveNames({ subjects = [], topics = [] }) {
+  const before = {
+    subjects: subjects.map((r) => store.subject(r.id)).filter(Boolean).map((r) => copy(r)),
+    topics: topics.map((r) => store.topic(r.id)).filter(Boolean).map((r) => copy(r))
+  };
+  await store.apply({ subjects: { put: subjects.map((r) => copy(r)) }, topics: { put: topics.map((r) => copy(r)) } });
+  return before;
+}

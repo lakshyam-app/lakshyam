@@ -23,6 +23,7 @@ import { wrongTricks } from "../ai/ai-actions.js";
 import { pickTopic } from "./topic-picker.js";
 import { header, backHandler, chev } from "./library.js";
 import { can } from "../../core/entitlements.js";
+import { label as nameLabel, pathLabel } from "../../core/names.js";
 
 export const AUTO = { flagged: "auto:flagged", wrong: "auto:wrong" };
 
@@ -177,8 +178,8 @@ export const bankAddScreen = {
 
     container.innerHTML = html`${header({ backTo: "bank", backParams: { id }, backLabel: bank.name, title: t("pool.title") })}
       <div class="filters">
-        ${select("subjectId", pool.subjectId, subjects.map((x) => ({ id: x.subject.id, name: `${x.subject.name} (${x.count})` })), t("pool.allSubjects"))}
-        ${pool.subjectId ? select("topicId", pool.topicId, topics.map((x) => ({ id: x.topic.id, name: `${x.topic.name} (${x.count})` })), t("pool.allTopics")) : ""}
+        ${select("subjectId", pool.subjectId, subjects.map((x) => ({ id: x.subject.id, name: `${nameLabel(x.subject)} (${x.count})` })), t("pool.allSubjects"))}
+        ${pool.subjectId ? select("topicId", pool.topicId, topics.map((x) => ({ id: x.topic.id, name: `${nameLabel(x.topic)} (${x.count})` })), t("pool.allTopics")) : ""}
         ${select("paperId", pool.paperId, papers.map((p) => ({ id: p.id, name: p.name })), t("pool.allPapers"))}
         <input type="search" class="search" id="poolSearch" placeholder="${t("pool.search")}" value="${pool.term}" autocomplete="off">
       </div>
@@ -257,7 +258,7 @@ export const bankAddScreen = {
 export function previewQuestion(q, { actions = "" , handlers = {} } = {}) {
   if (!q) return;
   const body = openSheet(html`${questionCard(q, { showPaper: true, mode: "study" })}
-    <p class="hint">${[store.subject(q.subjectId)?.name, store.topic(q.topicId)?.name].filter(Boolean).join(" › ")}</p>
+    <p class="hint">${pathLabel(q.topicId) || nameLabel(store.subject(q.subjectId))}</p>
     ${actions}`, handlers, { label: t("question.preview") });
   body.querySelectorAll(".qcard-badges").forEach((el) => el.remove()); // no editing from a preview
   typesetMath(body);
@@ -292,7 +293,7 @@ function typeQuestionFlow(bank) {
         <textarea class="field" id="tqExplain" rows="3">${form.explanation}</textarea>
         <button type="button" class="row" data-action="topic">
           <span class="row-main"><span class="row-title">${t("typeQ.topic")}</span>
-          <span class="row-sub">${topic ? `${store.subject(topic.subjectId)?.name} › ${topic.name}` : t("typeQ.pickTopic")}</span></span>${chev}</button>
+          <span class="row-sub">${topic ? pathLabel(topic) : t("typeQ.pickTopic")}</span></span>${chev}</button>
         <label class="switch-row"><input type="checkbox" id="tqPool" ${form.toPool ? "checked" : ""}>
           <span>${t("typeQ.toPool", { syllabus: syllabus.name })}</span></label>
         <div class="sheet-actions">

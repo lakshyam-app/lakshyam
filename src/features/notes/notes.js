@@ -44,7 +44,7 @@ export const notesScreen = {
       open: (el) => { const target = noteTarget(store.byId("notes", el.dataset.id)); go(target.to, target.params); },
       edit: (el) => {
         const n = store.byId("notes", el.dataset.id);
-        editNote(n.target.type, n.target.id, noteTarget(n)?.name || n.label || "");
+        editNote(n.target.type, n.target.id, n.label || noteTarget(n)?.name || "");
       }
     });
   }

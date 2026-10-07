@@ -6,6 +6,7 @@ import { go } from "../../core/router.js";
 import { formatDuration } from "../../domain/testing.js";
 import { pickByBasis, isTimed, isAnswered, guessSummary, markingInfo, avgDifficulty } from "../../domain/stats.js";
 import * as store from "../../data/store.js";
+import { label as nameLabel } from "../../core/names.js";
 import { difficultyOf } from "../question/card.js";
 import { statsContext } from "./data.js";
 import { guessCoach } from "../ai/ai-actions.js";
@@ -14,8 +15,8 @@ const TABS = ["time", "difficulty", "level", "guess"];
 const LV = ["E", "M", "D"];
 const guessView = { scope: "subject", sort: "net-asc" };
 const pct = (a, b) => (b ? `${Math.round((100 * a) / b)}%` : "—");
-const subName = (id) => store.subject(id)?.name || "—";
-const topicLabel = (id) => { const x = store.topic(id); return x ? `${x.name} · ${subName(x.subjectId)}` : "—"; };
+const subName = (id) => nameLabel(store.subject(id)) || "—";
+const topicLabel = (id) => { const x = store.topic(id); return x ? `${nameLabel(x)} · ${subName(x.subjectId)}` : "—"; };
 
 function groupBy(list, key) {
   const m = new Map();

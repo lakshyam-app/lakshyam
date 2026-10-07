@@ -10,6 +10,7 @@ import { letterFor } from "../../domain/text.js";
 import { formatDuration } from "../../domain/testing.js";
 import { pickByBasis, guessSummary, isTimed, isAnswered } from "../../domain/stats.js";
 import * as store from "../../data/store.js";
+import { nameHtml, label as nameLabel } from "../../core/names.js";
 import { questionCard } from "../question/card.js";
 import { labelFor, labelDot } from "../library/topic-actions.js";
 import { statsContext } from "./data.js";
@@ -33,7 +34,7 @@ function topicSub(ctx, r, { withSubject = false } = {}) {
   const n = testsFor(ctx.syllabus.id, "topic", r.id).length;
   const extra = [st?.studiedCount ? t("library.studied", { n: st.studiedCount }) : null, n ? t("common.tests", { n }) : null];
   const sub = rowSub(r, extra);
-  return withSubject ? `${store.subject(store.topic(r.id)?.subjectId)?.name || ""} · ${sub}` : sub;
+  return withSubject ? `${nameLabel(store.subject(store.topic(r.id)?.subjectId))} · ${sub}` : sub;
 }
 
 /* ---------- subject ---------- */
@@ -49,13 +50,13 @@ export const statsSubjectScreen = {
     const topicIds = [...ctx.countByTopic.keys()];
     const rows = accuracyRows(ctx, ctx.records, { by: "topicId", ids: topicIds, sort: sorts.subject });
     container.innerHTML = html`<header class="screen-head">${back("progress", t("tabs.progress"))}
-      <h1>${subject.name}</h1><p class="hint">${t("common.topics", { n: topicIds.length })} · ${t("stats.inPapers", { n: ctx.questions.length })}</p></header>
+      <h1>${nameHtml(subject)}</h1><p class="hint">${t("common.topics", { n: topicIds.length })} · ${t("stats.inPapers", { n: ctx.questions.length })}</p></header>
       ${howBlock(ctx, ctx.records, { trendKeep: (r) => r.subjectId === id })}
       ${insightsBlock(ctx, ctx.records, { scope: { subjectId: id } })}
       ${marksBlock(ctx, ctx.records)}
       <div class="section-row"><h2 class="section-title">${t("stats.topics")}</h2>
         <button type="button" class="pill" data-action="sort">${t(`stats.sort.${sorts.subject}`)} ▾</button></div>
-      <div class="rows">${rows.map((r) => accRow(r, { title: html`${labelDot(labelFor(syllabus.id, r.id))}${store.topic(r.id)?.name || ""}`, sub: topicSub(ctx, r), action: "topic" }))}</div>
+      <div class="rows">${rows.map((r) => accRow(r, { title: html`${labelDot(labelFor(syllabus.id, r.id))}${nameHtml(store.topic(r.id))}`, sub: topicSub(ctx, r), action: "topic" }))}</div>
       <div class="rows links"><button type="button" class="row" data-action="library"><span class="row-main"><span class="row-title">${t("stats.openInLibrary")}</span></span><span class="chev-txt">›</span></button></div>`;
     onAction(container, {
       ...backHandler, ...insightHandlers,
@@ -99,8 +100,8 @@ export const statsTopicScreen = {
     const st = store.topicStateFor(syllabus.id, id);
     const nTests = testsFor(syllabus.id, "topic", id);
 
-    container.innerHTML = html`<header class="screen-head">${back("stats-subject", subject?.name || t("tabs.progress"), { id: topic.subjectId })}
-      <h1>${labelDot(labelFor(syllabus.id, id))}${topic.name}</h1>
+    container.innerHTML = html`<header class="screen-head">${back("stats-subject", nameLabel(subject) || t("tabs.progress"), { id: topic.subjectId })}
+      <h1>${labelDot(labelFor(syllabus.id, id))}${nameHtml(topic)}</h1>
       <p class="hint">${[t("stats.inPapers", { n: ctx.questions.length }), st?.studiedCount ? t("library.studied", { n: st.studiedCount }) : null, nTests.length ? t("common.tests", { n: nTests.length }) : null].filter(Boolean).join(" · ")}</p></header>
       <div class="actions-row">
         <button type="button" class="btn" data-action="practise">▶ ${t("practice.button")}</button>
@@ -151,7 +152,7 @@ export const statsTopicsScreen = {
     container.innerHTML = html`<header class="screen-head">${back("progress", t("tabs.progress"))}
       <h1>${t("stats.allTopics")}</h1><p class="hint">${t("common.topics", { n: rows.length })}</p></header>
       <div class="toolbar"><button type="button" class="pill" data-action="sort">${t(`stats.sort.${sorts.all}`)} ▾</button></div>
-      <div class="rows">${rows.map((r) => accRow(r, { title: html`${labelDot(labelFor(syllabus.id, r.id))}${store.topic(r.id)?.name || ""}`, sub: topicSub(ctx, r, { withSubject: true }), action: "topic" }))}</div>`;
+      <div class="rows">${rows.map((r) => accRow(r, { title: html`${labelDot(labelFor(syllabus.id, r.id))}${nameHtml(store.topic(r.id))}`, sub: topicSub(ctx, r, { withSubject: true }), action: "topic" }))}</div>`;
     onAction(container, {
       ...backHandler,
       sort: () => sortFlow("all", ["weak", "strong", "most", "hard", "az"], () => store.touch()),

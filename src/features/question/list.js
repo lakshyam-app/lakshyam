@@ -9,6 +9,7 @@ import { runFlow, chooseAction, askText, confirmAction } from "../../core/dialog
 import { openSheet } from "../../core/sheet.js";
 import { letterFor } from "../../domain/text.js";
 import * as store from "../../data/store.js";
+import { label as nameLabel } from "../../core/names.js";
 import * as mut from "../../data/mutations.js";
 import { questionCard, difficultyOf } from "./card.js";
 import { copyQuestion } from "./copy.js";
@@ -167,7 +168,7 @@ export async function questionMenu(q, { bank, quiet, removeCard, selected }) {
   const deleted = q.status === "deleted_by_psc";
   const id = await chooseAction({
     title: q.number ? t("question.number", { n: q.number }) : t("question.question"),
-    sub: [store.subject(q.subjectId)?.name, store.topic(q.topicId)?.name].filter(Boolean).join(" › "),
+    sub: [nameLabel(store.subject(q.subjectId)), nameLabel(store.topic(q.topicId))].filter(Boolean).join(" › "),
     items: [
       can("ai") ? { id: "ai", label: Number.isInteger(selected) && selected !== q.answerIndex ? `🤖 ${t("ai.explainMistake")}` : `🤖 ${t("ai.help")}` } : null,
       { id: "flag", label: state?.flagged ? t("question.unflag") : t("question.flag") },
@@ -204,7 +205,7 @@ export async function questionMenu(q, { bank, quiet, removeCard, selected }) {
       const target = await pickTopic({ title: t("question.move"), current: { subjectId: q.subjectId, topicId: q.topicId } });
       if (!target) return;
       await quiet(() => mut.moveQuestion(q, target.subjectId, target.topicId), q.id);
-      toast(t("question.movedTo", { topic: store.topic(target.topicId)?.name || "" }));
+      toast(t("question.movedTo", { topic: nameLabel(store.topic(target.topicId)) }));
       return;
     }
     case "deleted": return quiet(() => mut.setDeletedByPsc(q, !deleted), q.id);

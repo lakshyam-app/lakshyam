@@ -14,6 +14,7 @@ import { typesetMath } from "../../core/math.js";
 import { copyText } from "../../core/clipboard.js";
 import { richText, letterFor } from "../../domain/text.js";
 import * as store from "../../data/store.js";
+import { label as nameLabel, pathLabel } from "../../core/names.js";
 import * as mut from "../../data/mutations.js";
 import * as T from "../../pdf/pdf-tools.js";
 import * as pdfStore from "../../pdf/pdf-store.js";
@@ -31,9 +32,9 @@ const jobKey = (id, kind) => `${id}|${kind}`;
 
 /* ---------- small helpers ---------- */
 
-const ownerName = (owner) => (owner?.type === "topic" ? store.topic(owner.id)?.name : owner?.type === "subject" ? store.subject(owner.id)?.name : null);
+const ownerName = (owner) => (owner?.type === "topic" ? nameLabel(store.topic(owner.id)) : owner?.type === "subject" ? nameLabel(store.subject(owner.id)) : null) || null;
 function ownerLabel(owner) {
-  if (owner?.type === "topic") { const x = store.topic(owner.id); return x ? `${store.subject(x.subjectId)?.name || ""} › ${x.name}` : t("pdf.unknownOwner"); }
+  if (owner?.type === "topic") { const x = store.topic(owner.id); return x ? pathLabel(x) : t("pdf.unknownOwner"); }
   return ownerName(owner) || t("pdf.unknownOwner");
 }
 /** Where questions/cards/notes from this PDF go by default. */
@@ -45,7 +46,9 @@ function defaultTarget(rec) {
   }
   return { subjectId: null, topicId: null };
 }
-const targetLabel = (tg) => (tg?.topicId && store.topic(tg.topicId) ? `${store.subject(store.topic(tg.topicId).subjectId)?.name || ""} › ${store.topic(tg.topicId).name}` : t("pdf.pickTopic"));
+/** English "Subject › Topic" for AI prompts. */
+const englishPath = (id) => { const x = store.topic(id); return x ? `${store.subject(x.subjectId)?.name || ""} › ${x.name}` : ""; };
+const targetLabel = (tg) => (tg?.topicId && store.topic(tg.topicId) ? pathLabel(tg.topicId) : t("pdf.pickTopic"));
 
 function summaryLine(rec) {
   const c = T.pageCounts(rec.pages);
@@ -452,7 +455,7 @@ function formView(rec, job, handlers) {
       if (examples.length < 3) { note.textContent = t("pdf.styleFew"); return; }
       el.disabled = true; note.textContent = t("pdf.styleLearning");
       try {
-        const text = await jobsApi.buildStyleGuide(targetLabel(cfg.target), examples);
+        const text = await jobsApi.buildStyleGuide(englishPath(cfg.target.topicId), examples);
         cfg.style = text; cfg.styleAt = Date.now(); cfg.styleNote = t("pdf.styleBuilt");
         await saveStyle(cfg.target, text);
       } catch (e) { cfg.styleNote = `✗ ${errorText(e)}`; }
@@ -583,7 +586,7 @@ function reviewView(rec, job, handlers) {
       if (!text || !topic) return;
       await mut.appendNote({ type: "topic", id: topic.id }, topic.name, text);
       jobs.delete(jobKey(rec.id, job.kind));
-      toast(t("pdf.noteSaved", { topic: topic.name }));
+      toast(t("pdf.noteSaved", { topic: nameLabel(topic) }));
       go("topic", { id: topic.id });
     };
     return { body: html`<p class="hint">${t("pdf.noteReview", { to: targetLabel(tg) })}${r.tot.dropped ? ` ${t("pdf.noteDropped", { n: r.tot.dropped })}` : ""}</p>

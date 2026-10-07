@@ -6,6 +6,7 @@ import { askText, runFlow } from "../../core/dialogs.js";
 import { toast } from "../../core/toast.js";
 import { ids } from "../../data/ids.js";
 import * as store from "../../data/store.js";
+import { label as nameLabel } from "../../core/names.js";
 import * as mut from "../../data/mutations.js";
 
 export const noteFor = (type, id) => store.byId("notes", ids.note(type, id)) || null;
@@ -15,8 +16,8 @@ export function noteTarget(note) {
   const { type, id } = note.target || {};
   const s = store;
   switch (type) {
-    case "topic": { const x = s.topic(id); return x ? { name: x.name, kind: t("notes.kind.topic"), sub: s.subject(x.subjectId)?.name, to: "topic", params: { id } } : null; }
-    case "subject": { const x = s.subject(id); return x ? { name: x.name, kind: t("notes.kind.subject"), to: "subject", params: { id } } : null; }
+    case "topic": { const x = s.topic(id); return x ? { name: nameLabel(x), kind: t("notes.kind.topic"), sub: nameLabel(s.subject(x.subjectId)), to: "topic", params: { id } } : null; }
+    case "subject": { const x = s.subject(id); return x ? { name: nameLabel(x), kind: t("notes.kind.subject"), to: "subject", params: { id } } : null; }
     case "paper": { const x = s.paper(id); return x ? { name: x.name, kind: t("notes.kind.paper"), sub: x.postName, to: "paper", params: { id } } : null; }
     case "bank": { const x = s.byId("sets", id); return x ? { name: x.name, kind: t("notes.kind.bank"), to: "bank", params: { id } } : null; }
     case "set": return { name: t(`banks.auto.${id === "auto:wrong" ? "wrong" : "flagged"}`), kind: t("notes.kind.bank"), to: "bank", params: { id } };

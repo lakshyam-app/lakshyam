@@ -7,6 +7,7 @@ import { t, formatNumber } from "../../core/i18n.js";
 import { go } from "../../core/router.js";
 import { onLongPress } from "../../core/longpress.js";
 import * as store from "../../data/store.js";
+import { nameHtml, label as nameLabel } from "../../core/names.js";
 import { mountQuestions, addToBankFlow, visibleQuestions } from "../question/list.js";
 import { openStartTest } from "../test/start-sheet.js";
 import { previewQuestion } from "../library/banks.js";
@@ -30,8 +31,8 @@ function search(term, scope) {
     store.papersOf(syl.id).forEach((p) => { if (has(p.name) || has(p.postName)) papers.push(p); });
   });
   return {
-    subjects: [...subjectIds].map((id) => store.subject(id)).filter((s) => s && has(s.name)),
-    topics: [...topicIds].map((id) => store.topic(id)).filter((x) => x && has(x.name)),
+    subjects: [...subjectIds].map((id) => store.subject(id)).filter((s) => s && (has(s.name) || has(s.nameMl))),
+    topics: [...topicIds].map((id) => store.topic(id)).filter((x) => x && (has(x.name) || has(x.nameMl))),
     papers, questions
   };
 }
@@ -78,15 +79,15 @@ export const searchScreen = {
       const section = (title, rows) => (rows.length ? html`<h3 class="rows-head">${title}</h3><div class="rows">${rows}</div>` : "");
       results.innerHTML = html`
         ${section(t("library.views.subjects"), r.subjects.map((s) => html`<button type="button" class="row" data-action="open" data-to="subject" data-id="${s.id}">
-          <span class="row-main"><span class="row-title">${s.name}</span></span>${chev}</button>`))}
+          <span class="row-main"><span class="row-title">${nameHtml(s)}</span></span>${chev}</button>`))}
         ${section(t("library.views.topics"), r.topics.slice(0, SHOW).map((x) => html`<button type="button" class="row" data-action="open" data-to="topic" data-id="${x.id}">
-          <span class="row-main"><span class="row-title">${x.name}</span><span class="row-sub">${store.subject(x.subjectId)?.name || ""}</span></span>${chev}</button>`))}
+          <span class="row-main"><span class="row-title">${nameHtml(x)}</span><span class="row-sub">${nameLabel(store.subject(x.subjectId))}</span></span>${chev}</button>`))}
         ${section(t("library.views.papers"), r.papers.slice(0, SHOW).map((p) => html`<button type="button" class="row" data-action="open" data-to="paper" data-id="${p.id}">
           <span class="row-main"><span class="row-title">${p.name}</span><span class="row-sub">${p.postName || ""}</span></span>${chev}</button>`))}
         ${r.questions.length ? html`<h3 class="rows-head">${t("search.questions", { n: formatNumber(r.questions.length) })}</h3>
           <div class="rows" id="qRows">${r.questions.slice(0, SHOW).map((q) => html`<button type="button" class="row" data-action="preview" data-id="${q.id}" data-lp="1">
             <span class="row-main"><span class="clamp">${q.text}</span>
-            <span class="row-sub">${[store.paper(q.paperId)?.name, store.topic(q.topicId)?.name].filter(Boolean).join(" · ")}</span></span></button>`)}</div>
+            <span class="row-sub">${[store.paper(q.paperId)?.name, nameLabel(store.topic(q.topicId))].filter(Boolean).join(" · ")}</span></span></button>`)}</div>
           <button type="button" class="btn btn-quiet more" data-action="as-list">${t("search.viewAll", { n: formatNumber(r.questions.length) })}</button>` : ""}`;
     };
     draw();

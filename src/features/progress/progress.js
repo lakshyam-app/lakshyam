@@ -11,6 +11,7 @@ import { runFlow, chooseAction, confirmAction } from "../../core/dialogs.js";
 import { toast } from "../../core/toast.js";
 import { sparkline, marksBar, accBar } from "../../core/charts.js";
 import * as store from "../../data/store.js";
+import { nameHtml, label as nameLabel } from "../../core/names.js";
 import { takeSnapshot } from "../../data/snapshots.js";
 import { summarize, findInsights, accuracyBy, pickByBasis, testTrend, avgDifficulty, markingInfo, LOW_N } from "../../domain/stats.js";
 import { formatDuration } from "../../domain/testing.js";
@@ -81,8 +82,8 @@ export function insightsBlock(ctx, records, { scope = null } = {}) {
   const catchAll = new Set([...counts.keys()].filter((id) => store.topic(id)?.isFallback));
   const list = findInsights({ records, allRecords: ctx.allRecords, questionCountByTopic: counts, marking: ctx.marking, now: ctx.now, basis: ctx.basis, catchAll });
   if (!list.length) return "";
-  const topicName = (id) => store.topic(id)?.name || "";
-  const subName = (id) => store.subject(id)?.name || "";
+  const topicName = (id) => nameLabel(store.topic(id));
+  const subName = (id) => nameLabel(store.subject(id));
   const row = (i) => {
     switch (i.kind) {
       case "weakest": return { text: t("insight.weakest", { topic: topicName(i.topicId), sub: subName(store.topic(i.topicId)?.subjectId), pct: pctText(i.pct), n: i.n }), act: "practise", id: i.topicId };
@@ -226,7 +227,7 @@ export const progressScreen = {
         ${marksBlock(ctx, ctx.records)}` : html`<p class="hint pad">${ctx.mode === "ai" ? t("stats.noAi") : t("stats.noTests")}</p>`}
       ${rows.length ? html`<div class="section-row"><h2 class="section-title">${t("stats.subjects")}</h2>
         <button type="button" class="pill" data-action="sort">${t(`stats.sort.${subjectSort}`)} ▾</button></div>
-      <div class="rows">${rows.map((r) => accRow(r, { title: store.subject(r.id)?.name || "", sub: rowSub(r), action: "subject" }))}</div>` : ""}
+      <div class="rows">${rows.map((r) => accRow(r, { title: nameHtml(store.subject(r.id)), sub: rowSub(r), action: "subject" }))}</div>` : ""}
       <div class="rows links">
         <button type="button" class="row" data-action="go" data-to="stats-topics"><span class="row-main"><span class="row-title">${t("stats.allTopics")}</span></span>${chev}</button>
         <button type="button" class="row" data-action="go" data-to="history"><span class="row-main"><span class="row-title">${t("history.title")}</span><span class="row-sub">${t("common.tests", { n: history })}</span></span>${chev}</button>

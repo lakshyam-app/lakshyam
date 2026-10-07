@@ -7,6 +7,7 @@ import { go } from "../../core/router.js";
 import { openSheet } from "../../core/sheet.js";
 import { toast } from "../../core/toast.js";
 import * as store from "../../data/store.js";
+import { nameHtml, label as nameLabel } from "../../core/names.js";
 import * as tests from "../../data/tests.js";
 import { downloadBackup } from "../../data/backup.js";
 import { startImport } from "../import/import-flow.js";
@@ -81,8 +82,8 @@ function nextCard(syllabus, cand) {
   const topic = store.topic(step.topicId);
   return html`<article class="next-card">
     <p class="kicker">${t(`next.kicker.${step.kind}`)}</p>
-    <h2>${topic.name}</h2>
-    <p class="hint">${store.subject(topic.subjectId)?.name || ""}</p>
+    <h2>${nameHtml(topic)}</h2>
+    <p class="hint">${nameLabel(store.subject(topic.subjectId))}</p>
     <p>${reasonFor(step, cand.freq)}</p>
     <div class="actions-row">
       <button type="button" class="btn" data-action="quick" data-id="${topic.id}">▶ ${t("next.quick")}</button>
@@ -99,8 +100,8 @@ function dueSheet(due) {
       const topic = store.topic(d.topicId);
       const days = daysBetween(d.nextReviewAt, Date.now());
       return html`<button type="button" class="row" data-action="topic" data-id="${d.topicId}">
-        <span class="row-main"><span class="row-title">${topic.name}</span>
-        <span class="row-sub">${store.subject(topic.subjectId)?.name || ""} · ${t("library.studied", { n: d.studiedCount })} · ${days > 0 ? t("next.dueDays", { n: days }) : t("next.dueToday")}</span></span>
+        <span class="row-main"><span class="row-title">${nameHtml(topic)}</span>
+        <span class="row-sub">${nameLabel(store.subject(topic.subjectId))} · ${t("library.studied", { n: d.studiedCount })} · ${days > 0 ? t("next.dueDays", { n: days }) : t("next.dueToday")}</span></span>
         <span class="chev-txt">›</span></button>`;
     })}</div>`, { topic: (el) => go("topic", { id: el.dataset.id }) }, { label: t("next.dueTitle", { n: due.length }) });
 }
@@ -177,7 +178,7 @@ export const todayScreen = {
       ${nextCard(syllabus, cand)}
       ${cand.due.length ? html`<button type="button" class="row due-row" data-action="due">
         <span class="row-main"><span class="row-title">${t("next.dueTitle", { n: cand.due.length })}</span>
-        <span class="row-sub">${cand.due.slice(0, 3).map((d) => store.topic(d.topicId)?.name).filter(Boolean).join(", ")}${cand.due.length > 3 ? "…" : ""}</span></span>
+        <span class="row-sub">${cand.due.slice(0, 3).map((d) => nameLabel(store.topic(d.topicId))).filter(Boolean).join(", ")}${cand.due.length > 3 ? "…" : ""}</span></span>
         <span class="chev-txt">›</span></button>` : ""}
       <button type="button" class="btn wide" data-action="start">${t("today.startTest")}</button>
       ${backupReminder()}

@@ -24,6 +24,7 @@ import { generateQuestions } from "../ai/ai-actions.js";
 import { testsFor } from "../progress/progress.js";
 import { pdfMenuItem } from "../pdfs/pdfs.js";
 import { can } from "../../core/entitlements.js";
+import { nameHtml, label as nameLabel } from "../../core/names.js";
 
 /** ▶ Practice from a listing: the questions as shown (exam filter and sort applied). */
 export function practice(key, questions, scope, keepOrder = false) {
@@ -81,9 +82,9 @@ function topicEntries(syllabusId) {
 }
 
 function topicRow(r) {
-  const sub = [r.subject?.name, r.studied ? t("library.studied", { n: r.studied }) : null].filter(Boolean).join(" · ");
+  const sub = [nameLabel(r.subject), r.studied ? t("library.studied", { n: r.studied }) : null].filter(Boolean).join(" · ");
   return html`<button type="button" class="row" data-action="open" data-to="topic" data-id="${r.topic.id}" data-lp="1">
-    <span class="row-main"><span class="row-title">${labelDot(r.label)}${r.topic.name}</span>
+    <span class="row-main"><span class="row-title">${labelDot(r.label)}${nameHtml(r.topic)}</span>
       <span class="row-sub">${sub}</span></span>
     <span class="row-count">${r.count}</span>${chev}
   </button>`;
@@ -160,10 +161,10 @@ function addTopicsToList(list, syllabusId) {
     }, { onClose: () => resolve(null) });
     const draw = () => {
       const q = term.toLowerCase();
-      body.querySelector("#ltRows").innerHTML = html`${all.filter((x) => matches(q, x.topic.name, x.subject?.name)).slice(0, 200).map((x) => html`
+      body.querySelector("#ltRows").innerHTML = html`${all.filter((x) => matches(q, x.topic.name, x.topic.nameMl, x.subject?.name, x.subject?.nameMl)).slice(0, 200).map((x) => html`
         <button type="button" class="check ${chosen.has(x.topic.id) ? "on" : ""}" data-action="toggle" data-id="${x.topic.id}">
           <span class="box">${chosen.has(x.topic.id) ? "✓" : ""}</span>
-          <span class="row-main"><span>${x.topic.name}</span><span class="row-sub">${x.subject?.name || ""} · ${x.count}</span></span>
+          <span class="row-main"><span>${nameHtml(x.topic)}</span><span class="row-sub">${nameLabel(x.subject)} · ${x.count}</span></span>
         </button>`)}`;
     };
     body.querySelector("#ltSearch").addEventListener("input", (e) => { term = e.target.value; draw(); });
@@ -205,14 +206,14 @@ function listMenu(listId, syllabusId) {
 
 function rowsFor(view, syllabusId, q) {
   if (view === "subjects") {
-    return store.subjectsWithCounts(syllabusId).filter((x) => matches(q, x.subject.name)).map((x) => html`
+    return store.subjectsWithCounts(syllabusId).filter((x) => matches(q, x.subject.name, x.subject.nameMl)).map((x) => html`
       <button type="button" class="row" data-action="open" data-to="subject" data-id="${x.subject.id}">
-        <span class="row-main"><span class="row-title">${x.subject.name}</span></span>
+        <span class="row-main"><span class="row-title">${nameHtml(x.subject)}</span></span>
         <span class="row-count">${x.count}</span>${chev}
       </button>`);
   }
   if (view === "topics") {
-    return topicEntries(syllabusId).filter((r) => matches(q, r.topic.name, r.subject?.name)).map(topicRow);
+    return topicEntries(syllabusId).filter((r) => matches(q, r.topic.name, r.topic.nameMl, r.subject?.name, r.subject?.nameMl)).map(topicRow);
   }
   if (view === "banks") return banksRows(syllabusId, q);
   return store.papersOf(syllabusId).filter((p) => matches(q, p.name, p.postName)).map((p) => html`
@@ -323,7 +324,7 @@ export const subjectScreen = {
     const counts = { pyq: total, ai: aiQuestions(syllabus.id, { subjectId: id }).length, cards: cardsOf(syllabus.id, { subjectId: id }).length };
     const head = html`${header({
       backTo: "library", backParams: { view: "subjects" }, backLabel: t("library.views.subjects"),
-      title: subject.name, sub: `${t("common.questions", { n: total })} · ${t("common.topics", { n: topics.length })}`, menu: mode === "pyq"
+      title: nameHtml(subject), sub: `${t("common.questions", { n: total })} · ${t("common.topics", { n: topics.length })}`, menu: mode === "pyq"
     })}${contentSwitch(mode, counts, "subject", { id })}`;
     if (mode !== "pyq") {
       container.innerHTML = html`${head}<div id="aiHost"></div>`;
@@ -344,7 +345,7 @@ export const subjectScreen = {
         const st = store.topicStateFor(syllabus.id, x.topic.id);
         const label = labelFor(syllabus.id, x.topic.id);
         return html`<button type="button" class="row" data-action="open" data-id="${x.topic.id}" data-lp="1">
-          <span class="row-main"><span class="row-title">${labelDot(label)}${x.topic.name}</span>
+          <span class="row-main"><span class="row-title">${labelDot(label)}${nameHtml(x.topic)}</span>
             ${st?.studiedCount ? html`<span class="row-sub">${t("library.studied", { n: st.studiedCount })}</span>` : ""}</span>
           <span class="row-count">${x.count}</span>${chev}
         </button>`;
@@ -357,7 +358,7 @@ export const subjectScreen = {
       practice: () => practice(`subject-all:${id}`, store.questionsFor({ syllabusId: syllabus.id, subjectId: id }), { type: "subject", ref: id, label: subject.name }),
       "note-edit": () => editNote("subject", id, subject.name),
       menu: () => runFlow(async () => {
-        const choice = await chooseAction({ title: subject.name, items: [
+        const choice = await chooseAction({ title: nameLabel(subject), items: [
           { id: "rename", label: t("subjectMenu.rename") },
           { id: "copy", label: t("listing.copy") },
           { id: "note", label: t("notes.myNote") },
@@ -383,7 +384,7 @@ export const subjectAllScreen = {
     const questions = store.questionsFor({ syllabusId: syllabus.id, subjectId: id })
       .sort((a, b) => (store.topic(a.topicId)?.order ?? 0) - (store.topic(b.topicId)?.order ?? 0));
     container.innerHTML = html`${header({
-      backTo: "subject", backParams: { id }, backLabel: subject.name,
+      backTo: "subject", backParams: { id }, backLabel: nameLabel(subject),
       title: t("subject.allQuestions"), sub: t("common.questions", { n: questions.length })
     })}
     ${questions.length ? html`<div class="actions-row"><button type="button" class="btn" data-action="practice">${playIcon} ${t("practice.button")}</button></div>` : ""}
@@ -411,8 +412,8 @@ export const topicScreen = {
       .filter(Boolean).join(" · ");
     const counts = { pyq: questions.length, ai: aiQuestions(syllabus.id, { topicId: id }).length, cards: cardsOf(syllabus.id, { topicId: id }).length };
     const head = html`${header({
-      backTo: "subject", backParams: { id: topic.subjectId }, backLabel: subject?.name || t("common.back"),
-      title: html`${labelDot(label)}${topic.name}`, sub, menu: true
+      backTo: "subject", backParams: { id: topic.subjectId }, backLabel: nameLabel(subject) || t("common.back"),
+      title: html`${labelDot(label)}${nameHtml(topic)}`, sub, menu: true
     })}${contentSwitch(mode, counts, "topic", { id })}`;
     const aiItem = { id: "ai-gen", label: t("ai.makeQuestions"), run: () => { generateQuestions(topic); } };
     const pdfItem = can("pdfs") ? pdfMenuItem("topic", id) : null;
