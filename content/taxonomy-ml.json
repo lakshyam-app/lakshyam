@@ -1,0 +1,231 @@
+{
+  "_about": "Malayalam names for Lakshyam subjects/topics. Source: Kerala PSC detailed syllabus, Village Field Assistant (Revenue), Cat. No. 049/2024. status 'official' = wording taken from the syllabus as printed (adjacent phrases only). status 'review' = built by joining non-adjacent syllabus phrases, or the syllabus meaning is only close. Topics with no suitable Malayalam in the syllabus are left out and stay English.",
+  "source": "KPSC syllabus, Village Field Assistant, Cat. No. 049/2024",
+  "subjects": [
+    {
+      "name": "History", "name_ml": "ചരിത്രം", "status": "official",
+      "topics": [
+        { "name": "Arrival of Europeans in Kerala", "name_ml": "യൂറോപ്യൻമാരുടെ വരവ്", "status": "official" },
+        { "name": "Travancore History", "name_ml": "തിരുവിതാംകൂറിന്റെ ചരിത്രം", "status": "official" },
+        { "name": "Social & Religious Reform Movements (Kerala)", "name_ml": "സാമൂഹ്യ, മത, നവോത്ഥാന പ്രസ്ഥാനങ്ങൾ", "status": "official" },
+        { "name": "National Movement in Kerala", "name_ml": "കേരളത്തിലെ ദേശീയ പ്രസ്ഥാനങ്ങൾ", "status": "official" },
+        { "name": "Literary Sources of Kerala History", "name_ml": "കേരള ചരിത്രത്തിന്റെ സാഹിത്യ സ്രോതസ്സുകൾ", "status": "official" },
+        { "name": "United Kerala Movement", "name_ml": "ഐക്യകേരള പ്രസ്ഥാനം", "status": "official" },
+        { "name": "Kerala after 1956", "name_ml": "1956-നു ശേഷമുള്ള കേരളത്തിന്റെ സാമൂഹ്യരാഷ്ട്രീയ ചരിത്രം", "status": "official" },
+        { "name": "Establishment of British Rule", "name_ml": "ബ്രിട്ടീഷ് ആധിപത്യം", "status": "official" },
+        { "name": "First War of Independence 1857", "name_ml": "ഒന്നാം സ്വാതന്ത്ര്യസമരം", "status": "official" },
+        { "name": "Formation of INC", "name_ml": "ഇന്ത്യൻ നാഷണൽ കോൺഗ്രസിന്റെ രൂപീകരണം", "status": "official" },
+        { "name": "Swadeshi Movement", "name_ml": "സ്വദേശി പ്രസ്ഥാനം", "status": "official" },
+        { "name": "Social Reform Movements (India)", "name_ml": "സാമൂഹ്യപരിഷ്കരണ പ്രസ്ഥാനങ്ങൾ", "status": "official" },
+        { "name": "Freedom Struggle Literature & Press", "name_ml": "വർത്തമാനപത്രങ്ങൾ, സ്വാതന്ത്ര്യസമരകാലത്തെ സാഹിത്യവും കലയും", "status": "review" },
+        { "name": "Gandhi & Independence Movement", "name_ml": "സ്വാതന്ത്ര്യ സമരവും മഹാത്മാഗാന്ധിയും", "status": "official" },
+        { "name": "Post-Independence India", "name_ml": "ഇന്ത്യയുടെ സ്വാതന്ത്ര്യാനന്തര കാലഘട്ടം", "status": "official" },
+        { "name": "State Reorganization", "name_ml": "സംസ്ഥാനങ്ങളുടെ പുനഃസംഘടന", "status": "official" },
+        { "name": "Science/Education/Tech Development", "name_ml": "ശാസ്ത്ര വിദ്യാഭ്യാസ സാങ്കേതിക മേഖലയിലെ പുരോഗതി", "status": "official" },
+        { "name": "India's Foreign Policy", "name_ml": "വിദേശ നയം", "status": "official" },
+        { "name": "English Revolution", "name_ml": "ഇംഗ്ലണ്ടിലെ മഹത്തായ വിപ്ലവം", "status": "official" },
+        { "name": "American War of Independence", "name_ml": "അമേരിക്കൻ സ്വാതന്ത്ര്യ സമരം", "status": "official" },
+        { "name": "French Revolution", "name_ml": "ഫ്രഞ്ച് വിപ്ലവം", "status": "official" },
+        { "name": "Russian Revolution", "name_ml": "റഷ്യൻ വിപ്ലവം", "status": "official" },
+        { "name": "Chinese Revolution", "name_ml": "ചൈനീസ് വിപ്ലവം", "status": "official" },
+        { "name": "World History after WWII", "name_ml": "രണ്ടാം ലോക മഹായുദ്ധാനന്തര രാഷ്ട്രീയ ചരിത്രം", "status": "official" },
+        { "name": "UNO & International Organizations", "name_ml": "ഐക്യരാഷ്ട്രസംഘടന, മറ്റ് അന്താരാഷ്ട്ര സംഘടനകൾ", "status": "official" }
+      ]
+    },
+    {
+      "name": "Geography", "name_ml": "ഭൂമിശാസ്ത്രം", "status": "official",
+      "topics": [
+        { "name": "Earth Structure", "name_ml": "ഭൂമിയുടെ ഘടന", "status": "official" },
+        { "name": "Atmosphere, Pressure Belts & Winds", "name_ml": "അന്തരീക്ഷം, അന്തരീക്ഷ മർദ്ദവും കാറ്റും", "status": "review" },
+        { "name": "Rocks & Landforms", "name_ml": "പാറകൾ, ഭൗമോപരിതലം", "status": "official" },
+        { "name": "Temperature & Seasons", "name_ml": "താപനിലയും ഋതുക്കളും", "status": "official" },
+        { "name": "Global Warming & Pollution", "name_ml": "ആഗോളതാപനം – വിവിധതരം മലിനീകരണങ്ങൾ", "status": "official" },
+        { "name": "Maps & Topographic Signs", "name_ml": "മാപ്പുകൾ – ടോപ്പോഗ്രഫിക് മാപ്പുകൾ, അടയാളങ്ങൾ", "status": "official" },
+        { "name": "Remote Sensing & GIS", "name_ml": "വിദൂരസംവേദനം – ഭൂമിശാസ്ത്രപരമായ വിവരസംവിധാനം", "status": "official" },
+        { "name": "Oceans & Ocean Movements", "name_ml": "മഹാസമുദ്രങ്ങൾ, സമുദ്രചലനങ്ങൾ", "status": "official" },
+        { "name": "Continents & Nations", "name_ml": "ഭൂഖണ്ഡങ്ങൾ, ലോകരാഷ്ട്രങ്ങൾ", "status": "official" },
+        { "name": "Indian Physiography & States", "name_ml": "ഇന്ത്യ: ഭൂപ്രകൃതി – സംസ്ഥാനങ്ങൾ", "status": "official" },
+        { "name": "Northern Mountains, Plains & Plateau", "name_ml": "ഇന്ത്യ: ഉത്തരപർവ്വത മേഖല, ഉത്തരമഹാസമതലം, ഉപദ്വീപീയ പീഠഭൂമി", "status": "official" },
+        { "name": "Indian Rivers", "name_ml": "ഇന്ത്യ: നദികൾ", "status": "official" },
+        { "name": "Indian Coastal Plains", "name_ml": "ഇന്ത്യ: തീരദേശം", "status": "official" },
+        { "name": "Indian Climate, Vegetation & Agriculture", "name_ml": "ഇന്ത്യ: കാലാവസ്ഥ – സ്വാഭാവിക സസ്യപ്രകൃതി – കൃഷി", "status": "official" },
+        { "name": "Indian Minerals, Industries & Energy", "name_ml": "ഇന്ത്യ: ധാതുക്കളും വ്യവസായവും – ഊർജ്ജസ്രോതസ്സുകൾ", "status": "official" },
+        { "name": "Indian Transport System", "name_ml": "ഇന്ത്യ: റോഡ് – ജല – റെയിൽ – വ്യോമ ഗതാഗത സംവിധാനങ്ങൾ", "status": "official" },
+        { "name": "Kerala Physiography & Districts", "name_ml": "കേരളം: ഭൂപ്രകൃതി – ജില്ലകൾ", "status": "official" },
+        { "name": "Kerala Rivers & Climate", "name_ml": "കേരളം: നദികൾ – കാലാവസ്ഥ", "status": "official" },
+        { "name": "Kerala Vegetation & Wildlife", "name_ml": "കേരളം: സ്വാഭാവിക സസ്യപ്രകൃതി – വന്യജീവി", "status": "official" },
+        { "name": "Kerala Agriculture & Research Centres", "name_ml": "കേരളം: കൃഷിയും ഗവേഷണ സ്ഥാപനങ്ങളും", "status": "official" },
+        { "name": "Kerala Minerals, Industries & Transport", "name_ml": "കേരളം: ധാതുക്കളും വ്യവസായവും – ഗതാഗത സംവിധാനങ്ങൾ", "status": "review" }
+      ]
+    },
+    {
+      "name": "Economics", "name_ml": "ധനതത്വശാസ്ത്രം", "status": "official",
+      "topics": [
+        { "name": "Indian Economy & Five Year Plans", "name_ml": "ഇന്ത്യ: സാമ്പത്തിക രംഗം, പഞ്ചവത്സര പദ്ധതികൾ", "status": "official" },
+        { "name": "New Economic Reforms", "name_ml": "നവസാമ്പത്തിക പരിഷ്കാരങ്ങൾ", "status": "official" },
+        { "name": "Planning Commission & Niti Aayog", "name_ml": "പ്ലാനിംഗ് കമ്മീഷൻ, നീതി ആയോഗ്", "status": "official" },
+        { "name": "Financial Institutions", "name_ml": "ധനകാര്യ സ്ഥാപനങ്ങൾ", "status": "official" },
+        { "name": "Agriculture & Major Crops", "name_ml": "കാർഷിക വിളകൾ", "status": "review" },
+        { "name": "Minerals", "name_ml": "ധാതുക്കൾ", "status": "official" },
+        { "name": "Green Revolution", "name_ml": "ഹരിത വിപ്ലവം", "status": "official" }
+      ]
+    },
+    {
+      "name": "Indian Constitution", "name_ml": "ഇന്ത്യൻ ഭരണഘടന", "status": "official",
+      "topics": [
+        { "name": "Constituent Assembly & Preamble", "name_ml": "ഭരണഘടനാ നിർമ്മാണ സമിതി, ആമുഖം", "status": "official" },
+        { "name": "Citizenship", "name_ml": "പൗരത്വം", "status": "official" },
+        { "name": "Fundamental Rights", "name_ml": "മൗലികാവകാശങ്ങൾ", "status": "official" },
+        { "name": "Directive Principles", "name_ml": "നിർദ്ദേശക തത്വങ്ങൾ", "status": "official" },
+        { "name": "Fundamental Duties", "name_ml": "മൗലിക കടമകൾ", "status": "official" },
+        { "name": "Local Self Government", "name_ml": "പഞ്ചായത്തീരാജ്", "status": "review" },
+        { "name": "Constitutional Amendments", "name_ml": "പ്രധാനപ്പെട്ട ഭരണഘടനാ ഭേദഗതികൾ", "status": "official" },
+        { "name": "Legislative Lists", "name_ml": "യൂണിയൻ ലിസ്റ്റ് – സ്റ്റേറ്റ് ലിസ്റ്റ് – കൺകറന്റ് ലിസ്റ്റ്", "status": "official" }
+      ]
+    },
+    {
+      "name": "Kerala Governance & Administration", "name_ml": "കേരളം – ഭരണവും ഭരണസംവിധാനങ്ങളും", "status": "official",
+      "topics": [
+        { "name": "Kerala State Civil Service", "name_ml": "സംസ്ഥാന സിവിൽ സർവ്വീസ്", "status": "official" },
+        { "name": "Quasi-Judicial Bodies & Commissions", "name_ml": "വിവിധ കമ്മീഷനുകൾ", "status": "review" },
+        { "name": "Socio-Economic Development", "name_ml": "സാമൂഹിക സാമ്പത്തിക വാണിജ്യ ആസൂത്രണ അടിസ്ഥാന വിവരങ്ങൾ", "status": "review" },
+        { "name": "Disaster Management", "name_ml": "ദുരന്ത നിവാരണ അതോറിറ്റി", "status": "review" },
+        { "name": "Employment & Labour", "name_ml": "തൊഴിലും ജോലിയും", "status": "official" },
+        { "name": "NREGA-type Programmes", "name_ml": "ദേശീയ ഗ്രാമീണ തൊഴിൽ പദ്ധതികൾ", "status": "official" },
+        { "name": "Land Reforms", "name_ml": "ഭൂപരിഷ്കരണങ്ങൾ", "status": "official" },
+        { "name": "Social Welfare & Security", "name_ml": "സാമൂഹ്യക്ഷേമം, സാമൂഹ്യ സുരക്ഷിതത്വം", "status": "official" },
+        { "name": "Protection of Women/Children/Senior Citizens", "name_ml": "സ്ത്രീകൾ, കുട്ടികൾ, മുതിർന്ന പൗരൻമാർ എന്നിവരുടെ സംരക്ഷണം", "status": "official" }
+      ]
+    },
+    {
+      "name": "Life Science", "name_ml": "ജീവശാസ്ത്രവും പൊതുജനാരോഗ്യവും", "status": "official",
+      "topics": [
+        { "name": "Human Body Basics", "name_ml": "മനുഷ്യ ശരീരത്തെക്കുറിച്ചുള്ള പൊതു അറിവ്", "status": "official" },
+        { "name": "Vitamins & Minerals Deficiency Diseases", "name_ml": "ജീവകങ്ങളും ധാതുക്കളും അവയുടെ അപര്യാപ്തതാ രോഗങ്ങളും", "status": "official" },
+        { "name": "Communicable Diseases", "name_ml": "സാംക്രമിക രോഗങ്ങളും രോഗകാരികളും", "status": "official" },
+        { "name": "Lifestyle Diseases", "name_ml": "ജീവിതശൈലീരോഗങ്ങൾ", "status": "official" },
+        { "name": "Public Health & Welfare Activities", "name_ml": "കേരളത്തിലെ ആരോഗ്യക്ഷേമ പ്രവർത്തനങ്ങൾ", "status": "review" },
+        { "name": "Environment & Environmental Hazards", "name_ml": "പരിസ്ഥിതിയും പരിസ്ഥിതി പ്രശ്നങ്ങളും", "status": "official" }
+      ]
+    },
+    {
+      "name": "Physics", "name_ml": "ഭൗതികശാസ്ത്രം", "status": "official",
+      "topics": [
+        { "name": "Units & Measurements", "name_ml": "യൂണിറ്റ്, അളവുകളും തോതും", "status": "official" },
+        { "name": "Newton's Laws of Motion", "name_ml": "ന്യൂട്ടന്റെ ചലന നിയമങ്ങൾ", "status": "official" },
+        { "name": "Projectile Motion & ISRO Missions", "name_ml": "പ്രൊജക്ടൈൽ മോഷൻ, ISRO യുടെ ബഹിരാകാശ നേട്ടങ്ങൾ", "status": "review" },
+        { "name": "Light, Lens & Mirrors", "name_ml": "പ്രകാശം – ലെൻസ്, ദർപ്പണം", "status": "official" },
+        { "name": "Electromagnetic Spectrum", "name_ml": "ഇലക്ട്രോമാഗ്നറ്റിക് സ്പെക്ട്രം", "status": "official" },
+        { "name": "Sound & Waves", "name_ml": "ശബ്ദം – വിവിധ തരം തരംഗങ്ങൾ", "status": "official" },
+        { "name": "Friction", "name_ml": "ഘർഷണം", "status": "official" },
+        { "name": "Liquid Pressure & Buoyancy", "name_ml": "ദ്രാവക മർദ്ദം – പ്ലവക്ഷമ ബലം", "status": "official" },
+        { "name": "Density & Surface Tension", "name_ml": "സാന്ദ്രത – പ്രതല ബലം", "status": "review" },
+        { "name": "Gravitation & Escape Velocity", "name_ml": "ഗുരുത്വാകർഷണം – പലായന പ്രവേഗം", "status": "review" },
+        { "name": "Satellites", "name_ml": "ഉപഗ്രഹങ്ങൾ", "status": "official" },
+        { "name": "Heat & Thermometers", "name_ml": "താപം – താപനില – വിവിധതരം തെർമോമീറ്ററുകൾ", "status": "official" },
+        { "name": "Humidity", "name_ml": "ആർദ്രത", "status": "official" },
+        { "name": "Work, Energy & Power", "name_ml": "പ്രവൃത്തി – ഊർജ്ജം – പവർ", "status": "official" },
+        { "name": "Levers", "name_ml": "ഉത്തോലകങ്ങൾ", "status": "official" }
+      ]
+    },
+    {
+      "name": "Chemistry", "name_ml": "രസതന്ത്രം", "status": "official",
+      "topics": [
+        { "name": "Atoms, Molecules & States of Matter", "name_ml": "ആറ്റം – തൻമാത്ര – ദ്രവ്യത്തിന്റെ വിവിധ അവസ്ഥകൾ", "status": "official" },
+        { "name": "Gas Laws", "name_ml": "വാതക നിയമങ്ങൾ", "status": "official" },
+        { "name": "Periodic Table", "name_ml": "ആവർത്തനപട്ടിക", "status": "official" },
+        { "name": "Metals & Non-metals", "name_ml": "ലോഹങ്ങളും അലോഹങ്ങളും", "status": "official" },
+        { "name": "Chemical Reactions", "name_ml": "രാസപ്രവർത്തനങ്ങൾ", "status": "official" },
+        { "name": "Solutions/Mixtures/Compounds", "name_ml": "ലായനികൾ, മിശ്രിതങ്ങൾ, സംയുക്തങ്ങൾ", "status": "official" },
+        { "name": "Alloys", "name_ml": "ലോഹസങ്കരങ്ങൾ", "status": "official" },
+        { "name": "Acids, Bases & pH", "name_ml": "ആസിഡും ആൽക്കലിയും – pH മൂല്യം", "status": "official" },
+        { "name": "Alkaloids", "name_ml": "ആൽക്കലോയിഡുകൾ", "status": "official" }
+      ]
+    },
+    {
+      "name": "Arts, Literature, Culture, Sports", "name_ml": "കല, കായികം, സാഹിത്യം, സംസ്കാരം", "status": "official",
+      "topics": [
+        { "name": "Kerala Art Forms & Artistes", "name_ml": "കേരളത്തിലെ പ്രധാന ദൃശ്യ-ശ്രാവ്യ കലകൾ, പ്രശസ്തരായ കലാകാരൻമാർ", "status": "review" },
+        { "name": "Sports Personalities & Achievements", "name_ml": "പ്രധാന കായികതാരങ്ങൾ, അവരുടെ നേട്ടങ്ങൾ", "status": "official" },
+        { "name": "Sports Awards & Trophies", "name_ml": "പ്രധാന അവാർഡുകൾ, പ്രധാന ട്രോഫികൾ", "status": "review" },
+        { "name": "Olympics & International Games", "name_ml": "ഒളിമ്പിക്സ്, ഏഷ്യൻ ഗെയിംസ്, കോമൺവെൽത്ത് ഗെയിംസ്", "status": "review" },
+        { "name": "National Games", "name_ml": "ദേശീയ ഗെയിംസ്", "status": "official" },
+        { "name": "Malayalam Literary Movements", "name_ml": "മലയാളത്തിലെ പ്രധാന സാഹിത്യ പ്രസ്ഥാനങ്ങൾ", "status": "official" },
+        { "name": "Malayalam Writers & Works", "name_ml": "പ്രധാനകൃതികളും കർത്താക്കളും", "status": "review" },
+        { "name": "Malayalam Journalism History", "name_ml": "മലയാള പത്രപ്രവർത്തനത്തിന്റെ ആരംഭം", "status": "official" },
+        { "name": "Jnanpith Award Winners", "name_ml": "ജ്ഞാനപീഠം നേടിയ മലയാളികൾ", "status": "official" },
+        { "name": "Malayalam Cinema", "name_ml": "മലയാള സിനിമ", "status": "official" },
+        { "name": "Kerala Festivals & Celebrations", "name_ml": "കേരളത്തിലെ പ്രധാന ആഘോഷങ്ങൾ, ഉത്സവങ്ങൾ", "status": "review" },
+        { "name": "Kerala Cultural Centres & Leaders", "name_ml": "കേരളത്തിലെ സാംസ്കാരിക കേന്ദ്രങ്ങൾ, സാംസ്കാരിക നായകർ", "status": "review" }
+      ]
+    },
+    { "name": "Basics of Computer", "name_ml": "കമ്പ്യൂട്ടർ – അടിസ്ഥാന വിവരങ്ങൾ", "status": "official", "topics": [] },
+    { "name": "Important Acts – General", "name_ml": "സുപ്രധാന നിയമങ്ങൾ", "status": "official", "topics": [] },
+    { "name": "Current Affairs", "name_ml": "ആനുകാലിക വിഷയങ്ങൾ", "status": "official", "topics": [] },
+    {
+      "name": "Simple Arithmetic", "name_ml": "ലഘുഗണിതം", "status": "official",
+      "topics": [
+        { "name": "Numbers & Basic Operations", "name_ml": "സംഖ്യകളും അടിസ്ഥാന ക്രിയകളും", "status": "official" },
+        { "name": "Fractions & Decimals", "name_ml": "ഭിന്നസംഖ്യകളും ദശാംശ സംഖ്യകളും", "status": "official" },
+        { "name": "Percentage", "name_ml": "ശതമാനം", "status": "official" },
+        { "name": "Profit & Loss", "name_ml": "ലാഭവും നഷ്ടവും", "status": "official" },
+        { "name": "Simple & Compound Interest", "name_ml": "സാധാരണ പലിശയും കൂട്ടുപലിശയും", "status": "official" },
+        { "name": "Ratio & Proportion", "name_ml": "അംശബന്ധവും അനുപാതവും", "status": "official" },
+        { "name": "Time & Distance", "name_ml": "സമയവും ദൂരവും", "status": "official" },
+        { "name": "Time & Work", "name_ml": "സമയവും പ്രവൃത്തിയും", "status": "official" },
+        { "name": "Average", "name_ml": "ശരാശരി", "status": "official" },
+        { "name": "Laws of Exponents", "name_ml": "കൃത്യങ്കങ്ങൾ", "status": "official" },
+        { "name": "Mensuration", "name_ml": "ജ്യാമിതീയ രൂപങ്ങളുടെ ചുറ്റളവ്, വിസ്തീർണ്ണം, വ്യാപ്തം", "status": "official" },
+        { "name": "Progressions", "name_ml": "പ്രോഗ്രഷനുകൾ", "status": "official" }
+      ]
+    },
+    {
+      "name": "Mental Ability & Reasoning", "name_ml": "മാനസിക ശേഷിയും നിരീക്ഷണപാടവ പരിശോധനയും", "status": "official",
+      "topics": [
+        { "name": "Series", "name_ml": "ശ്രേണികൾ", "status": "official" },
+        { "name": "Mathematical Signs", "name_ml": "ഗണിത ചിഹ്നങ്ങൾ ഉപയോഗിച്ചുള്ള പ്രശ്നങ്ങൾ", "status": "official" },
+        { "name": "Verifying Positions", "name_ml": "സ്ഥാന നിർണ്ണയ പരിശോധന", "status": "official" },
+        { "name": "Analogy", "name_ml": "സമാന ബന്ധങ്ങൾ", "status": "official" },
+        { "name": "Odd Man Out", "name_ml": "ഒറ്റയാനെ കണ്ടെത്തുക", "status": "official" },
+        { "name": "Numerical Ability", "name_ml": "സംഖ്യാവലോകന പ്രശ്നങ്ങൾ", "status": "official" },
+        { "name": "Coding & Decoding", "name_ml": "കോഡിംഗും ഡീകോഡിംഗും", "status": "official" },
+        { "name": "Family Relations", "name_ml": "കുടുംബ ബന്ധങ്ങൾ", "status": "official" },
+        { "name": "Sense of Direction", "name_ml": "ദിശാവബോധം", "status": "official" },
+        { "name": "Time & Angles", "name_ml": "ക്ലോക്കിലെ സമയവും കോണളവും", "status": "official" },
+        { "name": "Clock & Reflections", "name_ml": "ക്ലോക്കിലെ സമയവും പ്രതിബിംബവും", "status": "official" },
+        { "name": "Date & Calendar", "name_ml": "കലണ്ടറും തീയതിയും", "status": "official" },
+        { "name": "Clerical Ability", "name_ml": "ക്ലറിക്കൽ ശേഷി പരിശോധിക്കുന്നതിനുള്ള ചോദ്യങ്ങൾ", "status": "official" }
+      ]
+    },
+    {
+      "name": "Malayalam", "name_ml": "മലയാളം", "status": "official",
+      "topics": [
+        { "name": "Padasudhi (Word Purity)", "name_ml": "പദശുദ്ധി", "status": "official" },
+        { "name": "Vakyasudhi (Sentence Correction)", "name_ml": "വാക്യശുദ്ധി", "status": "official" },
+        { "name": "Paribhasha (Translation)", "name_ml": "പരിഭാഷ", "status": "official" },
+        { "name": "Ottapadam (One Word)", "name_ml": "ഒറ്റപ്പദം", "status": "official" },
+        { "name": "Paryayam (Synonyms)", "name_ml": "പര്യായം", "status": "official" },
+        { "name": "Viparitha Padam (Antonyms)", "name_ml": "വിപരീത പദം", "status": "official" },
+        { "name": "Shailikal & Pazhamchollukal (Idioms/Proverbs)", "name_ml": "ശൈലികൾ, പഴഞ്ചൊല്ലുകൾ", "status": "official" },
+        { "name": "Samana Padam (Equivalent Words)", "name_ml": "സമാനപദം", "status": "official" },
+        { "name": "Chernezhuthuka (Joining Words)", "name_ml": "ചേർത്തെഴുതുക", "status": "official" },
+        { "name": "Strilingam/Pullingam (Gender)", "name_ml": "സ്ത്രീലിംഗം, പുല്ലിംഗം", "status": "official" },
+        { "name": "Vachanam (Number)", "name_ml": "വചനം", "status": "official" },
+        { "name": "Piriche Ezhuthal (Separating Words)", "name_ml": "പിരിച്ചെഴുതൽ", "status": "official" },
+        { "name": "Ghataka Padam (Compound Words)", "name_ml": "ഘടക പദം (വാക്യം ചേർത്തെഴുതുക)", "status": "official" }
+      ]
+    }
+  ],
+  "left_english": {
+    "_why": "No suitable Malayalam wording in this syllabus (printed in English there, or not covered). Add later via Settings → Display → edit or bulk import.",
+    "subjects": ["General English", "Important Acts – Education Policy"],
+    "topics": {
+      "Economics": ["Direct & Indirect Taxes", "GST in India"],
+      "Indian Constitution": ["Writs", "Union Executive/Parliament/Judiciary", "State Executive/Legislature/Judiciary", "CAG", "Attorney/Advocate General", "Election Commissions", "UPSC & State PSC", "Finance Commissions", "GST Council", "Services under Union & States", "Tribunals", "National Commissions (SC/ST/Backward Classes)", "Official & Regional Languages"],
+      "Kerala Governance & Administration": ["Kerala Planning Board", "Watershed Management (syllabus has തണ്ണീർത്തട സംരക്ഷണം = wetland conservation, a different meaning)", "Population & Literacy", "E-Governance", "Delegated Legislation & Controls", "Administrative Discretion & Adjudication", "Principles of Natural Justice"],
+      "Basics of Computer": ["all topics (printed in English in the syllabus)"],
+      "Important Acts – General": ["all topics (printed in English in the syllabus)"],
+      "Current Affairs": ["all topics (not detailed in the syllabus)"]
+    }
+  }
+}
