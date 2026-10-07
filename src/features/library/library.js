@@ -22,6 +22,8 @@ import { openStartTest } from "../test/start-sheet.js";
 import { contentSwitch, contentHandler, renderAiPanel, renderCardsPanel, aiQuestions, cardsOf } from "../ai/content.js";
 import { generateQuestions } from "../ai/ai-actions.js";
 import { testsFor } from "../progress/progress.js";
+import { pdfMenuItem } from "../pdfs/pdfs.js";
+import { can } from "../../core/entitlements.js";
 
 /** ▶ Practice from a listing: the questions as shown (exam filter and sort applied). */
 export function practice(key, questions, scope, keepOrder = false) {
@@ -358,8 +360,10 @@ export const subjectScreen = {
         const choice = await chooseAction({ title: subject.name, items: [
           { id: "rename", label: t("subjectMenu.rename") },
           { id: "copy", label: t("listing.copy") },
-          { id: "note", label: t("notes.myNote") }
+          { id: "note", label: t("notes.myNote") },
+          can("pdfs") ? { id: "pdfs", label: `📄 ${t("pdf.title")}` } : null
         ] });
+        if (choice === "pdfs") return go("pdfs", { type: "subject", id });
         if (choice === "rename") return renameSubjectFlow(subject);
         if (choice === "copy") return copyQuestions(visibleQuestions(`subject-all:${id}`, store.questionsFor({ syllabusId: syllabus.id, subjectId: id })), subject.name);
         if (choice === "note") return editNote("subject", id, subject.name);
@@ -411,9 +415,10 @@ export const topicScreen = {
       title: html`${labelDot(label)}${topic.name}`, sub, menu: true
     })}${contentSwitch(mode, counts, "topic", { id })}`;
     const aiItem = { id: "ai-gen", label: t("ai.makeQuestions"), run: () => { generateQuestions(topic); } };
+    const pdfItem = can("pdfs") ? pdfMenuItem("topic", id) : null;
     if (mode !== "pyq") {
       container.innerHTML = html`${head}<div id="aiHost"></div>`;
-      onAction(container, { ...backHandler, ...contentHandler, menu: () => topicMenu(topic, { onPage: true, extra: [aiItem] }) });
+      onAction(container, { ...backHandler, ...contentHandler, menu: () => topicMenu(topic, { onPage: true, extra: [aiItem, pdfItem].filter(Boolean) }) });
       const host = container.querySelector("#aiHost");
       if (mode === "ai") renderAiPanel(host, { syllabus, scope: { topicId: id }, topic, label: topic.name });
       else renderCardsPanel(host, { syllabus, scope: { topicId: id } });
@@ -438,7 +443,8 @@ export const topicScreen = {
         st?.studiedCount ? { id: "minus", label: t("studied.minus", { n: st.studiedCount }), run: () => mut.addStudied(syllabus.id, id, -1) } : null,
         { id: "copy", label: t("listing.copy"), run: () => copyQuestions(visibleQuestions(key, questions), `${subject?.name} — ${topic.name}`) },
         { id: "note", label: t("notes.myNote"), run: () => editNote("topic", id, topic.name) },
-        aiItem
+        aiItem,
+        pdfItem
       ].filter(Boolean) })
     });
     mountQuestions(container.querySelector("#qHost"), { key, questions, showPaper: true });

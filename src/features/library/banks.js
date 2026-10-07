@@ -22,6 +22,7 @@ import { openStartTest } from "../test/start-sheet.js";
 import { wrongTricks } from "../ai/ai-actions.js";
 import { pickTopic } from "./topic-picker.js";
 import { header, backHandler, chev } from "./library.js";
+import { can } from "../../core/entitlements.js";
 
 export const AUTO = { flagged: "auto:flagged", wrong: "auto:wrong" };
 
@@ -79,9 +80,11 @@ export function banksRows(syllabusId, q) {
     ...autos.map((b) => row(b)),
     user.length ? html`<h3 class="rows-head">${t("banks.yours")}</h3>` : "",
     ...user.map((b) => row(b)),
-    nAi || nCards ? html`<h3 class="rows-head">${t("ai.hubHead")}</h3>` : "",
+    html`<h3 class="rows-head">${t("ai.hubHead")}</h3>`,
     nAi ? hub("ai", t("ai.hubAi"), nAi) : "",
-    nCards ? hub("cards", t("ai.hubCards"), nCards) : ""
+    nCards ? hub("cards", t("ai.hubCards"), nCards) : "",
+    can("pdfs") && (!q || t("pdf.title").toLowerCase().includes(q)) ? html`<button type="button" class="row" data-action="open" data-to="pdfs" data-id="">
+      <span class="row-main"><span class="row-title">📄 ${t("pdf.title")}</span><span class="row-sub">${t("pdf.hubSub")}</span></span>${chev}</button>` : ""
   ].filter(Boolean);
 }
 

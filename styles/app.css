@@ -715,3 +715,22 @@ svg.spark { width: 100%; height: 56px; }
 .fc-buttons .btn { justify-self: stretch; min-height: 52px; }
 .fc-list { display: grid; gap: 12px; }
 .btn.wide + .btn.wide { margin-top: -6px; }
+
+/* ---------- Phase 7: Study PDFs ---------- */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.page-nav { display: flex; gap: 8px; align-items: center; margin: 4px 0 12px; }
+.page-nav .page-jump { flex: 1; }
+.page-nav .page-jump .field { width: 100%; text-align: center; }
+.page-text { width: 100%; min-height: 40vh; font-size: 1rem; line-height: 1.55; resize: vertical; }
+.page-pic { display: block; width: 100%; height: auto; margin-top: 12px; border: 1px solid var(--line); border-radius: var(--radius-control); background: #fff; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: 0.8125rem; border: 1px solid var(--line); color: var(--muted); }
+.badge.ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
+.badge.warn { background: var(--warn-bg); color: var(--text); border-color: transparent; }
+.badge.bad { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, transparent); font-weight: 600; }
+details.source { margin-top: 6px; }
+details.source summary { color: var(--brand); font-size: 0.875rem; cursor: pointer; min-height: 32px; display: flex; align-items: center; }
+details.source .quote { white-space: pre-wrap; border-left: 3px solid var(--line); padding: 4px 10px; margin: 4px 0; color: var(--muted); font-size: 0.9375rem; }
+.job-row .row-title { font-size: 0.9375rem; }
+.row[disabled] { opacity: 0.5; }

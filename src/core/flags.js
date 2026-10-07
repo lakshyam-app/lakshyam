@@ -5,5 +5,6 @@ export const flags = Object.freeze({
   import: true,
   tests: true,
   ai: true,
+  pdfs: true,
   malayalamNames: false
 });

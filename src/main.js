@@ -14,6 +14,7 @@ import { libraryScreen, subjectScreen, subjectAllScreen, topicScreen, paperScree
 import { bankScreen, bankAddScreen } from "./features/library/banks.js";
 import { searchScreen } from "./features/search/search.js";
 import { aiHubScreen } from "./features/ai/content.js";
+import { pdfsScreen, pdfScreen, pdfPageScreen, pdfMakeScreen } from "./features/pdfs/pdfs.js";
 import { progressScreen, historyScreen, testsScreen } from "./features/progress/progress.js";
 import { statsSubjectScreen, statsTopicScreen, statsTopicsScreen } from "./features/progress/drill.js";
 import { statsTablesScreen } from "./features/progress/tables.js";
@@ -23,7 +24,7 @@ import { notesScreen } from "./features/notes/notes.js";
 import { settingsScreen } from "./features/settings/settings.js";
 
 [todayScreen, libraryScreen, subjectScreen, subjectAllScreen, topicScreen, paperScreen, bankScreen, bankAddScreen,
-  searchScreen, aiHubScreen, progressScreen, historyScreen, testsScreen, statsSubjectScreen, statsTopicScreen, statsTopicsScreen, statsTablesScreen, testScreen, resultScreen, notesScreen, settingsScreen]
+  searchScreen, aiHubScreen, pdfsScreen, pdfScreen, pdfPageScreen, pdfMakeScreen, progressScreen, historyScreen, testsScreen, statsSubjectScreen, statsTopicScreen, statsTopicsScreen, statsTablesScreen, testScreen, resultScreen, notesScreen, settingsScreen]
   .forEach(registerScreen);
 
 function renderTabbar(activeId) {

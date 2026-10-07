@@ -12,17 +12,30 @@ export class AiError extends Error {
   }
 }
 
-/** Builds the HTTP request (pure, so it can be tested). */
-export function buildRequest(preset, system, user, maxTokens = 2500) {
+/** Splits a data: URL into its media type and base64 data. */
+function dataUrlParts(url) {
+  const m = /^data:(image\/[a-z+.-]+);base64,([A-Za-z0-9+/=]+)$/.exec(String(url));
+  if (!m) throw new AiError("bad-image");
+  return { mediaType: m[1], data: m[2] };
+}
+
+/** Builds the HTTP request (pure, so it can be tested).
+    images: page pictures as data: URLs (for reading scanned pages). */
+export function buildRequest(preset, system, user, maxTokens = 2500, images = []) {
   const base = String(preset.baseUrl || "").replace(/\/+$/, "");
   if (preset.format === "anthropic") {
+    const content = images.length
+      ? [...images.map((u) => { const { mediaType, data } = dataUrlParts(u); return { type: "image", source: { type: "base64", media_type: mediaType, data } }; }), { type: "text", text: user }]
+      : user;
     return {
       url: `${base}/v1/messages`,
       headers: { "content-type": "application/json", "x-api-key": preset.apiKey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
-      body: { model: preset.model, max_tokens: maxTokens, system, messages: [{ role: "user", content: user }] }
+      body: { model: preset.model, max_tokens: maxTokens, system, messages: [{ role: "user", content }] }
     };
   }
-  const body = { model: preset.model, max_tokens: maxTokens, temperature: 0.4, messages: [{ role: "system", content: system }, { role: "user", content: user }] };
+  const content = images.length ? [{ type: "text", text: user }, ...images.map((u) => { dataUrlParts(u); return { type: "image_url", image_url: { url: u } }; })] : user;
+  // Reading a page must be faithful, so no creativity for images.
+  const body = { model: preset.model, max_tokens: maxTokens, temperature: images.length ? 0 : 0.4, messages: [{ role: "system", content: system }, { role: "user", content }] };
   if (/openrouter\.ai/i.test(base)) body.reasoning = { exclude: true };
   return { url: `${base}/chat/completions`, headers: { "content-type": "application/json", authorization: `Bearer ${preset.apiKey}` }, body };
 }
@@ -43,10 +56,10 @@ export function classify(status, message) {
   return { limit, busy };
 }
 
-export async function request(preset, system, user, maxTokens = 2500, retried = false) {
+export async function request(preset, system, user, maxTokens = 2500, retried = false, images = []) {
   if (!preset.apiKey) throw new AiError("No API key", { status: 401 });
   if (!preset.model) throw new AiError("No model name", { status: 400 });
-  const { url, headers, body } = buildRequest(preset, system, user, maxTokens);
+  const { url, headers, body } = buildRequest(preset, system, user, maxTokens, images);
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   let res;
@@ -67,31 +80,42 @@ export async function request(preset, system, user, maxTokens = 2500, retried = 
   const text = replyText(preset.format, data);
   if (!text) {
     // Reasoning models can spend the whole budget thinking: retry once with more room.
-    if (!retried && maxTokens < 6000) return request(preset, system, user, Math.min(8000, Math.max(1500, maxTokens * 4)), true);
+    if (!retried && maxTokens < 6000) return request(preset, system, user, Math.min(8000, Math.max(1500, maxTokens * 4)), true, images);
     throw new AiError("empty");
   }
   return text;
 }
 
+/** For page pictures, providers that read images well go first:
+    Gemini (best with Malayalam), then Anthropic / OpenAI, then OpenRouter, then the rest. */
+const VISION_RANK = { gemini: 0, anthropic: 1, openai: 1, openrouter: 2 };
+export function visionOrder(order) {
+  const rank = (p) => VISION_RANK[p.template] ?? (/generativelanguage\.googleapis/i.test(p.baseUrl) ? 0 : 3);
+  return order.map((p, i) => ({ p, i })).sort((a, b) => rank(a.p) - rank(b.p) || a.i - b.i).map((x) => x.p);
+}
+
 /**
- * Asks, trying your presets in order. Returns { text, preset }.
+ * Asks, trying your presets in order. Returns { text, preset, switched }.
  * A preset that hits its limit is marked so it is tried last for an hour.
+ * opts.images: page pictures (data: URLs). Image requests never change your active preset.
  */
-export async function ask(system, user, maxTokens = 2500) {
+export async function ask(system, user, maxTokens = 2500, { images = [] } = {}) {
   const list = await presets.getPresets();
   const config = await presets.getConfig();
-  const order = presets.tryOrder(list, config);
+  let order = presets.tryOrder(list, config);
   if (!order.length) throw new AiError("no-preset", { noPreset: true });
+  if (images.length) order = visionOrder(order);
   const errors = [];
   for (const p of order) {
     try {
       let text;
-      try { text = await request(p, system, user, maxTokens); } catch (e) {
+      try { text = await request(p, system, user, maxTokens, false, images); } catch (e) {
         if (!e.busy) throw e;
         await new Promise((r) => setTimeout(r, 3500));
-        text = await request(p, system, user, maxTokens);
+        text = await request(p, system, user, maxTokens, false, images);
       }
       await presets.updatePreset(p.id, { uses: (p.uses || 0) + 1, lastUsedAt: Date.now(), limitHitAt: null });
+      if (images.length) return { text, preset: p, switched: false };
       const switched = config.activeId !== p.id;
       if (switched) await presets.saveConfig({ activeId: p.id });
       return { text, preset: p, switched };

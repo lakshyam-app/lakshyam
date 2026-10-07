@@ -4,9 +4,14 @@
      (Other apps on the same site keep their caches.)
    - A new version waits until the user taps "Refresh" in the app. */
 
-const VERSION = "0.7.0";
+const VERSION = "0.8.0";
 const PREFIX = "lakshyam-";
 const SHELL_CACHE = `${PREFIX}shell-${VERSION}`;
+// The PDF reader is large (about 1.4 MB), so it is not downloaded with the app.
+// It is saved the first time Study PDFs is used, in its own cache that survives
+// app updates (rename this cache if pdf.js is ever upgraded).
+const PDFJS_CACHE = `${PREFIX}pdfjs-3.11.174`;
+const KEEP = [SHELL_CACHE, PDFJS_CACHE];
 
 const SHELL_FILES = [
   "./",
@@ -17,6 +22,7 @@ const SHELL_FILES = [
   "./icons/icon.svg",
   "./icons/maskable-512.png",
   "./src/ai/client.js",
+  "./src/ai/pdf-prompts.js",
   "./src/ai/presets.js",
   "./src/ai/prompts.js",
   "./src/core/charts.js",
@@ -66,6 +72,7 @@ const SHELL_FILES = [
   "./src/features/library/topic-picker.js",
   "./src/features/notes/note-editor.js",
   "./src/features/notes/notes.js",
+  "./src/features/pdfs/pdfs.js",
   "./src/features/progress/data.js",
   "./src/features/progress/drill.js",
   "./src/features/progress/progress.js",
@@ -83,6 +90,10 @@ const SHELL_FILES = [
   "./src/features/test/test-screen.js",
   "./src/features/today/today.js",
   "./src/main.js",
+  "./src/pdf/pdf-jobs.js",
+  "./src/pdf/pdf-reader.js",
+  "./src/pdf/pdf-store.js",
+  "./src/pdf/pdf-tools.js",
   "./src/strings/en.js",
   "./styles/app.css",
   "./vendor/katex/contrib/auto-render.min.js",
@@ -119,7 +130,7 @@ self.addEventListener("activate", (event) => {
     const keys = await caches.keys();
     await Promise.all(
       keys
-        .filter((key) => key.startsWith(PREFIX) && key !== SHELL_CACHE)
+        .filter((key) => key.startsWith(PREFIX) && !KEEP.includes(key))
         .map((key) => caches.delete(key))
     );
     await self.clients.claim();
@@ -152,7 +163,7 @@ self.addEventListener("fetch", (event) => {
     if (cached) return cached;
     const response = await fetch(request);
     if (response.ok) {
-      const cache = await caches.open(SHELL_CACHE);
+      const cache = await caches.open(url.pathname.includes("/vendor/pdfjs/") ? PDFJS_CACHE : SHELL_CACHE);
       cache.put(request, response.clone());
     }
     return response;

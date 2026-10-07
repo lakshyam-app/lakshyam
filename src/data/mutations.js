@@ -465,7 +465,7 @@ export async function saveAiQuestions(syllabus, subjectId, topicId, items) {
     return {
       id: newId("q"), paperId: paper.id, oldId: `ai${n}`, order: n, number: `AI-${n}`, text: x.text, options: x.options,
       answerIndex: x.answerIndex, status: "active", explanation: x.explanation || "", subjectId, topicId,
-      lang: /[ഀ-ൿ]/.test(x.text) ? "ml" : "en", difficultyHint: x.difficulty || null, source: "ai", sourceRef: null
+      lang: /[ഀ-ൿ]/.test(x.text) ? "ml" : "en", difficultyHint: x.difficulty || null, source: "ai", sourceRef: x.sourceRef || null
     };
   });
   await store.apply({ papers: { put: [copy(paper, { questionCount: n })] }, questions: { put: questions } });
@@ -473,6 +473,16 @@ export async function saveAiQuestions(syllabus, subjectId, topicId, items) {
 }
 
 /* ---------- flashcards ---------- */
+
+/** Saves reviewed flashcards (e.g. made from a study PDF) as new cards to learn. */
+export async function saveCards(syllabusId, subjectId, topicId, items) {
+  const cards = items.map((x) => ({
+    id: newId("fc"), syllabusId, subjectId, topicId, front: x.front, back: x.back, sourceRef: x.sourceRef || null, source: "ai"
+  }));
+  const states = cards.map((c) => ({ id: c.id, cardId: c.id, status: "new", reviews: 0, lastAt: null, dueAt: null }));
+  await store.apply({ flashcards: { put: cards }, flashcardState: { put: states } });
+  return cards;
+}
 
 export function saveCardState(state) {
   return store.apply({ flashcardState: { put: [copy(state)] } });
