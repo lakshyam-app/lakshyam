@@ -226,10 +226,11 @@ export function buildImportPlan(input, { now = Date.now(), seed = TAXONOMY_SEED 
       // The user's own state on this question (kept apart from content).
       const flagged = Boolean(q.flagged);
       const difficulty = ["E", "M", "D"].includes(q.difficulty) ? q.difficulty : null;
-      if (flagged || difficulty) {
+      // A difficulty you cleared by hand still blocks automatic marking (as in the old app).
+      if (flagged || difficulty || q.difficulty_manual) {
         questionState.push({
           id, questionId: id, flagged, difficulty,
-          difficultySource: difficulty ? (q.difficulty_auto ? "auto" : "manual") : null, ...stamp
+          difficultySource: difficulty && q.difficulty_auto ? "auto" : (difficulty || q.difficulty_manual ? "manual" : null), ...stamp
         });
       }
       if (str(q.note).trim()) {

@@ -8,6 +8,7 @@ import { isSheetOpen, closeSheet } from "./sheet.js";
 const screens = new Map();
 let onChange = () => {};
 let container = null;
+let cleanup = null; // a screen's render() may return a function to run when it is left or redrawn
 
 export function registerScreen(screen) {
   screens.set(screen.id, screen);
@@ -63,8 +64,10 @@ function render(resetScroll) {
   // screen can never fire on this one.
   const host = document.createElement("div");
   host.className = "screen-host";
+  if (cleanup) { try { cleanup(); } catch { /* never block navigation */ } cleanup = null; }
   container.replaceChildren(host);
-  screen.render(host, params);
+  const result = screen.render(host, params);
+  if (typeof result === "function") cleanup = result;
   if (resetScroll) window.scrollTo(0, 0);
   else window.scrollTo(0, scrollY);
   onChange(id);

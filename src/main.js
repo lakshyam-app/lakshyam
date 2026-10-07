@@ -13,12 +13,14 @@ import { todayScreen } from "./features/today/today.js";
 import { libraryScreen, subjectScreen, subjectAllScreen, topicScreen, paperScreen } from "./features/library/library.js";
 import { bankScreen, bankAddScreen } from "./features/library/banks.js";
 import { searchScreen } from "./features/search/search.js";
-import { progressScreen } from "./features/progress/progress.js";
+import { progressScreen, testsScreen } from "./features/progress/progress.js";
+import { testScreen } from "./features/test/test-screen.js";
+import { resultScreen } from "./features/test/results.js";
 import { notesScreen } from "./features/notes/notes.js";
 import { settingsScreen } from "./features/settings/settings.js";
 
 [todayScreen, libraryScreen, subjectScreen, subjectAllScreen, topicScreen, paperScreen, bankScreen, bankAddScreen,
-  searchScreen, progressScreen, notesScreen, settingsScreen]
+  searchScreen, progressScreen, testsScreen, testScreen, resultScreen, notesScreen, settingsScreen]
   .forEach(registerScreen);
 
 function renderTabbar(activeId) {

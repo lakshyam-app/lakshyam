@@ -51,9 +51,11 @@ export default {
     welcomeBody: "Pick the backup file you exported from PSC Exam Vault. You’ll see exactly what comes in before anything is saved. Your old app stays as it is.",
     importButton: "Import from PSC Exam Vault",
     readyTitle: "Your data is here",
-    readyBody: "{papers} and {questions} in {syllabus}. Tests, daily plans and progress arrive in the next updates.",
+    readyBody: "{papers} and {questions} in {syllabus}. Daily plans and progress insights arrive in the next updates.",
     openLibrary: "Open Library",
-    offlineReady: "Works offline on this phone"
+    offlineReady: "Works offline on this phone",
+    continue: "Continue: {label}",
+    startTest: "Start a test"
   },
   syllabus: {
     title: "Syllabus",
@@ -78,6 +80,8 @@ export default {
   question: {
     number: "Q{n}",
     question: "Question",
+    inTest: "Q{n}",
+    paperNumber: "paper Q{n}",
     correct: "correct answer",
     yourPick: "your choice",
     showAnswer: "Show answer",
@@ -357,7 +361,161 @@ export default {
   },
   progress: {
     emptyTitle: "Your progress will show here",
-    emptyBody: "After a few tests you’ll see what to study next, where you lose marks, and how you’re improving."
+    emptyBody: "After a few tests you’ll see what to study next, where you lose marks, and how you’re improving.",
+    soon: "Insights, where your marks go and subject-by-subject progress arrive in the next update. Your test history is below."
+  },
+  history: {
+    title: "Test history",
+    none: "No tests yet in this syllabus. Use ▶ Practice on any paper, subject, topic or bank, or Start a test.",
+    search: "Search tests",
+    group: { all: "All", paper: "Papers", subject: "Subjects", topic: "Topics", bank: "Banks", other: "Mocks & more", ai: "🤖 AI" },
+    sort: { recent: "Most recent", az: "A–Z", best: "Best score", worst: "Worst score" },
+    groupSub: (v) => (v.n === 1 ? "1 test · {avg}% right · {when}" : "{n} tests · avg {avg}% right · last {when}"),
+    testSub: "{right} right · {wrong} wrong · {blank} left"
+  },
+  practice: {
+    button: "Practice",
+    testsDone: (v) => (v.n === 1 ? "1 test taken · {last}% right" : "{n} tests taken · last {last}% right")
+  },
+  start: {
+    title: "Start a test",
+    whatTitle: "What",
+    what: { topic: "This topic", subject: "This subject", paper: "This paper", bank: "A bank", search: "These results", flagged: "Flagged", wrong: "Still wrong", mock: "Mock exam", weak: "Weak areas", review: "These questions" },
+    pickBank: "Choose a bank",
+    howMany: "How many",
+    all: "All {n}",
+    pattern: "Exam: {n}",
+    skipped: (v) => (v.n === 1 ? "1 question has no correct answer marked, so it’s left out." : "{n} questions have no correct answer marked, so they’re left out."),
+    timer: "Timer",
+    timerOff: "Off",
+    timerOn: "On",
+    minutes: "{n} min",
+    timerHint: "Suggested {n} min (0.9 min per question). The test submits itself when time runs out. Time stops while paused or when you leave the app.",
+    layout: "Layout",
+    more: "More options",
+    noMore: "Nothing more to set for this one.",
+    perSubject: "Questions per subject (total {n})",
+    autoSplit: "Split automatically",
+    available: "{n} available",
+    saveAsBank: "Also save these questions as a bank",
+    mixed: "Mix the order",
+    mixedHint: "Off keeps the listing’s order.",
+    start: (v) => (v.n ? "Start · {n}" : "Start"),
+    noneToStart: "No questions to start with.",
+    noGradable: "None of these questions has a correct answer marked yet, so a test can’t be scored. Add an answer key or set answers first.",
+    hint: {
+      mock: "Random questions from every subject, in proportion to how often each subject appears in your papers.",
+      weak: "Questions from your {n} weakest topics: topics that appear often and that you get wrong (or haven’t practised).",
+      wrong: "Questions where your latest answer was wrong or blank.",
+      wrongNone: "Nothing here yet. Questions you get wrong in tests will come here.",
+      flagged: "Questions you flagged with ☆.",
+      flaggedNone: "No flagged questions yet."
+    },
+    label: { mock: "Mock exam ({n})", weak: "Weak areas ({n})", wrong: "Still wrong ({n})", flagged: "Flagged ({n})" },
+    weakBankName: "Weak areas – {date}",
+    bankSaved: "Saved as bank “{name}”",
+    unfinishedTitle: "You have an unfinished test",
+    continue: "Continue it",
+    discardAndNew: "Discard it and start a new one",
+    answeredOf: "{n} of {of} answered",
+    timeLeft: "{time} left"
+  },
+  layout: {
+    single: "One at a time",
+    singleShort: "one at a time",
+    singleHint: "Number bar to jump, swipe or Prev / Next",
+    scroll: "Scroll",
+    scrollHint: "All questions in one long list"
+  },
+  pager: {
+    prev: "Prev",
+    next: "Next",
+    pos: "{n} of {of}",
+    goTo: "Question {n}"
+  },
+  test: {
+    title: "Test",
+    none: "No unfinished test.",
+    qOf: "{n} / {of}",
+    answered: "{n}/{of} answered",
+    guess: "Mark as a guess",
+    guessOn: "Marked as a guess",
+    pause: "Pause",
+    paused: "Paused",
+    pausedHint: "The timer is stopped and the questions are hidden.",
+    resume: "Resume",
+    submit: "Submit",
+    submitTitle: "Submit the test?",
+    submitLeft: (v) => (v.n === 1 ? "1 question is not answered. It counts as left (no marks lost)." : "{n} questions are not answered. They count as left (no marks lost)."),
+    timeUp: "Time’s up. The test was submitted.",
+    leave: "Save and leave",
+    leaveHint: "Continue later from Today. The timer stops while you’re away.",
+    discard: "Discard this test",
+    discardTitle: "Discard this test?",
+    discardBody: "Your answers in this test are thrown away and it won’t count in your history."
+  },
+  results: {
+    short: "{score} / {max}",
+    timed: "timed {n} min",
+    untimed: "no timer",
+    autoSubmitted: "submitted when time ran out",
+    breakdown: "{right} right (+{plus}) · {wrong} wrong (−{minus}) · {blank} left",
+    marking: "Marking: {right} for a right answer, {wrong} for a wrong one, 0 if left.",
+    accuracy: "of answered right",
+    attempted: "attempted",
+    time: "spent",
+    guessLine: "You guessed {n} times and got {right} right. Guessing earned you {net} marks.",
+    timingRemoved: "Time per question isn’t shown for this test (the old app recorded it wrongly).",
+    missing: (v) => (v.n === 1 ? "1 question from this test no longer exists; its result still counts." : "{n} questions from this test no longer exist; their results still count."),
+    ungraded: "{n} questions had no answer marked at the time and weren’t scored.",
+    retake: "Retake",
+    practiseWrong: "Practise the {n} wrong / left",
+    wrongLabel: "Wrong ones: {label}",
+    filter: { all: "All", right: "Right", wrong: "Wrong", blank: "Left", "guess-right": "🤔 right", "guess-wrong": "🤔 wrong" },
+    sort: { test: "Test order", slow: "Slowest first", fast: "Fastest first", hard: "Hardest first" },
+    noneHere: "No questions match this filter.",
+    copyWrong: "Copy the wrong / left questions",
+    delete: "Delete this test",
+    deleteTitle: "Delete this test?",
+    deleteBody: "It is removed from your history and from Still wrong. You can undo right after.",
+    deleted: "Test deleted"
+  },
+  review: {
+    right: "✓ Right",
+    wrong: "✗ Wrong",
+    blank: "Not answered",
+    ungraded: "Not scored (no answer marked then)",
+    guess: "Guess",
+    keyChanged: "The correct answer was changed after this test."
+  },
+  syllabi: {
+    title: "Syllabuses",
+    add: "+ Add a syllabus",
+    namePlaceholder: "e.g. Degree Level Prelims 2026",
+    added: "Added {name}",
+    editTitle: "Syllabus",
+    name: "Name",
+    marking: "Marking",
+    pos: "Marks for a right answer",
+    negNum: "Deduct",
+    negDen: "for every … wrong",
+    markingWords: "{right} for a right answer, {wrong} for a wrong one.",
+    markingShort: "{right} / {wrong}",
+    markingNote: "Changes apply to new tests. Past tests keep the marking they were scored with.",
+    pattern: "Exam pattern (optional)",
+    patternHint: "Fill this in to make mock exams match the real exam. Leave empty to keep the defaults.",
+    patternQuestions: "Questions",
+    patternMinutes: "Minutes",
+    patternShort: "exam: {n} q, {m} min",
+    invalid: "Check the name and marking numbers.",
+    saved: "Saved",
+    delete: "Delete this syllabus",
+    cantDelete: "Can’t delete yet",
+    cantDeleteBody: "It still has {papers} and {tests}. Move its papers to another syllabus first (paper ⋯ → Move). Tests stay with the syllabus they were taken in.",
+    lastOne: "You need at least one syllabus.",
+    deleteTitle: "Delete “{name}”?",
+    deleteBody: "Its studied counts and labels go too. A safety copy is kept (Settings → Undo).",
+    deleted: "Syllabus deleted"
   },
   notes: {
     emptyTitle: "No notes yet",
@@ -369,7 +527,7 @@ export default {
     removed: "Note removed",
     search: "Search notes",
     open: "Open",
-    kind: { topic: "Topic", subject: "Subject", paper: "Paper", bank: "Bank", list: "Topic list", other: "Note" }
+    kind: { question: "Question", topic: "Topic", subject: "Subject", paper: "Paper", bank: "Bank", list: "Topic list", other: "Note" }
   },
   search: {
     title: "Search",
@@ -380,7 +538,8 @@ export default {
     viewAll: "View all {n} as a list",
     openTopic: "Open topic",
     openPaper: "Open paper",
-    addAllToBank: "Add all to a bank"
+    addAllToBank: "Add all to a bank",
+    testLabel: "Search: {q}"
   },
   import: {
     reading: "Reading the file…",
@@ -494,7 +653,7 @@ export default {
     undoConfirmBody: "Lakshyam’s current data will be replaced by this copy. A new safety copy of the current data is kept first.",
     undoButton: "Put it back",
     undoDone: "Data put back as it was on {when}",
-    reason: { import: "Before import", restore: "Before restore", undo: "Before undo", erase: "Before erase", merge: "Before merging names", delete: "Before deleting a paper", paper: "Before updating a paper" },
+    reason: { import: "Before import", restore: "Before restore", undo: "Before undo", erase: "Before erase", merge: "Before merging names", delete: "Before deleting a paper", paper: "Before updating a paper", syllabus: "Before deleting a syllabus" },
     difficulty: "Difficulty marking",
     difficultyHint: "Shows Easy / Medium / Hard on question cards and lets you sort by it.",
     erase: "Erase Lakshyam’s data",
@@ -520,7 +679,7 @@ export default {
     checking: "Checking…",
     offlineNow: "You’re offline. Connect to check for updates.",
     comingTitle: "Coming in later updates",
-    coming: "Tests, progress insights, daily plan, AI keys, study PDFs and Malayalam names."
+    coming: "Progress insights, daily plan, AI keys, study PDFs and Malayalam names."
   },
   update: {
     ready: "A new version is ready",

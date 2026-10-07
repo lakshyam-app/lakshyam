@@ -4,7 +4,6 @@
    in a long list is kept. */
 import { html, onAction } from "../../core/dom.js";
 import { t } from "../../core/i18n.js";
-import { typesetMath } from "../../core/math.js";
 import { toast } from "../../core/toast.js";
 import { runFlow, chooseAction, askText, confirmAction } from "../../core/dialogs.js";
 import { openSheet } from "../../core/sheet.js";
@@ -15,9 +14,8 @@ import { questionCard, difficultyOf } from "./card.js";
 import { copyQuestion } from "./copy.js";
 import { pickTopic } from "../library/topic-picker.js";
 import { pickExams } from "./exam-filter.js";
+import { mountCards, forgetPlace } from "./pager.js";
 
-const PAGE = 30;
-const shownBy = new Map();   // listing key → how many cards were showing (kept across redraws)
 const examsBy = new Map();   // listing key → Set of included paper IDs (none = all)
 const sortBy = new Map();    // listing key → "none" | "diff-asc" | "diff-desc"
 const revealBy = new Map();  // listing key → Map(questionId → picked index | true)
@@ -26,7 +24,8 @@ let editMode = false;
 const RANK = { E: 1, M: 2, D: 3 };
 
 export const viewMode = () => (editMode ? "edit" : store.setting("questionView", "study"));
-const difficultyOn = () => store.setting("difficultyEnabled", true) !== false;
+export const listLayout = () => store.setting("listLayout", "scroll");
+export const difficultyOn = () => store.setting("difficultyEnabled", true) !== false;
 
 /** Questions after the listing's exam filter and sort. */
 export function visibleQuestions(key, questions) {
@@ -53,6 +52,26 @@ function papersIn(questions) {
 }
 
 /**
+ * Card actions shared by every list of question cards (Library, results, search).
+ * view: { refresh(id), remove(id) } from mountCards. onOption(q, i) handles option taps (optional).
+ */
+export function bindCardActions(host, { view, bank = null, onOption = null, onReveal = null }) {
+  const quiet = (fn, qid) => store.quietly(fn).then(() => view.refresh(qid));
+  const qOf = (el) => store.question(el.closest("[data-qid]").dataset.qid);
+  onAction(host, {
+    "q-option": (el) => onOption?.(qOf(el), Number(el.dataset.i), quiet),
+    "q-reveal": (el) => onReveal?.(qOf(el)),
+    "q-flag": (el) => {
+      const q = qOf(el); const on = !store.questionState(q.id)?.flagged;
+      quiet(() => mut.setFlag(q.id, on), q.id);
+      toast(on ? t("question.flaggedToast") : t("question.unflaggedToast"));
+    },
+    "q-diff": (el) => runFlow(() => chooseDifficulty(qOf(el), quiet)),
+    "q-menu": (el) => runFlow(() => questionMenu(qOf(el), { bank, quiet, removeCard: (id) => view.remove(id) }))
+  });
+}
+
+/**
  * host: element to fill. opts: { key, questions, showPaper, bank, examFilter }
  * examFilter: show the "Exams" chip (for listings that mix papers).
  */
@@ -61,13 +80,14 @@ export function mountQuestions(host, { key, questions, showPaper = true, bank = 
   const exams = examsBy.get(key);
   const list = visibleQuestions(key, questions);
   const mode = viewMode();
+  const layout = listLayout();
   const reveal = revealBy.get(key) || new Map();
   revealBy.set(key, reveal);
   const sort = sortBy.get(key) || "none";
 
   host.innerHTML = html`
     <div class="toolbar">
-      <button type="button" class="pill" data-action="ql-view">${t(`view.${mode}`)} ▾</button>
+      <button type="button" class="pill" data-action="ql-view">${t(`view.${mode}`)}${layout === "single" ? ` · ${t("layout.singleShort")}` : ""} ▾</button>
       <button type="button" class="pill" data-action="ql-sort">${t(`sort.${sort}`)} ▾</button>
       ${papers.length > 1 ? html`<button type="button" class="pill ${exams ? "on" : ""}" data-action="ql-exams">
         ${exams ? t("exams.some", { n: exams.size, of: papers.length }) : t("exams.all", { n: papers.length })} ▾</button>` : ""}
@@ -75,59 +95,38 @@ export function mountQuestions(host, { key, questions, showPaper = true, bank = 
     ${mode === "edit" ? html`<div class="banner"><span>${t("view.editBanner")}</span>
       <button type="button" class="btn btn-small" data-action="ql-edit-done">${t("common.done")}</button></div>` : ""}
     ${exams ? html`<p class="hint">${t("exams.showing", { n: list.length, of: questions.length })}</p>` : ""}
-    <div class="qlist"></div>
-    <button type="button" class="btn btn-quiet more" hidden></button>`;
+    <div class="qhost"></div>`;
 
-  const listEl = host.querySelector(".qlist");
-  const more = host.querySelector(".more");
-  const cardOpts = () => ({ showPaper, mode: viewMode(), showDifficulty: difficultyOn() });
-  let shown = 0;
-  const drawMore = (n = PAGE) => {
-    const next = list.slice(shown, shown + n);
-    const holder = document.createElement("div");
-    holder.innerHTML = html`${next.map((q) => questionCard(q, { ...cardOpts(), revealed: reveal.has(q.id) ? reveal.get(q.id) : null }))}`;
-    typesetMath(holder);
-    listEl.append(...holder.children);
-    shown += next.length;
-    shownBy.set(key, shown);
-    const left = list.length - shown;
-    more.hidden = left <= 0;
-    more.textContent = t("common.showMore", { n: Math.min(PAGE, left) });
-  };
-  more.addEventListener("click", () => drawMore());
-  if (!list.length) listEl.innerHTML = html`<p class="hint">${t("library.noQuestions")}</p>`;
-  else drawMore(Math.max(PAGE, shownBy.get(key) || 0));
-
+  // Always draw from the saved copy, so a redrawn card shows the latest edit.
+  const card = (q0) => { const q = store.question(q0.id) || q0; return questionCard(q, { showPaper, mode: viewMode(), showDifficulty: difficultyOn(), revealed: reveal.has(q.id) ? reveal.get(q.id) : null }); };
+  const view = mountCards(host.querySelector(".qhost"), { key, items: list, card, layout });
   const redraw = () => mountQuestions(host, { key, questions, showPaper, bank, examFilter });
 
-  function refreshCard(qid) {
-    const el = listEl.querySelector(`[data-qid="${CSS.escape(qid)}"]`);
-    if (!el) return;
-    const q = store.question(qid);
-    if (!q) { el.remove(); return; }
-    const holder = document.createElement("div");
-    holder.innerHTML = html`${questionCard(q, { ...cardOpts(), revealed: reveal.has(qid) ? reveal.get(qid) : null })}`;
-    const fresh = holder.firstElementChild;
-    typesetMath(fresh);
-    const openExplain = el.querySelector("details[open]");
-    if (openExplain) fresh.querySelector("details")?.setAttribute("open", "");
-    el.replaceWith(fresh);
-  }
-
-  const quiet = (fn, qid) => store.quietly(fn).then(() => refreshCard(qid));
-  const qOf = (el) => store.question(el.closest("[data-qid]").dataset.qid);
-
+  bindCardActions(host, {
+    view, bank,
+    onOption: (q, i, quiet) => {
+      if (viewMode() === "edit") return quiet(() => mut.setAnswer(q, i), q.id);
+      if (viewMode() === "selftest") { reveal.set(q.id, i); view.refresh(q.id); }
+    },
+    onReveal: (q) => { reveal.set(q.id, true); view.refresh(q.id); }
+  });
   onAction(host, {
     "ql-view": () => runFlow(async () => {
       const id = await chooseAction({ title: t("view.title"), items: [
         { id: "study", label: t("view.study"), sub: t("view.studyHint"), current: mode === "study" },
         { id: "selftest", label: t("view.selftest"), sub: t("view.selftestHint"), current: mode === "selftest" },
-        { id: "edit", label: t("view.edit"), sub: t("view.editHint"), current: mode === "edit" }
+        { id: "edit", label: t("view.edit"), sub: t("view.editHint"), current: mode === "edit" },
+        { id: "scroll", label: t("layout.scroll"), sub: t("layout.scrollHint"), current: layout === "scroll" },
+        { id: "single", label: t("layout.single"), sub: t("layout.singleHint"), current: layout === "single" }
       ] });
       if (!id) return;
-      editMode = id === "edit";
-      reveal.clear();
-      if (id !== "edit") await store.quietly(() => store.setSetting("questionView", id));
+      if (id === "scroll" || id === "single") {
+        await store.quietly(() => store.setSetting("listLayout", id));
+      } else {
+        editMode = id === "edit";
+        reveal.clear();
+        if (id !== "edit") await store.quietly(() => store.setSetting("questionView", id));
+      }
       redraw();
     }),
     "ql-edit-done": () => { editMode = false; redraw(); },
@@ -136,30 +135,16 @@ export function mountQuestions(host, { key, questions, showPaper = true, bank = 
         .map((s) => ({ id: s, label: t(`sort.${s}`), current: s === sort })) });
       if (!id) return;
       sortBy.set(key, id);
-      shownBy.delete(key);
+      forgetPlace(key);
       redraw();
     }),
     "ql-exams": async () => {
       const result = await pickExams({ papers, selected: exams || null });
       if (result === undefined) return;
       if (result) examsBy.set(key, result); else examsBy.delete(key);
-      shownBy.delete(key);
+      forgetPlace(key);
       redraw();
-    },
-    "q-option": (el) => {
-      const q = qOf(el); const i = Number(el.dataset.i);
-      if (viewMode() === "edit") return quiet(() => mut.setAnswer(q, i), q.id);
-      reveal.set(q.id, i);
-      refreshCard(q.id);
-    },
-    "q-reveal": (el) => { const q = qOf(el); reveal.set(q.id, true); refreshCard(q.id); },
-    "q-flag": (el) => {
-      const q = qOf(el); const on = !store.questionState(q.id)?.flagged;
-      quiet(() => mut.setFlag(q.id, on), q.id);
-      toast(on ? t("question.flaggedToast") : t("question.unflaggedToast"));
-    },
-    "q-diff": (el) => runFlow(() => chooseDifficulty(qOf(el), quiet)),
-    "q-menu": (el) => runFlow(() => questionMenu(qOf(el), { bank, quiet, refreshCard, removeCard: (id) => listEl.querySelector(`[data-qid="${CSS.escape(id)}"]`)?.remove() }))
+    }
   });
 }
 
@@ -175,7 +160,7 @@ async function chooseDifficulty(q, quiet) {
   await quiet(() => mut.setDifficulty(q.id, id === "clear" ? null : id), q.id);
 }
 
-async function questionMenu(q, { bank, quiet, removeCard }) {
+export async function questionMenu(q, { bank, quiet, removeCard }) {
   const state = store.questionState(q.id);
   const deleted = q.status === "deleted_by_psc";
   const id = await chooseAction({

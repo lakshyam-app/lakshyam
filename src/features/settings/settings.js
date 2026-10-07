@@ -10,6 +10,7 @@ import * as store from "../../data/store.js";
 import { downloadBackup } from "../../data/backup.js";
 import { takeSnapshot, listSnapshots, restoreSnapshot } from "../../data/snapshots.js";
 import { startImport } from "../import/import-flow.js";
+import { syllabiBlock, addSyllabusFlow, editSyllabusFlow } from "./syllabi.js";
 
 const when = (ms) => new Date(ms).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 
@@ -107,6 +108,10 @@ export const settingsScreen = {
           <h2>${t("settings.sectionData")}</h2>
           ${dataBlock()}
         </div>
+        ${store.syllabi().length ? html`<div class="group">
+          <h2>${t("syllabi.title")}</h2>
+          <div class="rows">${syllabiBlock()}</div>
+        </div>` : ""}
         <div class="group">
           <h2>${t("settings.sectionStorage")}</h2>
           <div id="storageBlock"></div>
@@ -139,6 +144,8 @@ export const settingsScreen = {
     onAction(container, {
       import: startImport,
       undo: openUndo,
+      "syl-add": addSyllabusFlow,
+      "syl-edit": (el) => editSyllabusFlow(el.dataset.id),
       erase: confirmErase,
       backup: async () => {
         // Saved first, so the backup itself records when it was made.

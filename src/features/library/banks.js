@@ -18,6 +18,7 @@ import { questionCard } from "../question/card.js";
 import { copyQuestions } from "../question/copy.js";
 import { noteBlock, editNote } from "../notes/note-editor.js";
 import { addPaperFlow } from "./paper-files.js";
+import { openStartTest } from "../test/start-sheet.js";
 import { pickTopic } from "./topic-picker.js";
 import { header, backHandler, chev } from "./library.js";
 
@@ -89,10 +90,11 @@ export const bankScreen = {
       backTo: "library", backParams: { view: "banks" }, backLabel: t("library.views.banks"),
       title: info.name, sub: [t("common.questions", { n: info.questions.length }), info.auto ? info.hint : null].filter(Boolean).join(" · "), menu: true
     })}
-    ${info.auto ? "" : html`<div class="actions-row">
-      <button type="button" class="btn" data-action="add">${t("banks.addFromPool")}</button>
-      <button type="button" class="btn btn-quiet" data-action="type">${t("banks.type")}</button>
-    </div>`}
+    <div class="actions-row">
+      ${info.questions.length ? html`<button type="button" class="btn" data-action="practice">▶ ${t("practice.button")}</button>` : ""}
+      ${info.auto ? "" : html`<button type="button" class="btn btn-quiet" data-action="add">${t("banks.addFromPool")}</button>
+      <button type="button" class="btn btn-quiet" data-action="type">${t("banks.type")}</button>`}
+    </div>
     ${info.missing ? html`<p class="hint">${t("banks.missing", { n: info.missing })}</p>` : ""}
     ${noteBlock(noteType, id)}
     <div id="qHost"></div>`;
@@ -100,6 +102,7 @@ export const bankScreen = {
       ...backHandler,
       add: () => go("bank-add", { id }),
       type: () => typeQuestionFlow(info.bank),
+      practice: () => openStartTest({ scope: info.auto ? { type: id === AUTO.flagged ? "flagged" : "wrong", ref: syllabus.id, label: info.name } : { type: "bank", ref: id, label: info.name }, questions: visibleQuestions(key, info.questions), keepOrder: false }),
       "note-edit": () => editNote(noteType, id, info.name),
       menu: () => runFlow(async () => {
         const choice = await chooseAction({ title: info.name, items: info.auto ? [

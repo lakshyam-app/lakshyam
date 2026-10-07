@@ -4,7 +4,7 @@
      (Other apps on the same site keep their caches.)
    - A new version waits until the user taps "Refresh" in the app. */
 
-const VERSION = "0.3.0";
+const VERSION = "0.4.0";
 const PREFIX = "lakshyam-";
 const SHELL_CACHE = `${PREFIX}shell-${VERSION}`;
 
@@ -42,8 +42,11 @@ const SHELL_FILES = [
   "./src/data/snapshots.js",
   "./src/data/store.js",
   "./src/data/taxonomy-seed.js",
+  "./src/data/tests.js",
   "./src/domain/scoring.js",
+  "./src/domain/stats.js",
   "./src/domain/study.js",
+  "./src/domain/testing.js",
   "./src/domain/text.js",
   "./src/features/import/import-flow.js",
   "./src/features/library/banks.js",
@@ -58,8 +61,13 @@ const SHELL_FILES = [
   "./src/features/question/copy.js",
   "./src/features/question/exam-filter.js",
   "./src/features/question/list.js",
+  "./src/features/question/pager.js",
   "./src/features/search/search.js",
   "./src/features/settings/settings.js",
+  "./src/features/settings/syllabi.js",
+  "./src/features/test/results.js",
+  "./src/features/test/start-sheet.js",
+  "./src/features/test/test-screen.js",
   "./src/features/today/today.js",
   "./src/main.js",
   "./src/strings/en.js",

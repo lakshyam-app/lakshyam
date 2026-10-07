@@ -18,6 +18,14 @@ import { noteBlock, editNote } from "../notes/note-editor.js";
 import { topicMenu, labelFor, labelDot, LABELS, renameTopicFlow, renameSubjectFlow, markStudied } from "./topic-actions.js";
 import { addPaperFlow, answerKeyFlow } from "./paper-files.js";
 import { banksRows } from "./banks.js";
+import { openStartTest } from "../test/start-sheet.js";
+import { testsFor } from "../progress/progress.js";
+
+/** ▶ Practice from a listing: the questions as shown (exam filter and sort applied). */
+export function practice(key, questions, scope, keepOrder = false) {
+  return openStartTest({ scope, questions: visibleQuestions(key, questions), keepOrder });
+}
+const playIcon = "▶";
 
 const VIEWS = ["subjects", "topics", "papers", "banks"];
 let lastView = "subjects";
@@ -312,6 +320,7 @@ export const subjectScreen = {
       backTo: "library", backParams: { view: "subjects" }, backLabel: t("library.views.subjects"),
       title: subject.name, sub: `${t("common.questions", { n: total })} · ${t("common.topics", { n: topics.length })}`, menu: true
     })}
+    ${total ? html`<div class="actions-row"><button type="button" class="btn" data-action="practice">${playIcon} ${t("practice.button")}</button></div>` : ""}
     ${noteBlock("subject", id)}
     <div class="rows" id="subRows">
       ${total ? html`<button type="button" class="row" data-action="all">
@@ -331,6 +340,7 @@ export const subjectScreen = {
       ...backHandler,
       open: (el) => go("topic", { id: el.dataset.id }),
       all: () => go("subject-all", { id }),
+      practice: () => practice(`subject-all:${id}`, store.questionsFor({ syllabusId: syllabus.id, subjectId: id }), { type: "subject", ref: id, label: subject.name }),
       "note-edit": () => editNote("subject", id, subject.name),
       menu: () => runFlow(async () => {
         const choice = await chooseAction({ title: subject.name, items: [
@@ -359,8 +369,10 @@ export const subjectAllScreen = {
     container.innerHTML = html`${header({
       backTo: "subject", backParams: { id }, backLabel: subject.name,
       title: t("subject.allQuestions"), sub: t("common.questions", { n: questions.length })
-    })}<div id="qHost"></div>`;
-    onAction(container, backHandler);
+    })}
+    ${questions.length ? html`<div class="actions-row"><button type="button" class="btn" data-action="practice">${playIcon} ${t("practice.button")}</button></div>` : ""}
+    <div id="qHost"></div>`;
+    onAction(container, { ...backHandler, practice: () => practice(`subject-all:${id}`, questions, { type: "subject", ref: id, label: subject.name }) });
     mountQuestions(container.querySelector("#qHost"), { key: `subject-all:${id}`, questions, showPaper: true });
   }
 };
@@ -378,14 +390,17 @@ export const topicScreen = {
     const questions = store.questionsFor({ syllabusId: syllabus.id, topicId: id });
     const st = store.topicStateFor(syllabus.id, id);
     const label = labelFor(syllabus.id, id);
+    const done = testsFor(syllabus.id, "topic", id).sort((a, b) => b.submittedAt - a.submittedAt);
     const sub = [t("common.questions", { n: questions.length }), st?.studiedCount ? t("library.studied", { n: st.studiedCount }) : t("library.notStudied")]
       .filter(Boolean).join(" · ");
     container.innerHTML = html`${header({
       backTo: "subject", backParams: { id: topic.subjectId }, backLabel: subject?.name || t("common.back"),
       title: html`${labelDot(label)}${topic.name}`, sub, menu: true
     })}
+    ${done.length ? html`<button type="button" class="link" data-action="tests">${t("practice.testsDone", { n: done.length, last: Math.round((done[0].counts.correct / Math.max(1, done[0].counts.total)) * 100) })} ›</button>` : ""}
     <div class="actions-row">
-      <button type="button" class="btn" data-action="studied">${t("studied.button")}</button>
+      ${questions.length ? html`<button type="button" class="btn" data-action="practice">${playIcon} ${t("practice.button")}</button>` : ""}
+      <button type="button" class="btn btn-quiet" data-action="studied">${t("studied.button")}</button>
     </div>
     ${noteBlock("topic", id)}
     <div id="qHost"></div>`;
@@ -393,6 +408,8 @@ export const topicScreen = {
     onAction(container, {
       ...backHandler,
       studied: () => markStudied(syllabus.id, topic),
+      practice: () => practice(key, questions, { type: "topic", ref: id, label: topic.name }),
+      tests: () => (done.length === 1 ? go("result", { id: done[0].id }) : go("tests", { type: "topic", ref: id })),
       "note-edit": () => editNote("topic", id, topic.name),
       menu: () => topicMenu(topic, { onPage: true, extra: [
         st?.studiedCount ? { id: "minus", label: t("studied.minus", { n: st.studiedCount }), run: () => mut.addStudied(syllabus.id, id, -1) } : null,
@@ -418,10 +435,12 @@ export const paperScreen = {
       backTo: "library", backParams: { view: "papers" }, backLabel: t("library.views.papers"),
       title: paper.name, sub: [paper.postName, t("common.questions", { n: questions.length })].filter(Boolean).join(" · "), menu: true
     })}
+    ${questions.length ? html`<div class="actions-row"><button type="button" class="btn" data-action="practice">${playIcon} ${t("practice.button")}</button></div>` : ""}
     ${noteBlock("paper", id)}
     <div id="qHost"></div>`;
     onAction(container, {
       ...backHandler,
+      practice: () => practice(key, questions, { type: "paper", ref: id, label: paper.name }, true),
       "note-edit": () => editNote("paper", id, paper.name),
       menu: () => paperMenu(paper, questions, key)
     });

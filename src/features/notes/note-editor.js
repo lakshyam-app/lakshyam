@@ -21,6 +21,7 @@ export function noteTarget(note) {
     case "bank": { const x = s.byId("sets", id); return x ? { name: x.name, kind: t("notes.kind.bank"), to: "bank", params: { id } } : null; }
     case "set": return { name: t(`banks.auto.${id === "auto:wrong" ? "wrong" : "flagged"}`), kind: t("notes.kind.bank"), to: "bank", params: { id } };
     case "list": { const x = s.byId("topicLists", id); return x ? { name: x.name, kind: t("notes.kind.list"), to: "library", params: { view: "topics", list: id } } : null; }
+    case "question": { const q = s.question(id); const p = q && s.paper(q.paperId); return p ? { name: note.label || p.name, kind: t("notes.kind.question"), to: "paper", params: { id: p.id } } : null; }
     default: return null;
   }
 }

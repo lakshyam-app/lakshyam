@@ -21,7 +21,8 @@ export function setFlag(questionId, flagged) {
 }
 
 export function setDifficulty(questionId, level) {
-  return store.apply({ questionState: { put: [copy(stateOf(questionId), { difficulty: level, difficultySource: level ? "manual" : null })] } });
+  // Any choice you make (even "no difficulty") stops automatic marking for this question.
+  return store.apply({ questionState: { put: [copy(stateOf(questionId), { difficulty: level, difficultySource: "manual" })] } });
 }
 
 /* ---------- question content ---------- */
@@ -405,4 +406,39 @@ export async function importIntoBank(bank, plan) {
   await savePaper(plan);
   const fresh = store.byId("sets", bank.id);
   await addToBank(fresh, plan.questions.map((q) => q.id));
+}
+
+/* ---------- syllabuses ---------- */
+
+export async function addSyllabus(name) {
+  const order = Math.max(-1, ...store.syllabi().map((s) => s.order)) + 1;
+  const syl = { id: newId("syl"), name: name.trim(), marking: { pos: 1, negNum: 1, negDen: 3 }, pattern: null, stage: null, order, source: "personal" };
+  await store.apply({ syllabi: { put: [syl] } });
+  return syl;
+}
+
+/** Name, marking and the optional exam pattern. Past tests keep the marking they were scored with. */
+export const updateSyllabus = (syllabus, patch) => store.apply({ syllabi: { put: [copy(syllabus, patch)] } });
+
+/** What still belongs to a syllabus (it can only be deleted when this is all zero). */
+export function syllabusUse(syllabusId) {
+  return {
+    papers: store.all("papers").filter((p) => p.syllabusId === syllabusId).length,
+    tests: store.all("attempts").filter((a) => a.syllabusId === syllabusId).length
+  };
+}
+
+export async function deleteSyllabus(syllabus) {
+  const changes = {
+    syllabi: { delete: [syllabus.id] },
+    topicState: { delete: store.all("topicState").filter((x) => x.syllabusId === syllabus.id).map((x) => x.id) },
+    labels: { delete: store.all("labels").filter((x) => x.syllabusId === syllabus.id).map((x) => x.id) },
+    filterTemplates: { delete: store.all("filterTemplates").filter((x) => x.syllabusId === syllabus.id).map((x) => x.id) }
+  };
+  await takeSnapshot("syllabus");
+  if (store.setting("currentSyllabusId") === syllabus.id) {
+    const other = store.syllabi().find((s) => s.id !== syllabus.id);
+    changes.settings = { put: [{ id: "currentSyllabusId", value: other?.id ?? null }] };
+  }
+  await store.apply(changes);
 }

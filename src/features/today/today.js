@@ -1,11 +1,14 @@
-/* Today: the home screen. Phase 1 shows the greeting, the goal ring, and either
-   the import invitation or a short summary of the imported data.
+/* Today: the home screen. Greeting, today's goal (questions answered in tests),
+   Continue an unfinished test, Start a test, and a short data summary.
    Next-best-step, streak and quick tests arrive in Phase 5. */
 import { html, onAction } from "../../core/dom.js";
 import { t, formatNumber } from "../../core/i18n.js";
 import { go } from "../../core/router.js";
 import * as store from "../../data/store.js";
 import { startImport } from "../import/import-flow.js";
+import { localDate } from "../../domain/study.js";
+import * as tests from "../../data/tests.js";
+import { openStartTest, progressText } from "../test/start-sheet.js";
 
 const DAILY_GOAL = 30; // becomes a setting in Phase 5
 
@@ -40,9 +43,14 @@ function dataPanel() {
     </div>`;
   }
   const syllabus = store.currentSyllabus();
+  const active = tests.activeTest();
+  const testBlock = html`${active ? html`<button type="button" class="continue-card" data-action="continue">
+      <span class="row-main"><span class="row-title">${t("today.continue", { label: active.scope?.label || "" })}</span>
+      <span class="row-sub">${progressText(active)}</span></span><span class="chev-txt">›</span></button>` : ""}
+    <button type="button" class="btn wide" data-action="start">${t("today.startTest")}</button>`;
   const papers = store.papersOf(syllabus.id).length;
   const questions = store.questionsFor({ syllabusId: syllabus.id }).length;
-  return html`<div class="panel">
+  return html`${testBlock}<div class="panel">
     <h2>${t("today.readyTitle")}</h2>
     <p>${t("today.readyBody", { papers: t("common.papers", { n: papers }), questions: t("common.questions", { n: questions }), syllabus: syllabus.name })}</p>
     <button type="button" class="btn btn-quiet" data-action="library">${t("today.openLibrary")}</button>
@@ -53,21 +61,25 @@ export const todayScreen = {
   id: "today",
   tab: 1,
   render(container) {
+    // Questions answered in tests today (on the phone's own date).
+    const done = store.byId("activity", localDate())?.questions || 0;
     container.innerHTML = html`
       <section class="today">
         <h1 class="greeting">${t(greetingKey())}</h1>
         <div class="goal">
-          ${goalRing(0, DAILY_GOAL)}
+          ${goalRing(done, DAILY_GOAL)}
           <div class="goal-text">
             <p class="goal-label">${t("today.goalLabel")}</p>
-            <p class="goal-sub">${t("today.goalProgress", { done: 0, goal: DAILY_GOAL })}</p>
+            <p class="goal-sub">${t("today.goalProgress", { done, goal: DAILY_GOAL })}</p>
           </div>
         </div>
         ${dataPanel()}
       </section>`;
     onAction(container, {
       import: startImport,
-      library: () => go("library")
+      library: () => go("library"),
+      continue: () => go("test"),
+      start: () => openStartTest()
     });
   }
 };

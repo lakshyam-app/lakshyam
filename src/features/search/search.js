@@ -7,7 +7,8 @@ import { t, formatNumber } from "../../core/i18n.js";
 import { go } from "../../core/router.js";
 import { onLongPress } from "../../core/longpress.js";
 import * as store from "../../data/store.js";
-import { mountQuestions, addToBankFlow } from "../question/list.js";
+import { mountQuestions, addToBankFlow, visibleQuestions } from "../question/list.js";
+import { openStartTest } from "../test/start-sheet.js";
 import { previewQuestion } from "../library/banks.js";
 import { runFlow } from "../../core/dialogs.js";
 import { chev } from "../library/library.js";
@@ -50,11 +51,13 @@ export const searchScreen = {
         <div class="head-bar"><button type="button" class="back" data-action="back-search">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>${t("search.title")}</span></button></div>
         <h1>“${state.q}”</h1><p class="hint">${t("common.questions", { n: questions.length })}</p></header>
-        <div class="actions-row"><button type="button" class="btn btn-quiet" data-action="bank-all">${t("search.addAllToBank")}</button></div>
+        <div class="actions-row"><button type="button" class="btn" data-action="practice">▶ ${t("practice.button")}</button>
+          <button type="button" class="btn btn-quiet" data-action="bank-all">${t("search.addAllToBank")}</button></div>
         <div id="qHost"></div>`;
       onAction(container, {
         "back-search": () => go("search", { q: state.q, scope: state.scope }),
-        "bank-all": () => runFlow(() => addToBankFlow(questions.map((q) => q.id)))
+        "bank-all": () => runFlow(() => addToBankFlow(questions.map((q) => q.id))),
+        practice: () => openStartTest({ scope: { type: "search", ref: state.q, label: t("search.testLabel", { q: state.q }) }, questions: visibleQuestions(`search:${state.scope}:${state.q}`, questions), keepOrder: false })
       });
       mountQuestions(container.querySelector("#qHost"), { key: `search:${state.scope}:${state.q}`, questions, showPaper: true });
       return;
