@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Lakshyam</title>
+  <meta name="description" content="Daily study for Kerala PSC: previous papers, tests and progress.">
+  <meta name="theme-color" content="#F6F7F5" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0F1513" media="(prefers-color-scheme: dark)">
+  <meta name="color-scheme" content="light dark">
+  <!-- Only this app's own files and the AI providers the user configures are allowed. -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https:; worker-src 'self'; object-src 'none'; base-uri 'self'">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="styles/app.css">
+</head>
+<body>
+  <div id="app" class="app">
+    <header class="topbar">
+      <button type="button" class="syllabus-chip" id="syllabusChip" data-action="open-syllabus">
+        <span id="syllabusName"></span>
+        <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg>
+      </button>
+      <div class="topbar-actions">
+        <button type="button" class="icon-btn" id="searchBtn" data-action="open-search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+        </button>
+        <button type="button" class="icon-btn" id="settingsBtn" data-action="go" data-to="settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main id="screen" class="screen" tabindex="-1"></main>
+
+    <nav class="tabbar" id="tabbar"></nav>
+  </div>
+
+  <div id="sheetRoot"></div>
+  <div id="toastRoot" aria-live="polite"></div>
+
+  <noscript><p class="noscript">Lakshyam needs JavaScript turned on.</p></noscript>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
