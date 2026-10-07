@@ -17,7 +17,8 @@ or any other app. Your data comes in only from an export file you choose.
 1. Open the app and tap **Import from PSC Exam Vault** (or Settings → Backup → Import).
    Choose the export file. Lakshyam checks it, shows what it will add, and verifies it after saving.
 2. Pick your syllabus from the chip at the top.
-3. On Today, tap **Set your exam date** to see the days and hours left.
+3. On Today, tap **Set your exam date**. You can keep up to 20 exams (Today → tap a countdown) and choose
+   which ones Today shows (the nearest few, or the ones you pick) and how: large cards, tiles or a compact list.
 4. Make a timetable (Progress → 🗓 My timetable) — by hand or as an AI draft you review.
 
 ### The four tabs
@@ -144,3 +145,4 @@ and [`docs/feature-check.md`](docs/feature-check.md) for where every old-app fea
 | 9 | Accessibility, speed check, AI instructions in the app, sample paper, CI, feature check (1.0.0) |
 | 1.1 | Theme choice, clearer question cards (especially dark), Settings in groups with search |
 | 1.2 | Paper theme |
+| 1.3 | Up to 20 exam countdowns, with a choice of which and how Today shows them |

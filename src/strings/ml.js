@@ -7,6 +7,7 @@ import p4 from "./ml-4.js";
 import p5 from "./ml-5.js";
 import p6 from "./ml-6.js";
 import p7 from "./ml-7.js";
+import p8 from "./ml-8.js";
 
 // Part 6 adds keys inside "import", so it is merged into part 5's section.
-export default { ...p1, ...p2, ...p3, ...p4, ...p5, ...p7, import: { ...p5.import, ...p6.import } };
+export default { ...p1, ...p2, ...p3, ...p4, ...p5, ...p7, ...p8, import: { ...p5.import, ...p6.import } };

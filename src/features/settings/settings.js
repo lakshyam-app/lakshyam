@@ -19,7 +19,8 @@ import { runFlow, askText } from "../../core/dialogs.js";
 import { aiBlock, openAiSettings } from "../ai/ai-settings.js";
 import { namesBlock, namesHandlers } from "./names.js";
 import { autoTimesLine, openAutoTimes } from "./difficulty-times.js";
-import { editExam, examOf } from "../today/countdown.js";
+import { allExams } from "../../data/exams.js";
+import { upcoming } from "../../domain/exams.js";
 import { openStatsSettings } from "../progress/progress.js";
 import { can } from "../../core/entitlements.js";
 import * as presets from "../../ai/presets.js";
@@ -136,8 +137,8 @@ const PAGES = {
         <p class="hint">${t("settings.goalHint")}</p>
       </div>
       <div class="group">
-        <button type="button" class="row" data-action="exam" data-set="exam"><span class="row-main"><span class="row-title">📅 ${examOf(store.currentSyllabus()) ? t("exam.change") : t("exam.set")}</span>
-          <span class="row-sub">${t("exam.setSub")}</span></span><span class="chev-txt">›</span></button>
+        <button type="button" class="row" data-action="exam" data-set="exam"><span class="row-main"><span class="row-title">📅 ${t("cd.title")}</span>
+          <span class="row-sub">${t("cd.settingsSub", { n: upcoming(allExams()).length })}</span></span><span class="chev-txt">›</span></button>
         ${sw("countdown", "showCountdown", t("exam.showSetting"))}
         ${sw("diary", "showDiary", t("diary.showSetting"))}
         ${sw("streak", "showStreak", t("settings.showStreak"))}
@@ -243,7 +244,7 @@ function catSubs(aiSummary) {
   const last = store.setting("lastBackupAt");
   const basis = ["first", "latest", "all"].includes(store.setting("statsBasis")) ? store.setting("statsBasis") : "first";
   return {
-    today: t("setx.catSub.today", { goal: Number(store.setting("dailyGoal", 30)) || 30, exam: examOf(syl) ? t("setx.examSet") : t("setx.examNone") }),
+    today: t("setx.catSub.today", { goal: Number(store.setting("dailyGoal", 30)) || 30, exam: upcoming(allExams()).length || t("setx.examNone") }),
     look: t("setx.catSub.look", { theme: t(`setx.themes.${store.setting("theme", "system")}`), lang: LANGUAGES.find((l) => l.code === locale())?.name || "" }),
     tests: t("setx.catSub.tests", { timer: d.timerOn ? t("setx.on") : t("setx.off"), layout: t(`layout.${d.layout === "scroll" ? "scroll" : "singleShort"}`), diff: on("difficultyEnabled") ? t("setx.on") : t("setx.off") }),
     progress: t("setx.catSub.progress", { basis: t(`stats.basis.${basis}`) }),
@@ -259,7 +260,7 @@ function resultsHtml(q) {
   if (!hits.length) return html`<p class="hint pad">${t("setx.noMatch", { q })}</p>`;
   return html`<p class="hint">${t("setx.results", { n: hits.length })}</p>
     <div class="rows">${hits.map((it) => html`<button type="button" class="row" data-action="hit" data-id="${it.id}">
-      <span class="set-icon" aria-hidden="true">${CATEGORY_ICON[it.cat] || "↗"}</span>
+      <span class="set-icon" aria-hidden="true">${CATEGORY_ICON[it.id] || CATEGORY_ICON[it.cat] || "↗"}</span>
       <span class="row-main"><span class="row-title">${it.label()}</span><span class="row-sub">${it.cat === "elsewhere" ? t("setx.elsewhere") : t(`setx.cat.${it.cat}`)}</span></span>
       <span class="chev-txt">›</span></button>`)}</div>`;
 }
@@ -280,7 +281,10 @@ function catList(subs) {
       <span class="row-main"><span class="row-title">${t(`setx.cat.${c}`)}</span><span class="row-sub" data-sub="${c}">${subs[c] || ""}</span></span>
       <span class="chev-txt">›</span></button>`)}</div>
     <h3 class="rows-head">${t("setx.elsewhere")}</h3>
-    <div class="rows"><button type="button" class="row" data-action="hit" data-id="timetable">
+    <div class="rows"><button type="button" class="row" data-action="hit" data-id="exam">
+      <span class="set-icon" aria-hidden="true">📅</span>
+      <span class="row-main"><span class="row-title">${t("cd.title")}</span><span class="row-sub">${t("cd.settingsSub", { n: upcoming(allExams()).length })}</span></span>
+      <span class="chev-txt">›</span></button><button type="button" class="row" data-action="hit" data-id="timetable">
       <span class="set-icon" aria-hidden="true">🗓</span>
       <span class="row-main"><span class="row-title">${t("setx.timetable")}</span><span class="row-sub">${t("setx.timetableSub")}</span></span>
       <span class="chev-txt">›</span></button></div>`;
@@ -296,7 +300,7 @@ async function aiSummaryText() {
 /* ---------- actions ---------- */
 
 const ACTIONS = {
-  exam: () => editExam(),
+  exam: () => go("exams"),
   "ai-settings": () => openAiSettings(),
   undo: () => openUndo(),
   "diff-times": () => openAutoTimes(),
@@ -323,7 +327,7 @@ function handlers(container, goalNow) {
     import: startImport,
     undo: openUndo,
     erase: confirmErase,
-    exam: () => editExam(),
+    exam: () => go("exams"),
     stats: () => openStatsSettings(),
     "diff-times": () => openAutoTimes(),
     "ai-settings": () => openAiSettings(),

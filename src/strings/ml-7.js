@@ -17,7 +17,7 @@ export default {
       about: "ആപ്പും അപ്ഡേറ്റും"
     },
     catSub: {
-      today: "ദിവസ ലക്ഷ്യം {goal} · പരീക്ഷാ തീയതി {exam}",
+      today: "ദിവസ ലക്ഷ്യം {goal} · വരാനുള്ള പരീക്ഷകൾ: {exam}",
       look: "{theme} · {lang}",
       tests: "ടൈമർ {timer} · {layout} · കാഠിന്യം {diff}",
       progress: "എണ്ണുന്നത്: {basis}",

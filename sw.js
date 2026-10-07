@@ -4,7 +4,7 @@
      (Other apps on the same site keep their caches.)
    - A new version waits until the user taps "Refresh" in the app. */
 
-const VERSION = "1.2.0";
+const VERSION = "1.3.0";
 const PREFIX = "lakshyam-";
 const SHELL_CACHE = `${PREFIX}shell-${VERSION}`;
 // The PDF reader is large (about 1.4 MB), so it is not downloaded with the app.
@@ -73,6 +73,7 @@ const SHELL_FILES = [
   "./src/data/backup.js",
   "./src/data/db.js",
   "./src/data/diary.js",
+  "./src/data/exams.js",
   "./src/data/ids.js",
   "./src/data/import-legacy.js",
   "./src/data/ml-names.js",
@@ -87,6 +88,7 @@ const SHELL_FILES = [
   "./src/domain/ai-instructions.js",
   "./src/domain/cards.js",
   "./src/domain/diary.js",
+  "./src/domain/exams.js",
   "./src/domain/habits.js",
   "./src/domain/insights.js",
   "./src/domain/scoring.js",
@@ -148,6 +150,7 @@ const SHELL_FILES = [
   "./src/strings/ml-5.js",
   "./src/strings/ml-6.js",
   "./src/strings/ml-7.js",
+  "./src/strings/ml-8.js",
   "./src/strings/ml.js"
 ];
 

@@ -7,7 +7,7 @@ import { go } from "../../core/router.js";
 import { openSheet } from "../../core/sheet.js";
 import { toast } from "../../core/toast.js";
 import * as store from "../../data/store.js";
-import { countdownCard, tickCountdown, editExam } from "./countdown.js";
+import { countdownCard, tickCountdown } from "./countdown.js";
 import { timetableNow, nowHandlers, nowTick } from "../timetable/now-card.js";
 import { todayDiaryCard, diaryHandlers } from "../diary/diary.js";
 import { nameHtml, label as nameLabel } from "../../core/names.js";
@@ -168,7 +168,7 @@ export const todayScreen = {
 
     container.innerHTML = html`<section class="today">
       <h1 class="greeting">${greet}</h1>
-      ${store.setting("showCountdown", true) !== false ? countdownCard(syllabus) : ""}
+      ${store.setting("showCountdown", true) !== false ? countdownCard() : ""}
       ${nowSlot}
       ${todayDiaryCard(syllabus)}
       ${showStreak ? habitsRow(today) : ""}
@@ -200,7 +200,8 @@ export const todayScreen = {
       continue: () => go("test"),
       start: () => openStartTest(),
       goal: () => go("settings", { section: "today" }),
-      exam: () => editExam(syllabus),
+      exams: () => go("exams"),
+      "exam-add": () => go("exams", { add: "1" }),
       ...nowHandlers,
       ...diaryHandlers,
       backup: async () => {
@@ -209,7 +210,7 @@ export const todayScreen = {
         toast(t("settings.backupSaved"));
       }
     });
-    const stopExam = tickCountdown(container, syllabus);
+    const stopExam = tickCountdown(container);
     const stopNow = nowTick(container);
     return () => { stopExam(); stopNow(); };
   }

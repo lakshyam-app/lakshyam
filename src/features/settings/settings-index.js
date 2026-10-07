@@ -5,13 +5,13 @@ import { t } from "../../core/i18n.js";
 import en from "../../strings/en.js";
 
 export const CATEGORIES = ["today", "look", "tests", "progress", "syllabi", "ai", "data", "about"];
-export const CATEGORY_ICON = { today: "🎯", look: "🎨", tests: "📝", progress: "📊", syllabi: "📚", ai: "🤖", data: "💾", about: "ℹ️", elsewhere: "🗓" };
+export const CATEGORY_ICON = { today: "🎯", look: "🎨", tests: "📝", progress: "📊", syllabi: "📚", ai: "🤖", data: "💾", about: "ℹ️", elsewhere: "🗓", exam: "📅" };
 
 const item = (id, cat, labelKey, act = null) => ({ id, cat, act, label: () => t(labelKey) });
 
 export const SETTINGS_INDEX = [
   item("goal", "today", "settings.goal"),
-  item("exam", "today", "exam.title", "exam"),
+  item("exam", "elsewhere", "cd.title", "exam"),
   item("countdown", "today", "exam.showSetting"),
   item("diary", "today", "diary.showSetting"),
   item("streak", "today", "settings.showStreak"),
