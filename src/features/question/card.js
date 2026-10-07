@@ -7,6 +7,7 @@ import { t } from "../../core/i18n.js";
 import { richText, letterFor } from "../../domain/text.js";
 import * as store from "../../data/store.js";
 import { formatDuration } from "../../domain/testing.js";
+import { can } from "../../core/entitlements.js";
 
 const star = (on) => html`<svg viewBox="0 0 24 24" aria-hidden="true" class="${on ? "filled" : ""}"><path d="M12 3.8l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16.8l-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/></svg>`;
 const dots = html`<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="18.5" cy="12" r="1.3"/></svg>`;
@@ -71,7 +72,17 @@ export function questionCard(q, { showPaper = true, mode = "study", revealed = n
     ${hidden ? html`<button type="button" class="link" data-action="q-reveal">${t("question.showAnswer")}</button>` : ""}
     ${q.explanation && !hidden ? html`<details class="explain"><summary>${t("question.explanation")}</summary>
       <div class="qtext">${richText(q.explanation)}</div></details>` : ""}
+    ${can("ai") && store.setting("aiOnCards", true) !== false && !hidden && mode !== "edit" ? aiRow(q, review) : ""}
   </article>`;
+}
+
+/** AI help right on the card: Explain (or "Why was I wrong?" after a wrong answer), a memory trick, more. */
+function aiRow(q, review) {
+  const wrong = review && review.graded && !review.isCorrect && review.selected !== null && review.selected !== undefined;
+  return html`<div class="ai-row">
+    <button type="button" class="ai-chip" data-action="q-ai" data-mode="explain">🤖 ${wrong ? t("ai.explainMistakeShort") : t("ai.explainShort")}</button>
+    <button type="button" class="ai-chip" data-action="q-ai" data-mode="mnemonic">🧠 ${t("ai.mnemonicShort")}</button>
+    <button type="button" class="ai-chip quiet" data-action="q-ai" data-mode="">${t("ai.moreShort")}</button></div>`;
 }
 
 function reviewLine(r) {

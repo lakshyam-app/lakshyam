@@ -4,7 +4,8 @@
 import * as store from "./store.js";
 import { newId } from "./ids.js";
 import { DEFAULT_MARKING } from "../domain/scoring.js";
-import { gradeTest, autoDifficulty, isGradable } from "../domain/testing.js";
+import { gradeTest, autoDifficulty, isGradable, AUTO_DIFF_DEFAULT, validThresholds, planAutoDifficulty } from "../domain/testing.js";
+import { takeSnapshot } from "./snapshots.js";
 import { localDate } from "../domain/study.js";
 
 /** The unfinished test, if any (only one at a time). */
@@ -58,7 +59,7 @@ export async function submitTest(attempt, run, { auto = false } = {}) {
       const q = store.question(r.questionId);
       const st = store.questionState(r.questionId);
       if (st?.difficulty || st?.difficultySource === "manual" || q.difficultyHint) return;
-      const level = autoDifficulty(r.timeMs);
+      const level = autoDifficulty(r.timeMs, autoTimes());
       states.push({ ...(st || { id: q.id, questionId: q.id, flagged: false }), difficulty: level, difficultySource: "auto" });
       r.difficulty = level;
     });
@@ -75,7 +76,7 @@ export async function submitTest(attempt, run, { auto = false } = {}) {
   await store.quietly(() => store.apply({
     attempts: { put: [done] },
     questionState: { put: states },
-    activity: { put: [{ ...act, count: (act.count || 0) + 1, questions: (act.questions || 0) + answered }] }
+    activity: { put: [{ ...act, count: (act.count || 0) + 1, questions: (act.questions || 0) + answered, correct: (act.correct || 0) + (graded.counts.correct || 0) }] }
   }));
   return done;
 }
@@ -101,3 +102,52 @@ export async function deleteAttempt(attempt) {
   return attempt;
 }
 export const restoreAttempt = (attempt) => store.apply({ attempts: { put: [{ ...attempt }] } });
+
+/* ---------- automatic difficulty times ---------- */
+
+/** The times you set (seconds), or the defaults 26 / 50. */
+export function autoTimes() {
+  const th = store.setting("autoDifficulty", null);
+  return validThresholds(th) ? { medium: Number(th.medium), hard: Number(th.hard) } : { ...AUTO_DIFF_DEFAULT };
+}
+
+/** What re-marking past tests with these times would change (nothing is saved). */
+export function previewAutoDifficulty(th) {
+  const attempts = store.all("attempts").filter((a) => a.status === "submitted");
+  return planAutoDifficulty(attempts, (id) => store.questionState(id), (id) => store.question(id)?.difficultyHint || null, th);
+}
+
+/** Saves the times; with past = true also re-marks past tests. Returns an undo function. */
+export async function saveAutoTimes(th, { past = false } = {}) {
+  const value = { medium: Number(th.medium), hard: Number(th.hard) };
+  if (!validThresholds(value)) throw new Error("bad-times");
+  if (!past) { await store.setSetting("autoDifficulty", value); return null; }
+  const before = store.setting("autoDifficulty", null);
+  const { changes } = previewAutoDifficulty(value);
+  await takeSnapshot("difficulty");
+  const byQ = new Map(changes.map((c) => [c.questionId, c]));
+  const prevStates = []; const created = []; const states = [];
+  changes.forEach((c) => {
+    const st = store.questionState(c.questionId);
+    if (st) prevStates.push({ ...st }); else created.push(c.questionId);
+    states.push({ ...(st || { id: c.questionId, questionId: c.questionId, flagged: false }), difficulty: c.to, difficultySource: "auto" });
+  });
+  // Answers in past tests carry the difficulty they had; update the automatic ones too.
+  const prevAttempts = []; const attempts = [];
+  store.all("attempts").filter((a) => a.status === "submitted").forEach((a) => {
+    let touched = false;
+    const answers = a.answers.map((r) => {
+      const c = byQ.get(r.questionId);
+      if (!c || (r.difficulty && r.difficulty !== c.from)) return r;
+      touched = true;
+      return { ...r, difficulty: c.to };
+    });
+    if (touched) { prevAttempts.push(a); attempts.push({ ...a, answers }); }
+  });
+  await store.apply({ settings: { put: [{ id: "autoDifficulty", value }] }, questionState: { put: states }, attempts: { put: attempts } });
+  return () => store.apply({
+    questionState: { put: prevStates, delete: created },
+    attempts: { put: prevAttempts },
+    settings: before ? { put: [{ id: "autoDifficulty", value: before }] } : { delete: ["autoDifficulty"] }
+  });
+}

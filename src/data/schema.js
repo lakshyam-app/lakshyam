@@ -2,7 +2,7 @@
    steps run in order on the user's phone, so existing data is upgraded, never lost. */
 
 export const DB_NAME = "lakshyam-db";
-export const DB_VERSION = 1;
+export const DB_VERSION = 2;
 
 /* Content: things that could later come from an admin (papers, questions…). */
 export const CONTENT_STORES = ["syllabi", "subjects", "topics", "papers", "questions", "flashcards"];
@@ -10,7 +10,8 @@ export const CONTENT_STORES = ["syllabi", "subjects", "topics", "papers", "quest
 /* User data: always the user's own (progress, notes, settings…). */
 export const USER_STORES = [
   "questionState", "topicState", "attempts", "sets", "topicLists", "labels",
-  "notes", "filterTemplates", "flashcardState", "activity", "settings"
+  "notes", "filterTemplates", "flashcardState", "activity", "settings",
+  "timetables", "ttLog", "diary" // added in v2 (timetable, its daily record, study diary)
 ];
 
 /* Included in backups. */
@@ -27,13 +28,17 @@ const INDEXES = {
   flashcards: ["topicId"]
 };
 
+function createMissing(db) {
+  [...BACKUP_STORES, ...PRIVATE_STORES].forEach((name) => {
+    if (db.objectStoreNames.contains(name)) return;
+    const store = db.createObjectStore(name, { keyPath: "id" });
+    (INDEXES[name] || []).forEach((field) => store.createIndex(field, field));
+  });
+}
+
 export const MIGRATIONS = [
   // v1: first layout
-  (db) => {
-    [...BACKUP_STORES, ...PRIVATE_STORES].forEach((name) => {
-      if (db.objectStoreNames.contains(name)) return;
-      const store = db.createObjectStore(name, { keyPath: "id" });
-      (INDEXES[name] || []).forEach((field) => store.createIndex(field, field));
-    });
-  }
+  createMissing,
+  // v2: timetables, ttLog (what you did each day), diary (day reviews and reports). Only adds; nothing existing changes.
+  createMissing
 ];

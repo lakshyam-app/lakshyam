@@ -70,6 +70,7 @@ export function bindCardActions(host, { view, bank = null, onOption = null, onRe
       toast(on ? t("question.flaggedToast") : t("question.unflaggedToast"));
     },
     "q-diff": (el) => runFlow(() => chooseDifficulty(qOf(el), quiet)),
+    "q-ai": (el) => { const q = qOf(el); aiHelp(q, { selected: selectedFor?.(q), mode: el.dataset.mode || null }); },
     "q-menu": (el) => { const q = qOf(el); return runFlow(() => questionMenu(q, { bank, quiet, removeCard: (id) => view.remove(id), selected: selectedFor?.(q) })); }
   });
 }

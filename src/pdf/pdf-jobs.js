@@ -63,7 +63,7 @@ export async function buildStyleGuide(label, examples) {
 
 /** cfg: { from, to, n, check, style, examples, lang, difficulty } → { items, tot, abortMsg } */
 export async function makeQuestions(pages, cfg, job, onStep = () => {}) {
-  const plan = T.planChunks(T.buildChunks(pages, cfg.from, cfg.to), cfg.n);
+  const plan = T.planChunks(T.buildChunks(pages, cfg.from, cfg.to, cfg.only ? new Set(cfg.only) : null), cfg.n);
   const all = []; const seen = new Set();
   const tot = { raw: 0, badShape: 0, badQuote: 0, skipped: 0, checkFailed: 0 };
   let abortMsg = null;

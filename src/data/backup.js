@@ -61,7 +61,9 @@ export function readBackup(json) {
   if (!json.data || typeof json.data !== "object") return { ok: false, error: "damaged" };
 
   const data = Object.fromEntries(BACKUP_STORES.map((name) => [name, Array.isArray(json.data[name]) ? json.data[name] : []]));
-  const checksumOk = checksum(JSON.stringify(data)) === json.checksum;
+  // The checksum covers the stores that existed when the file was made (older files have fewer).
+  const madeWith = Object.fromEntries(BACKUP_STORES.filter((name) => name in json.data).map((name) => [name, json.data[name]]));
+  const checksumOk = checksum(JSON.stringify(madeWith)) === json.checksum;
   const problems = [];
   BACKUP_STORES.forEach((name) => {
     const seen = new Set();

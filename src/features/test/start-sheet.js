@@ -5,7 +5,7 @@
    Layout:    one at a time, or scroll
    Your last choices are remembered. */
 import { html } from "../../core/dom.js";
-import { t } from "../../core/i18n.js";
+import { t, dateLocale } from "../../core/i18n.js";
 import { openSheet, closeSheet } from "../../core/sheet.js";
 import { chooseAction, runFlow } from "../../core/dialogs.js";
 import { toast } from "../../core/toast.js";
@@ -314,7 +314,7 @@ function startSheet(preset) {
       : s.what === "bank" ? { type: "bank", ref: bank.id, label: bank.name }
       : { type: s.what, ref: syllabus.id, label: t(`start.label.${s.what}`, { n }) };
     if (s.what === "weak" && s.saveBank) {
-      const created = await store.quietly(() => mut.createBank(t("start.weakBankName", { date: new Date().toLocaleDateString("en-IN") })));
+      const created = await store.quietly(() => mut.createBank(t("start.weakBankName", { date: new Date().toLocaleDateString(dateLocale()) })));
       await store.quietly(() => mut.addToBank(store.byId("sets", created.id), questions.map((q) => q.id)));
       toast(t("start.bankSaved", { name: created.name }));
     }

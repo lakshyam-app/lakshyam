@@ -6,9 +6,9 @@ import * as presets from "./presets.js";
 const TIMEOUT_MS = 90000;
 
 export class AiError extends Error {
-  constructor(message, { status = 0, limit = false, busy = false, noPreset = false } = {}) {
+  constructor(message, { status = 0, limit = false, busy = false, noPreset = false, allPaused = false } = {}) {
     super(message);
-    Object.assign(this, { status, limit, busy, noPreset });
+    Object.assign(this, { status, limit, busy, noPreset, allPaused });
   }
 }
 
@@ -103,7 +103,10 @@ export async function ask(system, user, maxTokens = 2500, { images = [] } = {}) 
   const list = await presets.getPresets();
   const config = await presets.getConfig();
   let order = presets.tryOrder(list, config);
-  if (!order.length) throw new AiError("no-preset", { noPreset: true });
+  if (!order.length) {
+    const allPaused = list.some((p) => p.apiKey && p.model && p.baseUrl) && list.every((p) => !(p.apiKey && p.model && p.baseUrl) || presets.isPaused(p));
+    throw new AiError(allPaused ? "all-paused" : "no-preset", { noPreset: true, allPaused });
+  }
   if (images.length) order = visionOrder(order);
   const errors = [];
   for (const p of order) {
@@ -116,7 +119,9 @@ export async function ask(system, user, maxTokens = 2500, { images = [] } = {}) 
       }
       await presets.updatePreset(p.id, { uses: (p.uses || 0) + 1, lastUsedAt: Date.now(), limitHitAt: null });
       if (images.length) return { text, preset: p, switched: false };
-      const switched = config.activeId !== p.id;
+      // A paused active preset stays your choice: it is used again once the pause ends.
+      const activePaused = list.some((x) => x.id === config.activeId && presets.isPaused(x));
+      const switched = config.activeId !== p.id && !activePaused;
       if (switched) await presets.saveConfig({ activeId: p.id });
       return { text, preset: p, switched };
     } catch (e) {

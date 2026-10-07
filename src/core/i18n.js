@@ -3,8 +3,10 @@
    in /src/strings/ plus an entry in LOCALES. */
 
 import en from "../strings/en.js";
+import ml from "../strings/ml.js";
 
-const LOCALES = { en };
+const LOCALES = { en, ml };
+export const LANGUAGES = [{ code: "en", name: "English" }, { code: "ml", name: "മലയാളം" }];
 let current = "en";
 
 export function setLocale(code) {
@@ -15,6 +17,9 @@ export function setLocale(code) {
 }
 
 export function locale() { return current; }
+
+/** Locale for dates and times shown on screen (Malayalam month and day names in മലയാളം). */
+export const dateLocale = () => (current === "ml" ? "ml-IN" : "en-IN");
 
 /** Looks up a dotted key; falls back to English, then to the key itself. */
 export function t(key, vars = {}) {

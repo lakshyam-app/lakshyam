@@ -15,6 +15,11 @@ import { bankScreen, bankAddScreen } from "./features/library/banks.js";
 import { searchScreen } from "./features/search/search.js";
 import { aiHubScreen } from "./features/ai/content.js";
 import { pdfsScreen, pdfScreen, pdfPageScreen, pdfMakeScreen } from "./features/pdfs/pdfs.js";
+import { insightsScreen, insightTopicScreen } from "./features/insights/insights.js";
+import { timetableScreen, ttListScreen } from "./features/timetable/timetable.js";
+import { ttPlansScreen, ttPlanScreen, ttScheduleScreen } from "./features/timetable/tt-edit.js";
+import { ttNewScreen, ttReviewScreen } from "./features/timetable/tt-new.js";
+import { diaryScreen } from "./features/diary/diary.js";
 import { progressScreen, historyScreen, testsScreen } from "./features/progress/progress.js";
 import { statsSubjectScreen, statsTopicScreen, statsTopicsScreen } from "./features/progress/drill.js";
 import { statsTablesScreen } from "./features/progress/tables.js";
@@ -24,7 +29,7 @@ import { notesScreen } from "./features/notes/notes.js";
 import { settingsScreen } from "./features/settings/settings.js";
 
 [todayScreen, libraryScreen, subjectScreen, subjectAllScreen, topicScreen, paperScreen, bankScreen, bankAddScreen,
-  searchScreen, aiHubScreen, pdfsScreen, pdfScreen, pdfPageScreen, pdfMakeScreen, progressScreen, historyScreen, testsScreen, statsSubjectScreen, statsTopicScreen, statsTopicsScreen, statsTablesScreen, testScreen, resultScreen, notesScreen, settingsScreen]
+  searchScreen, aiHubScreen, pdfsScreen, pdfScreen, pdfPageScreen, pdfMakeScreen, insightsScreen, insightTopicScreen, timetableScreen, ttListScreen, ttPlansScreen, ttPlanScreen, ttScheduleScreen, ttNewScreen, ttReviewScreen, diaryScreen, progressScreen, historyScreen, testsScreen, statsSubjectScreen, statsTopicScreen, statsTopicsScreen, statsTablesScreen, testScreen, resultScreen, notesScreen, settingsScreen]
   .forEach(registerScreen);
 
 function renderTabbar(activeId) {
@@ -75,6 +80,8 @@ async function boot() {
 
   try {
     await store.load();
+    setLocale(store.setting("appLang", "en"));
+    document.title = t("app.name");
   } catch {
     screen.innerHTML = html`<section class="empty"><p>${t("app.dbError")}</p></section>`;
     return;
@@ -91,7 +98,7 @@ async function boot() {
     renderTopbar(activeId);
   });
   // Any data change (import, restore, syllabus switch) redraws the screen.
-  store.onChange(() => rerender());
+  store.onChange(() => { setLocale(store.setting("appLang", "en")); rerender(); });
 
   registerServiceWorker();
   requestPersistence();

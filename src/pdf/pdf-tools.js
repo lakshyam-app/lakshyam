@@ -66,12 +66,12 @@ export function splitLong(text, limit) {
 
 /** Groups readable pages from..to into sections the AI can handle in one go.
     Malayalam text uses more tokens per character, so its sections are smaller. */
-export function buildChunks(pages, from = 1, to = pages.length) {
+export function buildChunks(pages, from = 1, to = pages.length, only = null) {
   const chunks = []; let cur = null;
   const flush = () => { if (cur?.len) chunks.push(cur); cur = null; };
   for (let n = Math.max(1, from); n <= Math.min(pages.length, to); n++) {
     const p = pages[n - 1];
-    if (!isUsable(p)) continue;
+    if (!isUsable(p) || (only && !only.has(n))) { if (only) flush(); continue; }
     const limit = mlRatio(p.t) > 0.3 ? 1800 : 3500;
     if (p.t.length > limit * 1.6) {
       flush();

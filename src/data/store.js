@@ -167,12 +167,19 @@ export function exportRecords() {
 
 /** mode "replace": wipe the backed-up stores first. mode "merge": update matching
     IDs and keep everything else. One transaction: all or nothing. */
+const DEVICE_SETTINGS = ["appLang"];
+
 export async function commitRecords(records, mode) {
   const changes = {};
   BACKUP_STORES.forEach((name) => {
     let put = records[name] || [];
     // On merge, never overwrite the user's current settings (e.g. chosen syllabus).
     if (mode === "merge" && name === "settings") put = put.filter((r) => !cache.settings.has(r.id));
+    // This phone's own choices (app language) survive a replace unless the file has them.
+    if (mode === "replace" && name === "settings") {
+      const keep = DEVICE_SETTINGS.map((id) => cache.settings.get(id)).filter((r) => r && !put.some((x) => x.id === r.id));
+      put = [...put, ...keep];
+    }
     if (mode === "replace" || put.length) changes[name] = { clear: mode === "replace", put };
   });
   await db.writeAll(changes);

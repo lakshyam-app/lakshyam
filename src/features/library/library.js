@@ -54,6 +54,28 @@ const matches = (q, ...texts) => !q || texts.some((s) => String(s || "").toLower
 
 /* ---------- Topics view ---------- */
 
+/** Filters and sorts topic rows ({ topic, count, studied, label }) by a view's choices. */
+function filterTopicRows(rows, { studied, labels, sort }) {
+  if (studied === "0") rows = rows.filter((r) => r.studied === 0);
+  if (studied === "1") rows = rows.filter((r) => r.studied >= 1);
+  if (studied === "3") rows = rows.filter((r) => r.studied >= 3);
+  if (labels) rows = rows.filter((r) => labels.has(r.label?.name || "__none"));
+  if (!sort) return rows;
+  const byName = (a, b) => a.topic.name.localeCompare(b.topic.name);
+  const labelRank = (r) => { const i = LABELS.findIndex((l) => l.name === r.label?.name); return i < 0 ? 99 : i; };
+  return rows.slice().sort({
+    freq: (a, b) => b.count - a.count || byName(a, b),
+    az: byName,
+    syllabus: (a, b) => (a.topic.order ?? 0) - (b.topic.order ?? 0) || b.count - a.count,
+    most: (a, b) => b.studied - a.studied || b.count - a.count || byName(a, b),
+    least: (a, b) => a.studied - b.studied || b.count - a.count || byName(a, b),
+    label: (a, b) => labelRank(a) - labelRank(b) || b.count - a.count || byName(a, b)
+  }[sort] || byName);
+}
+
+// Inside a subject: most-asked topics first by default (same sort & filter sheet as the Topics view).
+const subjectView = { sort: "freq", studied: "all", labels: null };
+
 function topicEntries(syllabusId) {
   const list = topicView.chip !== "all" ? store.byId("topicLists", topicView.chip) : null;
   const counts = new Map(store.topicsWithCounts(syllabusId).map((x) => [x.topic.id, x.count]));
@@ -63,22 +85,8 @@ function topicEntries(syllabusId) {
     studied: store.topicStateFor(syllabusId, topic.id)?.studiedCount || 0,
     label: labelFor(syllabusId, topic.id)
   }));
-  const { studied, labels, sort } = topicView;
-  if (studied === "0") rows = rows.filter((r) => r.studied === 0);
-  if (studied === "1") rows = rows.filter((r) => r.studied >= 1);
-  if (studied === "3") rows = rows.filter((r) => r.studied >= 3);
-  if (labels) rows = rows.filter((r) => labels.has(r.label?.name || "__none"));
-  const byName = (a, b) => a.topic.name.localeCompare(b.topic.name);
-  const labelRank = (r) => { const i = LABELS.findIndex((l) => l.name === r.label?.name); return i < 0 ? 99 : i; };
-  if (list && sort === "freq") return rows; // a list keeps its own order unless you sort it
-  rows.sort({
-    freq: (a, b) => b.count - a.count || byName(a, b),
-    az: byName,
-    most: (a, b) => b.studied - a.studied || b.count - a.count || byName(a, b),
-    least: (a, b) => a.studied - b.studied || b.count - a.count || byName(a, b),
-    label: (a, b) => labelRank(a) - labelRank(b) || b.count - a.count || byName(a, b)
-  }[sort] || byName);
-  return rows;
+  if (list && topicView.sort === "freq") return filterTopicRows(rows, { ...topicView, sort: null }); // a list keeps its own order unless you sort it
+  return filterTopicRows(rows, topicView);
 }
 
 function topicRow(r) {
@@ -106,12 +114,13 @@ function topicChips() {
   ${topicView.chip !== "all" ? noteBlock("list", topicView.chip) : ""}`;
 }
 
-function topicSortSheet() {
+function topicSortSheet(view = topicView, sorts = ["freq", "az", "most", "least", "label"]) {
+  const topicView = view; // the same sheet works for any view object
   return new Promise((resolve) => {
     const opt = (group, value, label, on) => html`<button type="button" class="pill ${on ? "on" : ""}" data-action="set" data-g="${group}" data-v="${value}">${label}</button>`;
     const draw = () => openSheet(html`<h2>${t("topics.sortFilter")}</h2>
       <h3>${t("topics.sortBy")}</h3>
-      <div class="chip-wrap">${["freq", "az", "most", "least", "label"].map((s) => opt("sort", s, t(`topics.sort.${s}`), topicView.sort === s))}</div>
+      <div class="chip-wrap">${sorts.map((s) => opt("sort", s, t(`topics.sort.${s}`), topicView.sort === s))}</div>
       <h3>${t("topics.studiedFilter")}</h3>
       <div class="chip-wrap">${["all", "0", "1", "3"].map((s) => opt("studied", s, t(`topics.studied.${s}`), topicView.studied === s))}</div>
       <h3>${t("labels.title")}</h3>
@@ -319,12 +328,14 @@ export const subjectScreen = {
     const subject = store.subject(id);
     if (!subject) return go("library");
     const syllabus = store.currentSyllabus();
-    const topics = store.topicsWithCounts(syllabus.id, id).sort((a, b) => a.topic.order - b.topic.order || b.count - a.count);
-    const total = topics.reduce((n, x) => n + x.count, 0);
+    const allTopics = store.topicsWithCounts(syllabus.id, id);
+    const total = allTopics.reduce((n, x) => n + x.count, 0);
+    const topics = filterTopicRows(allTopics.map((x) => ({ ...x, studied: store.topicStateFor(syllabus.id, x.topic.id)?.studiedCount || 0, label: labelFor(syllabus.id, x.topic.id) })), subjectView);
+    const filtered = subjectView.sort !== "freq" || subjectView.studied !== "all" || subjectView.labels;
     const counts = { pyq: total, ai: aiQuestions(syllabus.id, { subjectId: id }).length, cards: cardsOf(syllabus.id, { subjectId: id }).length };
     const head = html`${header({
       backTo: "library", backParams: { view: "subjects" }, backLabel: t("library.views.subjects"),
-      title: nameHtml(subject), sub: `${t("common.questions", { n: total })} · ${t("common.topics", { n: topics.length })}`, menu: mode === "pyq"
+      title: nameHtml(subject), sub: `${t("common.questions", { n: total })} · ${t("common.topics", { n: allTopics.length })}`, menu: mode === "pyq"
     })}${contentSwitch(mode, counts, "subject", { id })}`;
     if (mode !== "pyq") {
       container.innerHTML = html`${head}<div id="aiHost"></div>`;
@@ -337,6 +348,8 @@ export const subjectScreen = {
     container.innerHTML = html`${head}
     ${total ? html`<div class="actions-row"><button type="button" class="btn" data-action="practice">${playIcon} ${t("practice.button")}</button></div>` : ""}
     ${noteBlock("subject", id)}
+    <div class="toolbar"><button type="button" class="pill ${filtered ? "on" : ""}" data-action="sub-sort">${t(`topics.sort.${subjectView.sort}`)}${filtered && (subjectView.studied !== "all" || subjectView.labels) ? ` · ${t("topics.filtered")}` : ""} ▾</button>
+      ${topics.length < allTopics.length ? html`<span class="hint">${t("topics.showingOf", { n: topics.length, of: allTopics.length })}</span>` : ""}</div>
     <div class="rows" id="subRows">
       ${total ? html`<button type="button" class="row" data-action="all">
         <span class="row-main"><span class="row-title">${t("subject.allQuestions")}</span></span>
@@ -355,6 +368,7 @@ export const subjectScreen = {
       ...backHandler, ...contentHandler,
       open: (el) => go("topic", { id: el.dataset.id }),
       all: () => go("subject-all", { id }),
+      "sub-sort": () => topicSortSheet(subjectView, ["freq", "syllabus", "az", "most", "least", "label"]).then(() => runFlow(async () => store.touch())),
       practice: () => practice(`subject-all:${id}`, store.questionsFor({ syllabusId: syllabus.id, subjectId: id }), { type: "subject", ref: id, label: subject.name }),
       "note-edit": () => editNote("subject", id, subject.name),
       menu: () => runFlow(async () => {

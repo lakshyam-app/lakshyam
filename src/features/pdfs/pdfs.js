@@ -6,7 +6,7 @@
    AI work keeps running if you leave the screen; come back to the PDF to review.
    Nothing made from a PDF is saved until you review it. */
 import { html, onAction } from "../../core/dom.js";
-import { t } from "../../core/i18n.js";
+import { t, dateLocale } from "../../core/i18n.js";
 import { go, current, rerender } from "../../core/router.js";
 import { runFlow, chooseAction, askText, confirmAction } from "../../core/dialogs.js";
 import { toast } from "../../core/toast.js";
@@ -416,6 +416,7 @@ function formView(rec, job, handlers) {
   const c = T.pageCounts(rec.pages);
   handlers.set = (el) => { const k = el.dataset.k; cfg[k] = ["n"].includes(k) ? Number(el.dataset.v) : el.dataset.v; refresh(true); };
   handlers.start = () => start(rec, job);
+  handlers.unfocus = () => { cfg.only = null; cfg.focus = []; refresh(true); };
 
   if (job.kind === "read") {
     const need = T.pageNumbers(rec.pages, T.needsAi);
@@ -440,7 +441,8 @@ function formView(rec, job, handlers) {
       cfg.styleNote = "";
     }
   }).then(() => refresh(true));
-  const range = html`<div class="two-col">
+  const range = cfg.only ? html`<div class="ok-box"><p>🎯 ${t("pdf.focusOn", { pages: cfg.only.join(", "), n: cfg.focus?.length || 0 })}</p>
+      <button type="button" class="link" data-action="unfocus">${t("pdf.focusClear")}</button></div>` : html`<div class="two-col">
       <label class="field-label">${t("pdf.fromPage")}<input class="field" type="number" min="1" max="${rec.pages.length}" value="${cfg.from}" data-cfg="from" inputmode="numeric"></label>
       <label class="field-label">${t("pdf.toPage")}<input class="field" type="number" min="1" max="${rec.pages.length}" value="${cfg.to}" data-cfg="to" inputmode="numeric"></label></div>
     ${c.need ? html`<p class="hint">${t("pdf.skipsScanned", { n: c.need })}</p>` : ""}`;
@@ -462,7 +464,7 @@ function formView(rec, job, handlers) {
       refresh(true);
     };
     handlers["style-default"] = () => { cfg.style = DEFAULT_STYLE; cfg.styleNote = ""; refresh(true); };
-    const note = cfg.styleNote || (cfg.styleAt ? t("pdf.styleSaved", { date: new Date(cfg.styleAt).toLocaleDateString("en-IN"), n: pool }) : pool ? t("pdf.styleCanLearn", { n: pool }) : t("pdf.styleNoPyq"));
+    const note = cfg.styleNote || (cfg.styleAt ? t("pdf.styleSaved", { date: new Date(cfg.styleAt).toLocaleDateString(dateLocale()), n: pool }) : pool ? t("pdf.styleCanLearn", { n: pool }) : t("pdf.styleNoPyq"));
     return { body: html`${target}${range}
       <h3>${t("pdf.howMany")}</h3>${pills(job, "n", [5, 10, 15, 20, 30], (v) => v)}
       <h3>${t("ai.genDiff")}</h3>${pills(job, "difficulty", ["mixed", "E", "M", "D"], (v) => (v === "mixed" ? t("ai.mixed") : t(`question.difficulty.${v}`)))}
@@ -506,7 +508,7 @@ async function start(rec, job) {
     let from = Math.max(1, Math.round(Number(cfg.from)) || 1); let to = Math.min(fresh.pages.length, Math.round(Number(cfg.to)) || fresh.pages.length);
     if (from > to) [from, to] = [to, from];
     cfg.from = from; cfg.to = to;
-    if (!T.buildChunks(fresh.pages, from, to).length) { toast(t("pdf.noTextInRange", { from, to })); return; }
+    if (!T.buildChunks(fresh.pages, from, to, cfg.only ? new Set(cfg.only) : null).length) { toast(t("pdf.noTextInRange", { from, to })); return; }
     if (job.kind === "questions") {
       cfg.style = String(cfg.style || "").trim() || DEFAULT_STYLE;
       if (cfg.style !== DEFAULT_STYLE) await saveStyle(cfg.target, cfg.style);
@@ -640,3 +642,13 @@ function reviewView(rec, job, handlers) {
 
 /** "📄 Study PDFs" entry for a topic or subject ⋯ menu. */
 export const pdfMenuItem = (type, id) => ({ id: "pdfs", label: `📄 ${t("pdf.title")}`, run: () => go("pdfs", { type, id }) });
+
+/** Opens the "make" screen with settings filled in (e.g. from Smart insights: only some pages, focus facts). */
+export async function openPrepared(pdfId, kind, patch = {}) {
+  const rec = await pdfStore.getPdf(pdfId);
+  if (!rec) return;
+  const job = newJob(rec, kind);
+  Object.assign(job.cfg, patch);
+  jobs.set(jobKey(pdfId, kind), job);
+  go("pdf-make", { id: pdfId, kind });
+}

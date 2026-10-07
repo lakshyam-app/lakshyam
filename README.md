@@ -20,6 +20,7 @@ file you choose.
 | 6 | AI: presets with fallback, explain / my mistake / memory trick / revision note, practice questions (reviewed, kept apart), study plan, tricks, guess coach, flashcards with spaced review | Done |
 | 7 | Study PDFs: PDF library per topic/subject, page text with AI reading of scanned pages, page editor, style guide from your PYQs, grounded questions / flashcards / revision notes with code-checked source quotes | Done |
 | 8 | Malayalam names: English · മലയാളം · Both, names from the Kerala PSC syllabus (checked / for review), name editor, import / export names file, search in both | Done |
+| 8+ | Timetable (any days and hours, up to 6 months, AI draft with review, calendar export), exam countdown, study diary (auto checklist, coloured days, day review, weekly/monthly AI reports), Smart insights (weak spots, mistake patterns, notes check against PDFs, targeted practice), AI on question cards, pausing AI presets, difficulty time settings, results layout switch, subject topics by frequency, app in Malayalam | Done |
 | 9 | Polish, docs | Next |
 
 The full plan is in [`docs/redesign-brief.md`](docs/redesign-brief.md).
@@ -50,7 +51,7 @@ docs/                                      plan and documentation
 
 ## Storage names (kept separate from all other apps)
 
-- Database: `lakshyam-db` (IndexedDB)
+- Database: `lakshyam-db` (IndexedDB), layout version 2 (v2 added the timetable, its daily record and the study diary; the upgrade only adds)
 - Small settings: keys starting with `lk_`
 - Offline cache: names starting with `lakshyam-` (the service worker never touches any other cache).
   The PDF reader has its own cache (`lakshyam-pdfjs-…`) that is kept across app updates.

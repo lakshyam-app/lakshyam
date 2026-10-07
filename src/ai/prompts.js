@@ -60,10 +60,6 @@ export function cleanGenerated(arr) {
 }
 
 /** s: { weak, untried, slow, guess, due: [strings], marking: { pos, pen } } */
-export function planTask({ days, hours, s }) {
-  const list = (a, none) => (a.length ? a.join("\n") : none);
-  return `Create a ${days}-day study plan for a Kerala PSC aspirant with ${hours} study hours per day.\n\nWeak topics:\n${list(s.weak, "none yet")}\n\nHigh-frequency topics not yet practised:\n${list(s.untried, "none")}\n\nSlowest topics:\n${list(s.slow, "no timing data")}\n\nTopics where guessing loses marks (marking: +${s.marking.pos} / -${Math.round(s.marking.pen * 100) / 100}):\n${list(s.guess, "none")}\n\nDue for spaced revision:\n${list(s.due, "none")}\n\nRules: each day lists 3-5 specific topics with what to do (read, practise N questions, revise), a time split, and one short goal. Put the weakest and highest-frequency topics first, schedule revision of due topics, and end with a day for a mixed mock test. Use only the topics given.`;
-}
 
 export function tricksTask(batch, lang) {
   return `${batch.map((q, i) => `#${i + 1}\n${questionBlock(q)}`).join("\n\n")}\n\nFor each numbered question, return JSON array items: {"n": number, "fact": "the one key fact to remember (1 line)", "mnemonic": "a catchy memory trick (1-2 lines)"}. Only use facts you are sure of; if unsure set mnemonic to "". ${langInstruction(lang)} Output ONLY the JSON array.`;
@@ -75,3 +71,13 @@ export function guessCoachTask(g) {
 }
 
 export const TEST_PROMPT = { system: "You are a connection tester.", user: "Reply with the single word OK." };
+
+/* ---------- Smart insights ---------- */
+
+export function weakSpotsTask(rows, marking) {
+  return `These are a Kerala PSC aspirant's weakest areas, ranked by marks at stake (how often the topic appears in past papers × how often they get it wrong). Marking: +${marking.pos} / -${Math.round(marking.pen * 100) / 100}.\n\n${rows.join("\n")}\n\nFor the top 5, explain in 1-2 sentences why it matters and give ONE concrete action for this week (what to read, how many questions to practise, what to revise). Then give 2 short general tips that follow from the pattern of the whole list. Use only the data given; do not invent statistics. Keep it short and encouraging.`;
+}
+
+export function patternsTask(stats, examples) {
+  return `Here are recent past-paper questions a Kerala PSC aspirant got wrong (with their answer, the right answer and their time). Summary: ${stats}\n\n${examples.join("\n\n")}\n\nFind the 3-5 clearest PATTERNS in these mistakes (for example: confusing similar names, dates and years, statement-type questions, 'which is NOT' questions, rushing, guessing, a particular sub-area). For each pattern: name it, quote 1-2 of the examples above as evidence (by number), and give one specific habit to fix it. Only state patterns the examples actually show. End with a 2-line memory trick for any 2 facts that were missed.`;
+}

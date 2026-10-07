@@ -4,7 +4,7 @@
    #/tests?type=&ref=    every test of one group
    Drill-down (subject → topic) is in drill.js; detailed tables in tables.js. */
 import { html, onAction } from "../../core/dom.js";
-import { t, formatNumber } from "../../core/i18n.js";
+import { t, formatNumber, dateLocale } from "../../core/i18n.js";
 import { go } from "../../core/router.js";
 import { openSheet, closeSheet } from "../../core/sheet.js";
 import { runFlow, chooseAction, confirmAction } from "../../core/dialogs.js";
@@ -20,7 +20,6 @@ import { openStartTest, progressText } from "../test/start-sheet.js";
 import * as tests from "../../data/tests.js";
 import { difficultyOf } from "../question/card.js";
 import { statsContext, finishedTests, prefs, PERIODS } from "./data.js";
-import { studyPlan } from "../ai/ai-actions.js";
 
 export { finishedTests };
 /** Tests of a listing (e.g. a topic page's "3 tests ›"). */
@@ -28,7 +27,7 @@ export const testsFor = (syllabusId, type, ref) => finishedTests(syllabusId).fil
 
 const pctText = (x) => (x === null || x === undefined ? "—" : `${Math.round(x * 100)}%`);
 const signed = (x) => `${x > 0 ? "+" : x < 0 ? "−" : ""}${formatNumber(Math.abs(Math.round(x * 10) / 10))}`;
-export const dateText = (ms) => new Date(ms).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+export const dateText = (ms) => new Date(ms).toLocaleDateString(dateLocale(), { day: "numeric", month: "short", year: "numeric" });
 const chev = html`<span class="chev-txt">›</span>`;
 let subjectSort = "weak";
 
@@ -234,7 +233,8 @@ export const progressScreen = {
         <button type="button" class="row" data-action="go" data-to="stats-tables"><span class="row-main"><span class="row-title">${t("stats.tables")}</span><span class="row-sub">${t("stats.tablesSub")}</span></span>${chev}</button>
       </div>
       <button type="button" class="btn wide" data-action="start">${t("today.startTest")}</button>
-      ${ctx.mode === "pyq" ? html`<button type="button" class="btn btn-quiet wide" data-action="plan">🤖 ${t("ai.planTitle")}</button>` : ""}
+      ${ctx.mode === "pyq" ? html`<div class="actions-col"><button type="button" class="btn wide" data-action="insights">🔎 ${t("insights.button")}</button>
+        <button type="button" class="btn btn-quiet wide" data-action="timetable">🗓 ${t("tt.fromProgress")}</button></div>` : ""}
     </section>`;
 
     onAction(container, {
@@ -253,7 +253,8 @@ export const progressScreen = {
       go: (el) => go(el.dataset.to),
       continue: () => go("test"),
       start: () => openStartTest(),
-      plan: () => studyPlan()
+      insights: () => go("insights"),
+      timetable: () => go("timetable")
     });
   }
 };
@@ -347,7 +348,7 @@ export const testsScreen = {
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>${t("history.title")}</span></button></div>
       <h1>${list[0].scope?.label || ""}</h1><p class="hint">${t("common.tests", { n: list.length })}</p></header>
       <div class="rows">${list.map((a) => html`<button type="button" class="row" data-action="open" data-id="${a.id}">
-        <span class="row-main"><span class="row-title">${new Date(a.submittedAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}</span>
+        <span class="row-main"><span class="row-title">${new Date(a.submittedAt).toLocaleString(dateLocale(), { dateStyle: "medium", timeStyle: "short" })}</span>
         <span class="row-sub">${t("history.testSub", { right: a.counts.correct, wrong: a.counts.wrong, blank: a.counts.unanswered })}${a.timerMinutes ? ` · ${t("results.timed", { n: a.timerMinutes })}` : ""}${a.autoSubmitted ? ` · ${t("results.autoSubmitted")}` : ""}</span></span>
         <span class="row-count">${scoreLine(a)}</span>${chev}</button>`)}</div>`;
     onAction(container, { back: () => go("history"), open: (el) => go("result", { id: el.dataset.id }) });

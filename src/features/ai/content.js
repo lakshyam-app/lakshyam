@@ -4,7 +4,7 @@
    - Flashcards: study (tap to flip, "Again" / "Know it") or list; spaced review 1→3→7→14→30 days
    - #/ai-hub?kind=ai|cards: every topic that has AI questions or cards */
 import { html, onAction } from "../../core/dom.js";
-import { t } from "../../core/i18n.js";
+import { t, dateLocale } from "../../core/i18n.js";
 import { go } from "../../core/router.js";
 import { runFlow, confirmAction } from "../../core/dialogs.js";
 import { toast } from "../../core/toast.js";
@@ -118,7 +118,7 @@ export function renderCardsPanel(host, { syllabus, scope }) {
       : html`<div class="fc-list">${all.filter(pass).map((c) => {
           const s = stateOf(c);
           return html`<article class="qcard" data-cid="${c.id}">
-            <header class="qcard-meta"><span>${t(`ai.fcStatus.${s.status}`)}${s.dueAt && s.status === "known" ? ` · ${t("ai.fcNext", { date: new Date(s.dueAt).toLocaleDateString("en-IN") })}` : ""}</span></header>
+            <header class="qcard-meta"><span>${t(`ai.fcStatus.${s.status}`)}${s.dueAt && s.status === "known" ? ` · ${t("ai.fcNext", { date: new Date(s.dueAt).toLocaleDateString(dateLocale()) })}` : ""}</span></header>
             <div class="qtext"><strong>Q:</strong> ${richText(c.front)}</div><div class="qtext"><strong>A:</strong> ${richText(c.back)}</div>
             <div class="row-actions"><button type="button" class="link" data-action="fc-set" data-v="known">✓ ${t("ai.fcKnow")}</button>
               <button type="button" class="link" data-action="fc-set" data-v="again">↺ ${t("ai.fcAgain")}</button>

@@ -37,9 +37,10 @@ function langRule(lang, what) {
 }
 const diffRule = (d) => (d === "mixed" ? "a mix of easy, medium and difficult" : { E: "easy", M: "medium", D: "difficult" }[d] || "a mix of easy, medium and difficult");
 
-export function genTask({ style, examples = [], lang = "same", difficulty = "mixed" }, chunk, n) {
+export function genTask({ style, examples = [], lang = "same", difficulty = "mixed", focus = [] }, chunk, n) {
+  const fc = focus.length ? `\n\nFOCUS: the student keeps missing these facts in past papers. Where the passage states them (or closely related facts), test those first: ${focus.slice(0, 25).map((f) => `"${String(f).slice(0, 120)}"`).join("; ")}. Never add a fact the passage does not state.` : "";
   const ex = examples.length ? `STYLE EXAMPLES (copy their format and difficulty only; NEVER reuse their facts, names or numbers):\n${examples.map(formatExample).join("\n\n")}\n\n` : "";
-  return `STYLE GUIDE (learned from past papers):\n${style || DEFAULT_STYLE}\n\n${ex}SOURCE PASSAGE (the ONLY allowed source of facts; pages are marked [Page N]):\n<<<\n${chunkText(chunk)}\n>>>\n\nWrite up to ${n} multiple-choice question${n === 1 ? "" : "s"} in the style above. ${langRule(lang, "questions, options and explanations")} Difficulty: ${diffRule(difficulty)}. 4 options each.\n\nReturn a JSON array; each item: {"question_text":"...","options":["...","...","...","..."],"correct_answer_index":0-3,"source_quote":"exact sentence(s) copied from the passage","page":number,"question_type":"short label","explanation":"1-2 sentences restating the fact from the passage","difficulty":"E"|"M"|"D"}`;
+  return `STYLE GUIDE (learned from past papers):\n${style || DEFAULT_STYLE}\n\n${ex}SOURCE PASSAGE (the ONLY allowed source of facts; pages are marked [Page N]):\n<<<\n${chunkText(chunk)}\n>>>\n\nWrite up to ${n} multiple-choice question${n === 1 ? "" : "s"} in the style above. ${langRule(lang, "questions, options and explanations")} Difficulty: ${diffRule(difficulty)}. 4 options each.${fc}\n\nReturn a JSON array; each item: {"question_text":"...","options":["...","...","...","..."],"correct_answer_index":0-3,"source_quote":"exact sentence(s) copied from the passage","page":number,"question_type":"short label","explanation":"1-2 sentences restating the fact from the passage","difficulty":"E"|"M"|"D"}`;
 }
 
 export const CHECK_SYSTEM = "You answer multiple-choice questions using ONLY the passage given. If the passage does not clearly contain the answer, answer 0. Output ONLY a JSON array.";

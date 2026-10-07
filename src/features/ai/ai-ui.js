@@ -12,6 +12,7 @@ import * as presets from "../../ai/presets.js";
 import { ask } from "../../ai/client.js";
 
 export function errorText(e) {
+  if (e?.allPaused) return t("ai.err.allPaused");
   if (e?.noPreset) return t("ai.err.noPreset");
   const m = String(e?.message || e);
   if (m === "network") return t("ai.err.network");

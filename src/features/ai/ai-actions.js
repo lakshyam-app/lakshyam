@@ -1,7 +1,7 @@
 /* AI help in context:
    - a question: Explain (or Explain my mistake), Mnemonic, Revision note, Similar questions
    - a topic: Make practice questions (reviewed before saving, kept apart from PYQs)
-   - Progress: Study plan · Still wrong: Memory tricks · Guessing: Guess coach */
+   - Still wrong: Memory tricks · Guessing: Guess coach */
 import { html } from "../../core/dom.js";
 import { t } from "../../core/i18n.js";
 import { openSheet, closeSheet, isSheetOpen, sheetBody } from "../../core/sheet.js";
@@ -29,10 +29,10 @@ export function plainQuestion(q) {
 /* ---------- one question ---------- */
 
 /** selected: the option picked in a test (index), "none" if left, or undefined. */
-export async function aiHelp(q, { selected } = {}) {
+export async function aiHelp(q, { selected, mode: preset = null } = {}) {
   if (!(await ensureAi())) return;
   const mistake = Number.isInteger(selected) && selected !== q.answerIndex;
-  const mode = await chooseAction({ title: t("ai.help"), sub: q.text.slice(0, 120), items: [
+  const mode = preset || await chooseAction({ title: t("ai.help"), sub: q.text.slice(0, 120), items: [
     { id: "explain", label: mistake ? t("ai.explainMistake") : t("ai.explain") },
     { id: "mnemonic", label: t("ai.mnemonic") },
     { id: "note", label: t("ai.note") },
@@ -133,7 +133,7 @@ export async function generateQuestions(topic, seedQs = null) {
   }
 }
 
-/* ---------- Progress: study plan ---------- */
+/* ---------- shared figures for AI (guess coach) ---------- */
 
 function statsForAi(syllabus) {
   const attempts = store.attemptsOf(syllabus.id).filter((a) => a.kind !== "ai");
@@ -157,37 +157,6 @@ function statsForAi(syllabus) {
   const due = store.all("topicState").filter((s) => s.syllabusId === syllabus.id && s.nextReviewAt && s.nextReviewAt <= Date.now())
     .sort((a, b) => a.nextReviewAt - b.nextReviewAt).slice(0, 8).map((s) => name(s.topicId)).filter(Boolean);
   return { weak, untried, slow, guess, due, marking: mk, records };
-}
-
-export async function studyPlan() {
-  if (!(await ensureAi())) return;
-  const syllabus = store.currentSyllabus();
-  const s = { days: 7, hours: 3 };
-  const last = store.byId("notes", "note:misc:ai-plan");
-  const draw = () => openSheet(html`<h2>${t("ai.planTitle")}</h2>
-    <p class="hint">${t("ai.planHint")}</p>
-    <h3>${t("ai.planDays")}</h3><div class="chip-wrap">${[3, 7, 14].map((d) => html`<button type="button" class="pill ${s.days === d ? "on" : ""}" data-action="days" data-v="${d}">${t("ai.daysN", { n: d })}</button>`)}</div>
-    <h3>${t("ai.planHours")}</h3><div class="chip-wrap">${[1, 2, 3, 4, 6].map((h) => html`<button type="button" class="pill ${s.hours === h ? "on" : ""}" data-action="hours" data-v="${h}">${t("ai.hoursN", { n: h })}</button>`)}</div>
-    ${last ? html`<p class="hint">${t("ai.lastPlan")}</p>` : ""}
-    <div class="sheet-actions"><button type="button" class="btn btn-quiet" data-action="cancel">${t("common.cancel")}</button>
-      <button type="button" class="btn" data-action="go">${t("ai.makePlan")}</button></div>`, {
-    days: (el) => { s.days = Number(el.dataset.v); draw(); },
-    hours: (el) => { s.hours = Number(el.dataset.v); draw(); },
-    cancel: () => closeSheet(),
-    go: async () => {
-      const data = statsForAi(syllabus);
-      if (!data.weak.length && !data.untried.length) { toast(t("ai.planNoData")); return; }
-      await askInSheet({
-        title: t("ai.planTitle"), sub: t("ai.planSub", { days: s.days, hours: s.hours }), maxTokens: 3500,
-        system: P.tutorSystem(await lang()), user: P.planTask({ days: s.days, hours: s.hours, s: data }),
-        actions: [{ id: "save", label: t("ai.saveToNotes"), run: async (text) => {
-          await mut.saveNote({ type: "misc", id: "ai-plan" }, t("ai.planNoteLabel"), `${t("ai.planNoteHead", { date: new Date().toLocaleDateString("en-IN"), days: s.days, hours: s.hours })}\n\n${text}`);
-          toast(t("ai.savedToNotes")); return true;
-        } }]
-      });
-    }
-  }, { label: t("ai.planTitle") });
-  draw();
 }
 
 /* ---------- Still wrong: memory tricks ---------- */

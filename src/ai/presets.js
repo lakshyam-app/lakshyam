@@ -88,9 +88,19 @@ export async function removeAllKeys() {
   await saveConfig({ activeId: null });
 }
 
-/** Order to try presets in: the active one first, then by priority; ones that hit a limit recently go last. */
+/** A paused preset is skipped completely (as active one and in auto-switch) until pausedUntil. */
+export const FOREVER = 8.64e15; // "until I turn it back on"
+export const isPaused = (p, now = Date.now()) => Boolean(p.pausedUntil && p.pausedUntil > now);
+
+/** End of today on this phone (for "Pause for today"). */
+export function endOfToday(now = Date.now()) {
+  const d = new Date(now); d.setHours(23, 59, 59, 999); return d.getTime();
+}
+
+/** Order to try presets in: the active one first, then by priority; ones that hit a limit recently go last.
+    Paused presets are left out. */
 export function tryOrder(presets, config, now = Date.now()) {
-  const usable = presets.filter((p) => p.apiKey && p.model && p.baseUrl);
+  const usable = presets.filter((p) => p.apiKey && p.model && p.baseUrl && !isPaused(p, now));
   if (!usable.length) return [];
   const start = Math.max(0, usable.findIndex((p) => p.id === config.activeId));
   const rotated = usable.map((_, i) => usable[(start + i) % usable.length]);

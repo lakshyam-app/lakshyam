@@ -2,11 +2,14 @@
    Greeting · streak and this week · today's goal · what to study next (Quick 10) ·
    Continue an unfinished test · due for review · Start a test · backup reminder. */
 import { html, onAction } from "../../core/dom.js";
-import { t, formatNumber } from "../../core/i18n.js";
+import { t, locale, LANGUAGES, formatNumber } from "../../core/i18n.js";
 import { go } from "../../core/router.js";
 import { openSheet } from "../../core/sheet.js";
 import { toast } from "../../core/toast.js";
 import * as store from "../../data/store.js";
+import { countdownCard, tickCountdown, editExam } from "./countdown.js";
+import { timetableNow, nowHandlers, nowTick } from "../timetable/now-card.js";
+import { todayDiaryCard, diaryHandlers } from "../diary/diary.js";
 import { nameHtml, label as nameLabel } from "../../core/names.js";
 import * as tests from "../../data/tests.js";
 import { downloadBackup } from "../../data/backup.js";
@@ -109,7 +112,8 @@ function dueSheet(due) {
 /* ---------- screen ---------- */
 
 function welcome() {
-  return html`<div class="panel">
+  return html`<div class="segmented two lang-pick" role="group">${LANGUAGES.map((l) => html`<button type="button" class="${locale() === l.code ? "on" : ""}" data-action="app-lang" data-v="${l.code}" lang="${l.code}">${l.name}</button>`)}</div>
+  <div class="panel">
     <h2>${t("today.welcomeTitle")}</h2>
     <p>${t("today.welcomeBody")}</p>
     <button type="button" class="btn" data-action="import">${t("today.importButton")}</button>
@@ -147,7 +151,7 @@ export const todayScreen = {
     const greet = name ? t("today.greetName", { greeting: t(greetingKey()), name }) : t(greetingKey());
     if (store.isEmpty()) {
       container.innerHTML = html`<section class="today"><h1 class="greeting">${greet}</h1>${welcome()}</section>`;
-      onAction(container, { import: startImport });
+      onAction(container, { import: startImport, "app-lang": (el) => store.setSetting("appLang", el.dataset.v) });
       return;
     }
     const syllabus = store.currentSyllabus();
@@ -160,9 +164,13 @@ export const todayScreen = {
     const showGoal = store.setting("showGoal", true) !== false;
     const active = tests.activeTest();
     const cand = studyCandidates(syllabus);
+    const nowSlot = timetableNow(); // the timetable's current block, if you use one
 
     container.innerHTML = html`<section class="today">
       <h1 class="greeting">${greet}</h1>
+      ${store.setting("showCountdown", true) !== false ? countdownCard(syllabus) : ""}
+      ${nowSlot}
+      ${todayDiaryCard(syllabus)}
       ${showStreak ? habitsRow(today) : ""}
       ${showGoal ? html`<div class="goal">
         ${goalRing(done, target, celebrate)}
@@ -192,11 +200,17 @@ export const todayScreen = {
       continue: () => go("test"),
       start: () => openStartTest(),
       goal: () => go("settings", { section: "today" }),
+      exam: () => editExam(syllabus),
+      ...nowHandlers,
+      ...diaryHandlers,
       backup: async () => {
         await store.setSetting("lastBackupAt", Date.now());
         downloadBackup();
         toast(t("settings.backupSaved"));
       }
     });
+    const stopExam = tickCountdown(container, syllabus);
+    const stopNow = nowTick(container);
+    return () => { stopExam(); stopNow(); };
   }
 };

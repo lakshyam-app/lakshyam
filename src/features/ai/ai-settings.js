@@ -1,7 +1,7 @@
 /* Settings → AI: presets (provider + model + your key), priority order,
    automatic fallback, answer language, Test, and "Remove all AI keys". */
 import { html } from "../../core/dom.js";
-import { t } from "../../core/i18n.js";
+import { t, dateLocale } from "../../core/i18n.js";
 import { openSheet, closeSheet, isSheetOpen } from "../../core/sheet.js";
 import { chooseAction, confirmAction } from "../../core/dialogs.js";
 import { toast } from "../../core/toast.js";
@@ -11,6 +11,9 @@ import { request } from "../../ai/client.js";
 import { TEST_PROMPT } from "../../ai/prompts.js";
 import { errorText } from "./ai-ui.js";
 
+const PAUSE = html`<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="6.5" y="5" width="3.5" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="3.5" height="14" rx="1" fill="currentColor"/></svg>`;
+const PLAY = html`<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg>`;
+const pauseWhen = (ms) => new Date(ms).toLocaleString(dateLocale(), { hour: "numeric", minute: "2-digit", day: new Date(ms).toDateString() === new Date().toDateString() ? undefined : "numeric", month: new Date(ms).toDateString() === new Date().toDateString() ? undefined : "short" });
 const mask = (key) => (key ? `••••${key.slice(-4)}` : t("ai.noKey"));
 
 /** The small summary shown inside Settings. */
@@ -31,14 +34,17 @@ export async function openAiSettings() {
     <p class="hint">${t("ai.privacy")}</p>
     ${list.length ? html`<div class="menu">${list.map((p, i) => {
       const limited = p.limitHitAt && now - p.limitHitAt < 3600000;
-      return html`<div class="preset ${p.id === cfg.activeId ? "is-current" : ""}">
+      const paused = presets.isPaused(p, now);
+      return html`<div class="preset ${p.id === cfg.activeId ? "is-current" : ""} ${paused ? "is-paused" : ""}">
         <button type="button" class="preset-main" data-action="activate" data-id="${p.id}" aria-pressed="${String(p.id === cfg.activeId)}">
           <span class="radio">${p.id === cfg.activeId ? "●" : "○"}</span>
           <span class="row-main"><span class="row-title">${i + 1}. ${p.name}</span>
-          <span class="row-sub">${[p.model || t("ai.noModel"), mask(p.apiKey), t("ai.uses", { n: p.uses || 0 }), limited ? t("ai.limited", { m: Math.max(1, 60 - Math.floor((now - p.limitHitAt) / 60000)) }) : null].filter(Boolean).join(" · ")}</span></span>
+          <span class="row-sub">${[p.model || t("ai.noModel"), mask(p.apiKey), t("ai.uses", { n: p.uses || 0 }), limited ? t("ai.limited", { m: Math.max(1, 60 - Math.floor((now - p.limitHitAt) / 60000)) }) : null].filter(Boolean).join(" · ")}</span>
+          ${paused ? html`<span class="row-sub paused-note">${p.pausedUntil >= presets.FOREVER ? t("ai.pausedOff") : t("ai.pausedUntil", { when: pauseWhen(p.pausedUntil) })}</span>` : ""}</span>
         </button>
         <button type="button" class="icon-sm" data-action="up" data-id="${p.id}" ${i === 0 ? "disabled" : ""} aria-label="${t("ai.up")}">↑</button>
         <button type="button" class="icon-sm" data-action="down" data-id="${p.id}" ${i === list.length - 1 ? "disabled" : ""} aria-label="${t("ai.down")}">↓</button>
+        <button type="button" class="icon-sm" data-action="pause" data-id="${p.id}" aria-label="${paused ? t("ai.resume") : t("ai.pause")}">${paused ? PLAY : PAUSE}</button>
         <button type="button" class="icon-sm" data-action="edit" data-id="${p.id}" aria-label="${t("common.edit")}">✎</button>
       </div>`;
     })}</div>` : html`<p>${t("ai.none")}</p>`}
@@ -52,6 +58,19 @@ export async function openAiSettings() {
     up: async (el) => { await presets.movePreset(el.dataset.id, -1); openAiSettings(); },
     down: async (el) => { await presets.movePreset(el.dataset.id, 1); openAiSettings(); },
     edit: (el) => editPreset(el.dataset.id),
+    pause: async (el) => {
+      const p = list.find((x) => x.id === el.dataset.id);
+      const paused = presets.isPaused(p);
+      const choice = await chooseAction({ title: p.name, sub: t("ai.pauseHint"), items: [
+        paused ? { id: "resume", label: `▶ ${t("ai.resume")}` } : null,
+        { id: "hour", label: t("ai.pauseHour") },
+        { id: "today", label: t("ai.pauseToday") },
+        { id: "off", label: t("ai.pauseOff") }
+      ] });
+      const until = { hour: Date.now() + 3600000, today: presets.endOfToday(), off: presets.FOREVER, resume: null }[choice];
+      if (choice) { await presets.updatePreset(p.id, { pausedUntil: until }); toast(choice === "resume" ? t("ai.resumed", { name: p.name }) : t("ai.pausedToast", { name: p.name })); }
+      openAiSettings();
+    },
     add: async () => {
       const key = await chooseAction({ title: t("ai.add"), items: presets.TEMPLATES.map((x) => ({ id: x.key, label: x.label })) });
       if (!key) { if (isSheetOpen()) openAiSettings(); return; }

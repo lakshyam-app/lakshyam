@@ -55,3 +55,19 @@ export function nextSteps({ due = [], weak = [], untouched = [], gradable = new 
 }
 
 export const daysBetween = (fromMs, toMs) => Math.floor((toMs - fromMs) / DAY);
+
+/** Exam date + time ("YYYY-MM-DD", "HH:MM") → milliseconds on this phone's clock (local time). */
+export function examMoment(date, time = "") {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(date || ""));
+  if (!m) return null;
+  const [h, min] = /^\d{1,2}:\d{2}$/.test(time || "") ? time.split(":").map(Number) : [0, 0];
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), h, min).getTime();
+}
+
+/** Whole days, hours and minutes left (counting down), or past: true. */
+export function timeUntil(target, now = Date.now()) {
+  const ms = target - now;
+  if (ms <= 0) return { past: true, days: 0, hours: 0, minutes: 0 };
+  const minutes = Math.floor(ms / 60000);
+  return { past: false, days: Math.floor(minutes / 1440), hours: Math.floor((minutes % 1440) / 60), minutes: minutes % 60 };
+}

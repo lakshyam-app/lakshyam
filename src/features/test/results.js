@@ -3,7 +3,7 @@
    sort (test order, slowest, fastest, hardest), review cards, Retake, Practise the
    wrong ones, delete with Undo. */
 import { html, onAction } from "../../core/dom.js";
-import { t, formatNumber } from "../../core/i18n.js";
+import { t, formatNumber, dateLocale } from "../../core/i18n.js";
 import { go } from "../../core/router.js";
 import { runFlow, chooseAction, confirmAction } from "../../core/dialogs.js";
 import { toast } from "../../core/toast.js";
@@ -62,10 +62,11 @@ export const resultScreen = {
         : sort === "fast" ? (x.r.timeMs || Infinity) - (y.r.timeMs || Infinity)
           : (RANK[difficultyOf(y.q)] || 0) - (RANK[difficultyOf(x.q)] || 0)));
     }
-    const when = new Date(a.submittedAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
+    const when = new Date(a.submittedAt).toLocaleString(dateLocale(), { dateStyle: "medium", timeStyle: "short" });
     const pill = (f) => html`<button type="button" class="pill ${filter === f ? "on" : ""} f-${f}" data-action="filter" data-f="${f}" ${counts[f] || f === "all" ? "" : "disabled"}>
       ${t(`results.filter.${f}`)} <span class="count">${counts[f]}</span></button>`;
 
+    const layout = store.setting("resultLayout", null) || listLayout(); // results remember their own layout
     container.innerHTML = html`<header class="screen-head">
         <div class="head-bar"><button type="button" class="back" data-action="back">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>${t("history.title")}</span></button>
@@ -92,20 +93,22 @@ export const resultScreen = {
         ${counts.wrong + counts.blank ? html`<button type="button" class="btn btn-quiet" data-action="wrong-again">${t("results.practiseWrong", { n: counts.wrong + counts.blank })}</button>` : ""}
       </div>
       <div class="chip-row">${["all", "right", "wrong", "blank"].map(pill)}${counts["guess-right"] + counts["guess-wrong"] ? html`${pill("guess-right")}${pill("guess-wrong")}` : ""}</div>
-      <div class="toolbar"><button type="button" class="pill" data-action="sort">${t(`results.sort.${sort}`)} ▾</button></div>
+      <div class="toolbar"><button type="button" class="pill" data-action="sort">${t(`results.sort.${sort}`)} ▾</button>
+        <div class="segmented two compact" role="group" aria-label="${t("layout.title")}">${["scroll", "single"].map((l) => html`<button type="button" class="${layout === l ? "on" : ""}" data-action="layout" data-v="${l}" aria-pressed="${String(layout === l)}">${t(`layout.${l}Short2`)}</button>`)}</div></div>
       <div id="rHost"></div>`;
 
     const order = new Map(a.answers.map((r, i) => [r.questionId, i]));
     const recFor = new Map(recs.map((x) => [x.q.id, x.r]));
     const card = (q0) => questionCard(store.question(q0.id) || q0, { showPaper: true, review: recFor.get(q0.id), n: order.get(q0.id) + 1, showDifficulty: difficultyOn() });
     const view = mountCards(container.querySelector("#rHost"), {
-      key: `result:${id}:${filter}:${sort}`, items: shown.map((x) => x.q), card, layout: listLayout(),
+      key: `result:${id}:${filter}:${sort}`, items: shown.map((x) => x.q), card, layout,
       marks: (q) => stateOf(recFor.get(q.id)), empty: t("results.noneHere")
     });
     bindCardActions(container, { view, selectedFor: (q) => { const r = recFor.get(q.id); return r ? (r.selected === null ? "none" : r.selected) : undefined; } });
 
     onAction(container, {
       back: () => go("history"),
+      layout: (el) => { if (el.dataset.v !== layout) store.setSetting("resultLayout", el.dataset.v); },
       filter: (el) => { filterBy.set(id, el.dataset.f); forgetPlace(`result:${id}`); go("result", { id }); },
       sort: () => runFlow(async () => {
         const s = await chooseAction({ title: t("sort.title"), items: ["test", "slow", "fast", "hard"].map((x) => ({ id: x, label: t(`results.sort.${x}`), current: x === sort })) });

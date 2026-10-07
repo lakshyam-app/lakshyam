@@ -1,6 +1,6 @@
 /* Settings: your data (import, backup, restore, undo, erase), storage, display, app. */
 import { html, onAction } from "../../core/dom.js";
-import { t } from "../../core/i18n.js";
+import { t, locale, LANGUAGES } from "../../core/i18n.js";
 import { APP_VERSION } from "../../core/version.js";
 import { isPersisted, requestPersistence, usage, formatBytes } from "../../core/storage-health.js";
 import { checkForUpdate } from "../../core/sw-client.js";
@@ -14,6 +14,8 @@ import { syllabiBlock, addSyllabusFlow, editSyllabusFlow } from "./syllabi.js";
 import { runFlow, askText } from "../../core/dialogs.js";
 import { aiBlock, openAiSettings } from "../ai/ai-settings.js";
 import { namesBlock, namesHandlers } from "./names.js";
+import { autoTimesLine, openAutoTimes } from "./difficulty-times.js";
+import { editExam, examOf } from "../today/countdown.js";
 import { can } from "../../core/entitlements.js";
 
 const when = (ms) => new Date(ms).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
@@ -116,6 +118,9 @@ export const settingsScreen = {
             <button type="button" class="pill ${[10, 20, 30, 50, 75, 100].includes(goalNow) ? "" : "on"}" data-action="goal-custom">${[10, 20, 30, 50, 75, 100].includes(goalNow) ? t("settings.goalOther") : goalNow}</button></div>
           <p class="hint">${t("settings.goalHint")}</p>
           <label class="field-label">${t("settings.name")}<input class="field" id="userName" type="text" value="${store.setting("userName", "")}" placeholder="${t("settings.namePlaceholder")}" autocomplete="off"></label>
+          <label class="switch-row"><input type="checkbox" id="showCountdown" ${store.setting("showCountdown", true) !== false ? "checked" : ""}><span>${t("exam.showSetting")}</span></label>
+          <button type="button" class="link" data-action="exam">📅 ${examOf(store.currentSyllabus()) ? t("exam.change") : t("exam.set")}</button>
+          <label class="switch-row"><input type="checkbox" id="showDiary" ${store.setting("showDiary", true) !== false ? "checked" : ""}><span>${t("diary.showSetting")}</span></label>
           <label class="switch-row"><input type="checkbox" id="showStreak" ${store.setting("showStreak", true) !== false ? "checked" : ""}><span>${t("settings.showStreak")}</span></label>
           <label class="switch-row"><input type="checkbox" id="showGoal" ${store.setting("showGoal", true) !== false ? "checked" : ""}><span>${t("settings.showGoal")}</span></label>
         </div>
@@ -130,6 +135,7 @@ export const settingsScreen = {
         <div class="group" id="sec-ai">
           <h2>${t("ai.title")}</h2>
           <div id="aiBlock"></div>
+          <label class="switch-row"><input type="checkbox" id="aiOnCards" ${store.setting("aiOnCards", true) !== false ? "checked" : ""}><span>${t("ai.onCards")}<span class="row-sub">${t("ai.onCardsHint")}</span></span></label>
         </div>
         <div class="group">
           <h2>${t("settings.sectionStorage")}</h2>
@@ -137,10 +143,15 @@ export const settingsScreen = {
         </div>
         <div class="group" id="sec-display">
           <h2>${t("settings.sectionDisplay")}</h2>
+          <h3>${t("settings.appLang")}</h3>
+          <div class="segmented two" role="group" aria-label="${t("settings.appLang")}">${LANGUAGES.map((l) => html`<button type="button" class="${locale() === l.code ? "on" : ""}" data-action="app-lang" data-v="${l.code}" lang="${l.code}" aria-pressed="${String(locale() === l.code)}">${l.name}</button>`)}</div>
+          <p class="hint">${t("settings.appLangHint")}</p>
           <p>${t("settings.theme")}</p>
           ${can("malayalamNames") ? namesBlock() : ""}
           <label class="switch-row"><input type="checkbox" id="diffToggle" ${store.setting("difficultyEnabled", true) !== false ? "checked" : ""}>
             <span>${t("settings.difficulty")}<span class="row-sub">${t("settings.difficultyHint")}</span></span></label>
+          ${store.setting("difficultyEnabled", true) !== false ? html`<p class="hint">${autoTimesLine()}</p>
+          <button type="button" class="link" data-action="diff-times">${t("diffTimes.change")}</button>` : ""}
         </div>
         <div class="group">
           <h2>${t("settings.sectionApp")}</h2>
@@ -154,6 +165,9 @@ export const settingsScreen = {
       </section>`;
 
     container.querySelector("#diffToggle").addEventListener("change", (e) => store.setSetting("difficultyEnabled", e.target.checked));
+    container.querySelector("#aiOnCards").addEventListener("change", (e) => store.setSetting("aiOnCards", e.target.checked));
+    container.querySelector("#showCountdown").addEventListener("change", (e) => store.setSetting("showCountdown", e.target.checked));
+    container.querySelector("#showDiary").addEventListener("change", (e) => store.setSetting("showDiary", e.target.checked));
     container.querySelector("#showStreak").addEventListener("change", (e) => store.setSetting("showStreak", e.target.checked));
     container.querySelector("#showGoal").addEventListener("change", (e) => store.setSetting("showGoal", e.target.checked));
     container.querySelector("#userName").addEventListener("change", (e) => store.quietly(() => store.setSetting("userName", e.target.value.trim().slice(0, 40))).then(() => toast(t("settings.saved"))));
@@ -171,6 +185,9 @@ export const settingsScreen = {
       import: startImport,
       undo: openUndo,
       ...namesHandlers,
+      "diff-times": () => openAutoTimes(),
+      "app-lang": (el) => store.setSetting("appLang", el.dataset.v),
+      exam: () => editExam(),
       "ai-settings": () => openAiSettings(),
       goal: (el) => store.setSetting("dailyGoal", Number(el.dataset.n)),
       "goal-custom": () => runFlow(async () => {

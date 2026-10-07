@@ -51,9 +51,48 @@ export function distributeProportionally(items, target) {
 }
 
 /** Old app's thresholds: over 50 s is Hard, 26–50 s Medium, under 26 s Easy. */
-export function autoDifficulty(ms) {
+export const AUTO_DIFF_DEFAULT = Object.freeze({ medium: 26, hard: 50 });
+
+/** Easy under `medium` seconds, Medium from `medium` to `hard`, Hard over `hard`. */
+export function autoDifficulty(ms, th = AUTO_DIFF_DEFAULT) {
   const sec = ms / 1000;
-  return sec > 50 ? "D" : sec >= 26 ? "M" : "E";
+  return sec > th.hard ? "D" : sec >= th.medium ? "M" : "E";
+}
+
+/** Checks the times you set: whole seconds, 5 ≤ medium < hard ≤ 600. */
+export function validThresholds(th) {
+  const m = Number(th?.medium); const h = Number(th?.hard);
+  return Number.isInteger(m) && Number.isInteger(h) && m >= 5 && h > m && h <= 600;
+}
+
+/**
+ * Re-marks automatic difficulty with new times, as if your past tests had used them.
+ * Uses the time of your FIRST timed answer to each question (the one that set it originally;
+ * later attempts are faster because you have seen the question).
+ * Never touches a difficulty you chose yourself, or one that came with the paper.
+ * attempts: submitted tests; stateOf(qid); hintOf(qid) → paper difficulty or null.
+ * → { changes: [{ questionId, from, to }], summary: { "E>M": n, … , filled } }
+ */
+export function planAutoDifficulty(attempts, stateOf, hintOf, th) {
+  const first = new Map();
+  attempts.slice().sort((a, b) => (a.submittedAt || 0) - (b.submittedAt || 0)).forEach((a) => {
+    (a.answers || []).forEach((r) => {
+      if (r.selected === null || r.selected === undefined || !(r.timeMs > 0) || first.has(r.questionId)) return;
+      first.set(r.questionId, r.timeMs);
+    });
+  });
+  const changes = []; const summary = { filled: 0 };
+  first.forEach((ms, qid) => {
+    const st = stateOf(qid);
+    if (st?.difficultySource === "manual" || hintOf(qid)) return;
+    if (st?.difficulty && st.difficultySource !== "auto") return;
+    const to = autoDifficulty(ms, th);
+    const from = st?.difficulty || null;
+    if (from === to) return;
+    changes.push({ questionId: qid, from, to });
+    if (from) { const k = `${from}>${to}`; summary[k] = (summary[k] || 0) + 1; } else summary.filled++;
+  });
+  return { changes, summary };
 }
 
 /**

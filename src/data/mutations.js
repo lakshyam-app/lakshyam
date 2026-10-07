@@ -86,8 +86,13 @@ export function addStudied(syllabusId, topicId, delta) {
   // Like the old app, marking a topic studied counts as activity for the streak.
   const day = localDate();
   const act = store.byId("activity", day) || { id: day, date: day, count: 0 };
-  if (delta > 0) changes.activity = { put: [copy(act, { count: act.count + 1 })] };
-  else if (act.count > 0) changes.activity = { put: [copy(act, { count: act.count - 1 })] };
+  // The day's record also keeps which topics were studied (for the study diary).
+  const topics = act.topics || [];
+  if (delta > 0) changes.activity = { put: [copy(act, { count: act.count + 1, topics: [...topics, topicId] })] };
+  else if (act.count > 0) {
+    const i = topics.lastIndexOf(topicId);
+    changes.activity = { put: [copy(act, { count: act.count - 1, topics: i < 0 ? topics : [...topics.slice(0, i), ...topics.slice(i + 1)] })] };
+  }
   return store.apply(changes);
 }
 
@@ -475,9 +480,9 @@ export async function saveAiQuestions(syllabus, subjectId, topicId, items) {
 /* ---------- flashcards ---------- */
 
 /** Saves reviewed flashcards (e.g. made from a study PDF) as new cards to learn. */
-export async function saveCards(syllabusId, subjectId, topicId, items) {
+export async function saveCards(syllabusId, subjectId, topicId, items, source = "ai") {
   const cards = items.map((x) => ({
-    id: newId("fc"), syllabusId, subjectId, topicId, front: x.front, back: x.back, sourceRef: x.sourceRef || null, source: "ai"
+    id: newId("fc"), syllabusId, subjectId: x.subjectId || subjectId, topicId: x.topicId || topicId, front: x.front, back: x.back, sourceRef: x.sourceRef || null, source
   }));
   const states = cards.map((c) => ({ id: c.id, cardId: c.id, status: "new", reviews: 0, lastAt: null, dueAt: null }));
   await store.apply({ flashcards: { put: cards }, flashcardState: { put: states } });
