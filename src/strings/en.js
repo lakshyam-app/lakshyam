@@ -800,7 +800,16 @@ export default {
     saveN: (v) => (v.n === 1 ? "Save 1" : "Save {n}"),
     nothingChosen: "Nothing ticked",
     savedN: (v) => (v.n === 1 ? "1 AI question saved (topic → AI)" : "{n} AI questions saved (topic → AI)"),
-    cs: { pyq: "PYQs", ai: "🤖 AI", cards: "🃏 Cards" },
+    cs: { pyq: "PYQs", ai: "🤖 AI", cards: "🃏 Cards", notes: "📝 Notes" },
+    from: { label: "From which study PDF", all: "All together", none: "Not from a PDF" },
+    pnNone: "No revision notes from study PDFs yet. Open a study PDF and choose Revision note; it is saved here, one note per PDF run.",
+    pnHint: "Revision notes made from your study PDFs. Pick one PDF or read them all together.",
+    pnPages: "pages {pages}",
+    pnReadAll: "Read all {n} together",
+    pnTogether: "Revision notes together",
+    pnOpenPdf: "Open PDF",
+    pnDeleteTitle: "Delete this revision note?",
+    pnDeleted: "Revision note deleted",
     separateNote: "AI questions are kept apart: never mixed into PYQ lists, search, PYQ tests or PYQ stats.",
     separateShort: "Kept apart from PYQs",
     hubHead: "AI content",
@@ -987,11 +996,12 @@ export default {
     cardsSaved: (v) => `${v.n} flashcard${v.n === 1 ? "" : "s"} saved`,
     discardTitle: "Discard everything made here?",
     noteHead: "📝 Revision — {name}",
-    noteReview: "For {to}. Edit freely, then add it to the topic’s note.",
+    noteReview: "For {to}. Edit freely, then save it to the topic’s 📝 Notes tab (one note per PDF run).",
     noteDropped: (v) => `${v.n} point${v.n === 1 ? " was" : "s were"} dropped because a number wasn’t in the PDF text.`,
     noNote: "No usable notes came back. Try another page range or model.",
-    saveNote: "Add to topic note",
+    saveNote: "Save to the topic’s 📝 Notes",
     noteSaved: "Added to the note for {topic}",
+    noteSavedTab: "Saved in {topic} → 📝 Notes",
     hubSub: "Questions, cards and notes from your own PDFs",
     focusOn: (v) => `Focused practice: only page${v.pages.includes(",") ? "s" : ""} ${v.pages}, aiming at ${v.n} fact${v.n === 1 ? "" : "s"} you missed in past papers.`,
     focusClear: "Use any pages instead"
@@ -1646,7 +1656,7 @@ export default {
     removed: "Note removed",
     search: "Search notes",
     open: "Open",
-    kind: { question: "Question", topic: "Topic", subject: "Subject", paper: "Paper", bank: "Bank", list: "Topic list", other: "Note" },
+    kind: { question: "Question", topic: "Topic", subject: "Subject", paper: "Paper", bank: "Bank", list: "Topic list", other: "Note", pdfnote: "PDF note" },
     count: "{n} of {of} notes",
     asked: "{n} in papers",
     noneHere: "No notes match these filters.",
@@ -1654,7 +1664,7 @@ export default {
     sort: { recent: "Recently edited", oldest: "Oldest edited", most: "Most asked first", least: "Least asked first", az: "A–Z", syllabus: "Syllabus order", longest: "Longest first" },
     f: {
       allSubjects: "All subjects", noSubject: "Not about a subject", subjectTitle: "Notes for which subject?", kindTitle: "Which notes?",
-      kind: { all: "All notes", topic: "Topic notes", subject: "Subject notes", paper: "Paper notes", question: "Question notes", bank: "Banks & lists", ai: "🤖 AI write-ups", own: "✍️ My own notes" }
+      kind: { all: "All notes", topic: "Topic notes", pdfnote: "📄 PDF notes", subject: "Subject notes", paper: "Paper notes", question: "Question notes", bank: "Banks & lists", ai: "🤖 AI write-ups", own: "✍️ My own notes" }
     }
   },
   search: {

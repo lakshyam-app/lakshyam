@@ -605,12 +605,14 @@ function reviewView(rec, job, handlers) {
   if (job.kind === "note") {
     handlers.copy = () => copyText(job.noteText);
     handlers.save = async () => {
-      const text = job.noteText.trim();
+      // The PDF's name is shown with the note, so the generated first line ("📝 Revision — name") isn't kept.
+      const head = t("pdf.noteHead", { name: rec.name });
+      const text = job.noteText.trim().replace(new RegExp(`^${head.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*`), "").trim();
       if (!text || !topic) return;
-      await mut.appendNote({ type: "topic", id: topic.id }, topic.name, text);
+      await mut.savePdfNote({ topicId: topic.id, pdfId: rec.id, pdfName: rec.name, pages: cfg.only ? cfg.only.join(", ") : `${cfg.from}–${cfg.to}`, text });
       jobs.delete(jobKey(rec.id, job.kind));
-      toast(t("pdf.noteSaved", { topic: nameLabel(topic) }));
-      go("topic", { id: topic.id });
+      toast(t("pdf.noteSavedTab", { topic: nameLabel(topic) }));
+      go("topic", { id: topic.id, mode: "notes" });
     };
     return { body: html`<p class="hint">${t("pdf.noteReview", { to: targetLabel(tg) })}${r.tot.dropped ? ` ${t("pdf.noteDropped", { n: r.tot.dropped })}` : ""}</p>
       ${stoppedNote(r)}

@@ -121,8 +121,27 @@ export function saveNote(target, label, text) {
   const clean = String(text || "").trim();
   if (!clean) return store.apply({ notes: { delete: [id] } });
   const prev = store.byId("notes", id);
-  return store.apply({ notes: { put: [copy(prev || {}, { id, target, label, text: clean })] } });
+  // Keep extra details a note carries (a PDF note's topic and PDF) when it is edited.
+  return store.apply({ notes: { put: [copy(prev || {}, { id, target: prev?.target ? { ...prev.target, ...target } : target, label, text: clean })] } });
 }
+
+/* ---------- revision notes made from a study PDF (several per topic, one record each) ---------- */
+
+/** Saves a new PDF revision note for a topic. Returns its id. */
+export async function savePdfNote({ topicId, pdfId, pdfName, pages = "", text }) {
+  const rid = newId("pn");
+  const id = ids.note("pdfnote", rid);
+  await store.apply({ notes: { put: [{ id, target: { type: "pdfnote", id: rid, topicId, pdfId, pages }, label: pdfName, text: String(text || "").trim(), createdAt: Date.now() }] } });
+  return rid;
+}
+
+/** Deletes PDF notes; returns them for Undo (putNotes). */
+export async function deleteNotes(noteIds) {
+  const prev = noteIds.map((id) => store.byId("notes", id)).filter(Boolean);
+  await store.apply({ notes: { delete: prev.map((n) => n.id) } });
+  return prev;
+}
+export const putNotes = (notes) => store.apply({ notes: { put: notes } });
 
 /* ---------- saved exam filters ---------- */
 

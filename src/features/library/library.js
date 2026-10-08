@@ -20,7 +20,7 @@ import { topicMenu, labelFor, labelDot, LABELS, renameTopicFlow, renameSubjectFl
 import { addPaperFlow, answerKeyFlow } from "./paper-files.js";
 import { banksRows } from "./banks.js";
 import { openStartTest } from "../test/start-sheet.js";
-import { contentSwitch, contentHandler, renderAiPanel, renderCardsPanel, aiQuestions, cardsOf } from "../ai/content.js";
+import { contentSwitch, contentHandler, renderAiPanel, renderCardsPanel, renderPdfNotesPanel, aiQuestions, cardsOf, pdfNotesOf } from "../ai/content.js";
 import { generateQuestions, topicStrategy } from "../ai/ai-actions.js";
 import { testsFor } from "../progress/progress.js";
 import { pdfMenuItem } from "../pdfs/pdfs.js";
@@ -333,7 +333,7 @@ export const subjectScreen = {
     const total = allTopics.reduce((n, x) => n + x.count, 0);
     const topics = filterTopicRows(allTopics.map((x) => ({ ...x, studied: store.topicStateFor(syllabus.id, x.topic.id)?.studiedCount || 0, label: labelFor(syllabus.id, x.topic.id) })), subjectView);
     const filtered = subjectView.sort !== "freq" || subjectView.studied !== "all" || subjectView.labels;
-    const counts = { pyq: total, ai: aiQuestions(syllabus.id, { subjectId: id }).length, cards: cardsOf(syllabus.id, { subjectId: id }).length };
+    const counts = { pyq: total, ai: aiQuestions(syllabus.id, { subjectId: id }).length, cards: cardsOf(syllabus.id, { subjectId: id }).length, notes: pdfNotesOf({ subjectId: id }).length };
     const head = html`${header({
       backTo: "library", backParams: { view: "subjects" }, backLabel: t("library.views.subjects"),
       title: nameHtml(subject), sub: `${t("common.questions", { n: total })} · ${t("common.topics", { n: allTopics.length })}`, menu: mode === "pyq"
@@ -343,6 +343,7 @@ export const subjectScreen = {
       onAction(container, { ...backHandler, ...contentHandler });
       const host = container.querySelector("#aiHost");
       if (mode === "ai") renderAiPanel(host, { syllabus, scope: { subjectId: id }, label: subject.name });
+      else if (mode === "notes") renderPdfNotesPanel(host, { scope: { subjectId: id } });
       else renderCardsPanel(host, { syllabus, scope: { subjectId: id } });
       return;
     }
@@ -425,7 +426,7 @@ export const topicScreen = {
     const done = testsFor(syllabus.id, "topic", id).sort((a, b) => b.submittedAt - a.submittedAt);
     const sub = [t("common.questions", { n: questions.length }), st?.studiedCount ? t("library.studied", { n: st.studiedCount }) : t("library.notStudied")]
       .filter(Boolean).join(" · ");
-    const counts = { pyq: questions.length, ai: aiQuestions(syllabus.id, { topicId: id }).length, cards: cardsOf(syllabus.id, { topicId: id }).length };
+    const counts = { pyq: questions.length, ai: aiQuestions(syllabus.id, { topicId: id }).length, cards: cardsOf(syllabus.id, { topicId: id }).length, notes: pdfNotesOf({ topicId: id }).length };
     const head = html`${header({
       backTo: "subject", backParams: { id: topic.subjectId }, backLabel: nameLabel(subject) || t("common.back"),
       title: html`${labelDot(label)}${nameHtml(topic)}`, sub, menu: true
@@ -437,6 +438,7 @@ export const topicScreen = {
       onAction(container, { ...backHandler, ...contentHandler, menu: () => topicMenu(topic, { onPage: true, extra: [aiItem, pdfItem].filter(Boolean) }) });
       const host = container.querySelector("#aiHost");
       if (mode === "ai") renderAiPanel(host, { syllabus, scope: { topicId: id }, topic, label: topic.name });
+      else if (mode === "notes") renderPdfNotesPanel(host, { scope: { topicId: id }, topic });
       else renderCardsPanel(host, { syllabus, scope: { topicId: id } });
       return;
     }

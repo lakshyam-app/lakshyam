@@ -12,8 +12,8 @@ let term = "";
 /* Sort & filter (kept while the app is open). */
 const view = { sort: "recent", subject: "all", kind: "all" };
 const SORTS = ["recent", "oldest", "most", "least", "az", "syllabus", "longest"];
-const KINDS = ["all", "topic", "subject", "paper", "question", "bank", "ai", "own"];
-const isAi = (n) => /🤖|^\s*#{1,4}\s/m.test(n.text || "");
+const KINDS = ["all", "topic", "pdfnote", "subject", "paper", "question", "bank", "ai", "own"];
+const isAi = (n) => n.target?.type === "pdfnote" || /🤖|^\s*#{1,4}\s/m.test(n.text || "");
 
 /** For each note: its subject (if any), how many past-paper questions sit behind it, its name and syllabus order. */
 function facts(notes) {
@@ -30,6 +30,7 @@ function facts(notes) {
     else if (type === "subject") { subjectId = id; asked = bySubject.get(id) || 0; order = [store.subject(id)?.order ?? 9999, -1]; }
     else if (type === "question") { const q = store.question(id); subjectId = q?.subjectId || null; asked = q ? byTopic.get(q.topicId) || 0 : 0; order = [store.subject(subjectId)?.order ?? 9999, store.topic(q?.topicId)?.order ?? 9999]; }
     else if (type === "paper") asked = store.questionsOfPaper(id).length;
+    else if (type === "pdfnote") { const x = store.topic(n.target.topicId); subjectId = x?.subjectId || null; asked = byTopic.get(n.target.topicId) || 0; order = [store.subject(subjectId)?.order ?? 9999, x?.order ?? 9999]; }
     const target = noteTarget(n);
     const kind = type === "set" || type === "list" ? "bank" : type || "other";
     return { n, target, subjectId, asked, order, kind, name: target?.name || n.label || "" };

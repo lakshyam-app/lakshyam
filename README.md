@@ -159,6 +159,7 @@ and [`docs/feature-check.md`](docs/feature-check.md) for where every old-app fea
 | 1.3 | Up to 20 exam countdowns, with a choice of which and how Today shows them |
 | 1.6 | Automatic Drive backup without sign-in, through your own Google Apps Script (docs/apps-script); background backup on installed app |
 | 1.5 | How to use Lakshyam: illustrated demo + PDF (English, മലയാളം) in Settings |
+| 1.10 | 📝 Notes tab next to Cards: revision notes from study PDFs, one per PDF run; AI questions, cards and notes can be shown per study PDF or all together |
 | 1.9 | AI questions (with or without a PDF) follow the topic's past-paper pattern from its AI strategy; PDF questions still come only from the PDF |
 | 1.8 | 🤖 AI strategy on every topic: the pattern of its past questions (sub-areas, styles, repeats) and a preparation plan |
 | 1.7 | Focus check (how often you leave the app during a test, Do Not Disturb and real-break tips) and your best time of day in Smart insights |

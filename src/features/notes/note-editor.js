@@ -26,6 +26,7 @@ export function noteTarget(note) {
     case "bank": { const x = s.byId("sets", id); return x ? { name: x.name, kind: t("notes.kind.bank"), to: "bank", params: { id } } : null; }
     case "set": return { name: t(`banks.auto.${id === "auto:wrong" ? "wrong" : "flagged"}`), kind: t("notes.kind.bank"), to: "bank", params: { id } };
     case "list": { const x = s.byId("topicLists", id); return x ? { name: x.name, kind: t("notes.kind.list"), to: "library", params: { view: "topics", list: id } } : null; }
+    case "pdfnote": { const x = s.topic(note.target.topicId); return x ? { name: nameLabel(x), kind: t("notes.kind.pdfnote"), sub: `📄 ${note.label || ""}`, to: "topic", params: { id: x.id, mode: "notes" } } : null; }
     case "question": { const q = s.question(id); const p = q && s.paper(q.paperId); return p ? { name: note.label || p.name, kind: t("notes.kind.question"), to: "paper", params: { id: p.id } } : null; }
     default: return null;
   }
@@ -54,6 +55,17 @@ export function viewNote(type, id, label) {
     edit: () => { closeSheet(); editNote(type, id, label); },
     close: () => closeSheet()
   }, { label: t("notes.myNote") });
+  typesetMath(sheetBody());
+}
+
+/** Any laid-out text to read (e.g. several notes together), with Copy. */
+export function viewText(title, text) {
+  openSheet(html`<h2>${title}</h2><div class="ai-answer note-view">${noteText(text)}</div>
+    <div class="sheet-actions"><button type="button" class="btn btn-quiet" data-action="copy">${t("question.copy")}</button>
+      <button type="button" class="btn" data-action="close">${t("common.done")}</button></div>`, {
+    copy: async () => { try { await navigator.clipboard.writeText(text); toast(t("common.copied")); } catch { toast(t("common.copyFailed")); } },
+    close: () => closeSheet()
+  }, { label: title });
   typesetMath(sheetBody());
 }
 
