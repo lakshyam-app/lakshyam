@@ -64,14 +64,24 @@ export const guideScreen = {
     const track = container.querySelector("#gTrack");
     const dots = [...container.querySelectorAll(".g-dot")];
     const nextBtn = container.querySelector("#gNext");
+    const prevBtn = container.querySelector('[data-action="prev"]');
     const current = () => Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
     const paint = () => {
       const i = current();
       place.i = i;
       dots.forEach((d, k) => { d.classList.toggle("on", k === i); d.setAttribute("aria-selected", String(k === i)); });
       nextBtn.textContent = i >= STEPS.length - 1 ? `${u.done} ✓` : `${u.next} ›`;
+      // On the first step, Back leaves the demo (instead of doing nothing).
+      prevBtn.textContent = i === 0 ? `‹ ${t("settings.title")}` : `‹ ${u.prev}`;
     };
-    const show = (i, smooth = true) => track.scrollTo({ left: Math.max(0, Math.min(STEPS.length - 1, i)) * track.clientWidth, behavior: smooth ? "smooth" : "auto" });
+    // Moves to step i. Some phones ignore a smooth scroll inside a snapping row (most often
+    // going backwards), so if it hasn't arrived shortly after, jump there directly.
+    const show = (i, smooth = true) => {
+      const k = Math.max(0, Math.min(STEPS.length - 1, i));
+      const left = k * track.clientWidth;
+      track.scrollTo({ left, behavior: smooth ? "smooth" : "auto" });
+      setTimeout(() => { if (track.isConnected && current() !== k) { track.style.scrollSnapType = "none"; track.scrollLeft = left; requestAnimationFrame(() => { track.style.scrollSnapType = ""; paint(); }); } }, smooth ? 450 : 0);
+    };
     let raf = 0;
     track.addEventListener("scroll", () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(paint); }, { passive: true });
     requestAnimationFrame(() => { show(Number(params.i ?? place.i) || 0, false); paint(); });
@@ -82,7 +92,7 @@ export const guideScreen = {
       back: () => go("settings"),
       lang: (el) => { place.lang = el.dataset.l; go("guide", { lang: el.dataset.l, i: current() }); },
       dot: (el) => show(Number(el.dataset.i)),
-      prev: () => show(current() - 1),
+      prev: () => (current() === 0 ? go("settings") : show(current() - 1)),
       next: () => (current() >= STEPS.length - 1 ? go("today") : show(current() + 1)),
       "pdf-view": () => go("guide-pdf", { lang }),
       "pdf-dl": () => downloadPdf(lang),
