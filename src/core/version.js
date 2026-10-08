@@ -1,3 +1,3 @@
 // Keep in step with VERSION in /sw.js.
-export const APP_VERSION = "1.10.0";
+export const APP_VERSION = "1.11.0";
 export { DB_VERSION as SCHEMA_VERSION } from "../data/schema.js";

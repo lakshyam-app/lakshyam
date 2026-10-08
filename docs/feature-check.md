@@ -149,3 +149,10 @@ Today screen with Quick 10 and daily goal · exam countdown · timetable (any da
 |---|---|---|
 | PDF revision notes saved as their own notes (one per PDF run, with pages and date) in a 📝 Notes tab next to Cards on topic and subject pages; read, edit, open PDF, delete with Undo; also in the Notes tab as "📄 PDF notes" | Topic / Subject → 📝 Notes | ✅ |
 | "From which study PDF" chips on AI questions, Cards and Notes (each PDF, not from a PDF, or all together); notes grouped by PDF and "Read all together" | Topic / Subject → AI · Cards · Notes | ✅ |
+
+## Added in 1.11
+
+| Feature | Where | Status |
+|---|---|---|
+| Study PDF file moved to your Google Drive ("Lakshyam PDFs"): resumable upload, size + MD5 check, only then the phone copy is removed; page text stays on the phone; pictures / AI page reading fetch it for the session; keep on phone again; delete here only or Drive copy to the Bin | Study PDF → Where the PDF file is kept | ✅ |
+| Move all PDFs to Drive with space freed shown; add back PDFs that are in Drive but not on this phone (same id, links restored) | Settings → Backup & data → Study PDFs | ✅ |

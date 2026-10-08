@@ -60,7 +60,9 @@ Presets fall back to the next one if one fails, and can be paused.
 - Settings → Backup → **Export** saves everything to one file (a reminder appears if you haven't in a while).
 - Big changes (imports, restores, start fresh, merges, difficulty re-runs) keep a **safety copy** first:
   Settings → Undo.
-- Study PDFs and AI keys stay on the phone; they are not in backups.
+- AI keys stay on the phone; they are not in backups. Study PDFs stay on the phone too, unless you move
+  them to your own Google Drive (on a PDF, or Settings → Backup & data → Study PDFs) to free space.
+  The app only removes its own copy after Drive's copy is checked byte-for-byte; your original file is never touched.
 - Clearing the browser's site data for this address deletes Lakshyam's data. Export first.
 
 ### Settings
@@ -159,6 +161,7 @@ and [`docs/feature-check.md`](docs/feature-check.md) for where every old-app fea
 | 1.3 | Up to 20 exam countdowns, with a choice of which and how Today shows them |
 | 1.6 | Automatic Drive backup without sign-in, through your own Google Apps Script (docs/apps-script); background backup on installed app |
 | 1.5 | How to use Lakshyam: illustrated demo + PDF (English, മലയാളം) in Settings |
+| 1.11 | Study PDFs can live in your own Google Drive to free phone space (checked copy before removal; page text stays on the phone); move one or all, keep on phone again, add back on a new phone |
 | 1.10 | 📝 Notes tab next to Cards: revision notes from study PDFs, one per PDF run; AI questions, cards and notes can be shown per study PDF or all together |
 | 1.9 | AI questions (with or without a PDF) follow the topic's past-paper pattern from its AI strategy; PDF questions still come only from the PDF |
 | 1.8 | 🤖 AI strategy on every topic: the pattern of its past questions (sub-areas, styles, repeats) and a preparation plan |

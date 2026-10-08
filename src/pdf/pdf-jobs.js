@@ -9,6 +9,7 @@ import * as PP from "../ai/pdf-prompts.js";
 import * as T from "./pdf-tools.js";
 import { getPdf, savePage } from "./pdf-store.js";
 import { openStoredPdf, renderPageJpeg } from "./pdf-reader.js";
+import { pdfFile } from "./pdf-file.js";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 export const PAUSE_MS = { between: 700, afterFail: 2500, page: 1200 };
@@ -27,7 +28,8 @@ function toArray(reply, ...keys) {
 export async function readPages(pdfId, pageNums, job, onStep = () => {}) {
   const rec = await getPdf(pdfId);
   if (!rec) throw new Error("pdf-missing");
-  const doc = await openStoredPdf(rec);
+  // The file may be only in Google Drive: fetched for this session (page text stays on the phone).
+  const doc = await openStoredPdf({ blob: await pdfFile(rec) });
   let done = 0; let failedInRow = 0;
   try {
     for (const n of pageNums) {

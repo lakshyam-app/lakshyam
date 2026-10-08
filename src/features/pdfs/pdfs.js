@@ -26,6 +26,8 @@ import { header, backHandler, chev } from "../library/library.js";
 import { pickTopic } from "../library/topic-picker.js";
 import { ensureAi, errorText } from "../ai/ai-ui.js";
 import { strategyFor, patternFrom } from "../../data/strategy.js";
+import { pdfFile, inDrive, onPhone, needsSignIn, ensureSignedIn } from "../../pdf/pdf-file.js";
+import { storageBox, storageHandlers, deleteChoice, cloudErrorText } from "./pdf-cloud.js";
 
 const PDF_SCREENS = ["pdfs", "pdf", "pdf-page", "pdf-make"];
 const KINDS = ["questions", "cards", "note", "read"];
@@ -146,7 +148,7 @@ export const pdfsScreen = {
         const ready = KINDS.some((k) => jobs.get(jobKey(r.id, k))?.phase === "review");
         return html`<button type="button" class="row" data-action="open" data-id="${r.id}">
           <span class="row-main"><span class="row-title">📄 ${r.name}</span>
-          <span class="row-sub">${[owner && r.owner?.type === owner.type ? null : ownerLabel(r.owner), pdfStore.formatMB(r.size || 0), summaryLine(r), running ? `⏳ ${t("pdf.working")}` : null, ready ? `✓ ${t("pdf.readyToReview")}` : null].filter(Boolean).join(" · ")}</span></span>${chev}</button>`;
+          <span class="row-sub">${[owner && r.owner?.type === owner.type ? null : ownerLabel(r.owner), `${!onPhone(r) && inDrive(r) ? "☁️ " : ""}${pdfStore.formatMB(r.size || 0)}`, summaryLine(r), running ? `⏳ ${t("pdf.working")}` : null, ready ? `✓ ${t("pdf.readyToReview")}` : null].filter(Boolean).join(" · ")}</span></span>${chev}</button>`;
       })}` : html`<p class="hint pad">${owner ? t("pdf.noneHere") : t("pdf.none")}</p>`;
     }).catch((e) => { const rows = container.querySelector("#pdfRows"); if (rows) rows.innerHTML = html`<p class="warn-box">${errorText(e)}</p>`; });
   }
@@ -192,9 +194,12 @@ function drawPdf(container, rec) {
     ${c.readable ? "" : html`<p class="hint pad">${t("pdf.noReadable")}</p>`}
     <h3 class="rows-head">${t("pdf.pagesHead")}</h3>
     <div class="rows"><button type="button" class="row" data-action="pages"><span class="row-main"><span class="row-title">🔍 ${t("pdf.pages")}</span><span class="row-sub">${t("pdf.pagesSub")}</span></span>${chev}</button></div>
+    <h3 class="rows-head">${t("pdfc.whereHead")}</h3>
+    ${storageBox(rec)}
     <p class="hint pad">${t("pdf.privacy")}</p>`;
   onAction(container, {
     ...backHandler,
+    ...storageHandlers(container, rec, () => pdfStore.getPdf(rec.id).then((fresh) => { if (fresh && container.isConnected) drawPdf(container, fresh); })),
     make: (el) => go("pdf-make", { id: rec.id, kind: el.dataset.kind }),
     pages: () => go("pdf-page", { id: rec.id, n: T.pageNumbers(rec.pages, T.needsAi)[0] || 1 }),
     menu: () => runFlow(async () => {
@@ -210,8 +215,9 @@ function drawPdf(container, rec) {
         const pick = await pickTopic({ title: t("pdf.move"), current: defaultTarget(rec) });
         if (pick?.topicId) { rec.owner = { type: "topic", id: pick.topicId }; await pdfStore.savePdf(rec); toast(t("pdf.moved", { to: targetLabel(pick) })); }
       } else if (choice === "delete") {
-        const ok = await confirmAction({ title: t("pdf.deleteTitle", { name: rec.name }), body: t("pdf.deleteBody"), confirmLabel: t("common.delete"), danger: true });
-        if (!ok) return;
+        const how = await deleteChoice(rec);
+        if (!how) return;
+        if (how === "both") { try { const { binDriveCopy } = await import("../../pdf/pdf-file.js"); await binDriveCopy(rec); } catch (e) { toast(cloudErrorText(e)); return; } }
         KINDS.forEach((k) => { const j = jobs.get(jobKey(rec.id, k)); if (j) j.cancel = true; jobs.delete(jobKey(rec.id, k)); });
         await pdfStore.deletePdf(rec.id);
         toast(t("pdf.deleted"));
@@ -258,6 +264,7 @@ function drawPage(container, rec, n) {
       <button type="button" class="btn btn-quiet" data-action="ai">🖼️ ${t("pdf.readWithAi")}</button>
       <button type="button" class="btn btn-quiet" data-action="pic">${pic ? t("pdf.hidePicture") : t("pdf.showPicture")}</button>
     </div>
+    ${!pic && !onPhone(rec) && inDrive(rec) ? html`<p class="hint">☁️ ${t("pdfc.pictureFromDrive")}</p>` : ""}
     ${nextNeed ? html`<button type="button" class="link" data-action="to" data-n="${nextNeed}">${t("pdf.nextNeed", { n: nextNeed })} ›</button>` : ""}
     ${pic ? html`<img class="page-pic" src="${pic}" alt="${t("pdf.pageOf", { n, of: rec.pages.length })}">` : ""}`;
   const out = container.querySelector("#pgOut");
@@ -285,12 +292,15 @@ function drawPage(container, rec, n) {
       if (pagePicture.has(key)) { pagePicture.delete(key); redraw(); return; }
       el.disabled = true; el.textContent = t("pdf.loading");
       try {
-        const doc = await openStoredPdf(rec);
+        // Only in Drive: fetched for this session (needs internet; one Google sign-in tap if it expired).
+        const blob = await pdfFile(rec, { onProgress: (d, n) => { el.textContent = t("pdfc.downloadingShort", { p: n ? Math.round((100 * d) / n) : 0 }); } });
+        const doc = await openStoredPdf({ blob });
         try { pagePicture.clear(); pagePicture.set(key, await renderPageJpeg(doc, n, { width: 1100, quality: 0.8 })); } finally { doc.destroy(); }
         if (container.isConnected) redraw();
-      } catch (e) { out.innerHTML = html`<p class="warn-box">${errorText(e)}</p>`; el.disabled = false; }
+      } catch (e) { out.innerHTML = html`<p class="warn-box">${e?.kind ? cloudErrorText(e) : errorText(e)}</p>`; el.disabled = false; el.textContent = t("pdf.showPicture"); }
     },
     ai: async (el) => {
+      if (needsSignIn(rec)) { try { await ensureSignedIn(rec.drive?.email); } catch (e) { out.innerHTML = html`<p class="warn-box">${cloudErrorText(e)}</p>`; return; } }
       if (!(await ensureAi())) return;
       el.disabled = true;
       out.innerHTML = html`<p class="sheet-status">${t("pdf.aiReading")}</p>`;
@@ -511,6 +521,8 @@ function formView(rec, job, handlers) {
 }
 
 async function start(rec, job) {
+  // Reading scanned pages needs the file; if it is only in Drive, sign in now (while it is still a tap).
+  if (job.kind === "read" && needsSignIn(rec)) { try { await ensureSignedIn(rec.drive?.email); } catch (e) { toast(cloudErrorText(e)); return; } }
   if (!(await ensureAi())) return;
   const cfg = job.cfg;
   // The topic's past-paper pattern (from its AI strategy) steers which passage facts to ask; never a source of facts.

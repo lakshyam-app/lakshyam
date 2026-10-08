@@ -98,3 +98,12 @@ test("background backup makes the same backup as the app", () => {
   assert.deepEqual(JSON.parse(JSON.stringify(sw.counts)), app.counts);
   assert.ok(!JSON.stringify(sw).includes("secret"), "the Drive link never goes into a backup");
 });
+
+import { createHash } from "node:crypto";
+import { md5Blob } from "../src/pdf/md5.js";
+test("MD5 of a file matches the standard one (used to check Drive copies)", async () => {
+  for (const n of [0, 3, 64, 1000, 70000]) {
+    const b = Buffer.from(Array.from({ length: n }, (_, i) => (i * 31 + 7) & 255));
+    assert.equal(await md5Blob(new Blob([b])), createHash("md5").update(b).digest("hex"));
+  }
+});

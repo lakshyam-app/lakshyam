@@ -1,5 +1,6 @@
 /* Your study PDFs: the file itself plus the text of each page.
-   They live in the private "pdfs" store on this phone only — never in backups
+   They live in the private "pdfs" store on this phone — never in backups. The file can be moved
+   to your own Google Drive (see pdf-file.js); the page text always stays here. Never in backups
    or safety copies (they can be large). Questions, cards and notes made from a
    PDF are normal app data and are backed up as usual. */
 import * as db from "../data/db.js";

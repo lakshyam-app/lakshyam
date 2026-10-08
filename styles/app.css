@@ -1194,3 +1194,8 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 @media (max-width: 420px) { .segmented.four > button { font-size: 0.875rem; } .segmented.four .cs-ico { display: none; } }
 .from-row { margin: 4px 0 8px; }
 .pdf-note { margin-bottom: 10px; }
+
+/* Where a study PDF's file is (phone / Google Drive) */
+.pdf-where { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin: 4px 0 8px; background: var(--surface); }
+.pdf-where.is-cloud { background: var(--brand-soft); }
+.pdf-where p { margin: 4px 0; }

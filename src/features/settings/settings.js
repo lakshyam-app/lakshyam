@@ -27,6 +27,7 @@ import { can } from "../../core/entitlements.js";
 import * as presets from "../../ai/presets.js";
 import { header, backHandler } from "../library/library.js";
 import { driveBlock, driveHandlers, driveConfig, paintBackgroundLine } from "./drive.js";
+import { settingsBlock as pdfCloudBlock, settingsHandlers as pdfCloudHandlers } from "../pdfs/pdf-cloud.js";
 import { openGuideSheet } from "../guide/guide.js";
 import { SETTINGS_INDEX, CATEGORIES, CATEGORY_ICON, searchSettings } from "./settings-index.js";
 
@@ -239,6 +240,7 @@ const PAGES = {
   data() {
     return html`${store.isEmpty() ? "" : driveBlock()}
       <div class="group">${dataBlock()}</div>
+      <div class="group" data-set="pdfCloud" id="pdfCloudBlock"></div>
       <div class="group" data-set="protect">
         <h3>${t("settings.sectionStorage")}</h3>
         <div id="storageBlock"></div>
@@ -432,6 +434,10 @@ export const settingsScreen = {
     if (section === "ai") aiBlock().then((markup) => { const el = container.querySelector("#aiBlock"); if (el) el.innerHTML = String(markup); });
     if (section === "data") paintBackgroundLine(container);
     if (section === "data") storageBlock().then((markup) => { const el = container.querySelector("#storageBlock"); if (el) el.innerHTML = String(markup); });
+    // Study PDFs: space on this phone, move all to Google Drive, add back from Drive.
+    const paintPdfCloud = () => pdfCloudBlock().then((markup) => { const el = container.querySelector("#pdfCloudBlock"); if (el) el.innerHTML = String(markup); })
+      .then(() => storageBlock()).then((markup) => { const el = container.querySelector("#storageBlock"); if (el) el.innerHTML = String(markup); });
+    if (section === "data") { paintPdfCloud(); onAction(container, pdfCloudHandlers(container, paintPdfCloud)); }
     // One-off requests (open the AI sheet, highlight a search hit) are removed from the
     // address, so a redraw after a change doesn't repeat them.
     if (params.open || params.focus) history.replaceState(history.state, "", `#/settings?section=${section}`);

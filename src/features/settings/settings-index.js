@@ -50,6 +50,7 @@ export const SETTINGS_INDEX = [
   item("removeKeys", "ai", "ai.removeAll", "ai-settings"),
 
   item("drive", "data", "drive.title"),
+  item("pdfCloud", "data", "pdfc.title"),
   item("backup", "data", "settings.backupNow"),
   item("restore", "data", "settings.restore"),
   item("importOld", "data", "settings.importOld"),

@@ -168,3 +168,87 @@ export async function prune(phoneId, keep = KEEP) {
   for (const f of extra) { try { await deleteFile(f.id); } catch { /* try again next time */ } }
   return extra.length;
 }
+
+/* ---------- study PDFs kept in Drive ("Lakshyam PDFs") ---------- */
+
+export const PDF_FOLDER = "Lakshyam PDFs";
+export const pdfFolder = () => folder(PDF_FOLDER);
+
+/**
+ * Uploads a large file with a resumable upload (multipart is only for small files).
+ * meta: { name, parents, mimeType, appProperties }. onProgress(sent, total).
+ * Returns { id, name, size, md5Checksum }.
+ */
+export async function uploadLarge(blob, meta, onProgress) {
+  if (!hasToken()) throw new DriveError("auth");
+  let start;
+  try {
+    start = await fetch(`${UPLOAD}?uploadType=resumable&fields=id,name,size,md5Checksum`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token.value}`, "Content-Type": "application/json; charset=UTF-8", "X-Upload-Content-Type": meta.mimeType, "X-Upload-Content-Length": String(blob.size) },
+      body: JSON.stringify(meta)
+    });
+  } catch { throw new DriveError("offline"); }
+  if (start.status === 401) { token = null; throw new DriveError("auth"); }
+  if (start.status === 403 && /storageQuota|quota/i.test(await start.clone().text())) throw new DriveError("full");
+  if (!start.ok) throw new DriveError("http", `${start.status} ${(await start.text()).slice(0, 200)}`);
+  const at = start.headers.get("Location");
+  if (!at) {
+    // The browser couldn't see the upload address: one-request upload instead (fine for smaller files).
+    const boundary = `lk${Math.random().toString(36).slice(2)}`;
+    const body = new Blob([`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${boundary}\r\nContent-Type: ${meta.mimeType}\r\n\r\n`, blob, `\r\n--${boundary}--`]);
+    onProgress?.(0, blob.size);
+    const r = await call(`${UPLOAD}?uploadType=multipart&fields=id,name,size,md5Checksum`, { method: "POST", headers: { "Content-Type": `multipart/related; boundary=${boundary}` }, body });
+    onProgress?.(blob.size, blob.size);
+    return r;
+  }
+  // XMLHttpRequest, because fetch can't report upload progress.
+  return new Promise((resolve, reject) => {
+    const x = new XMLHttpRequest();
+    x.open("PUT", at);
+    x.setRequestHeader("Content-Type", meta.mimeType);
+    x.upload.onprogress = (e) => onProgress?.(e.loaded, e.total || blob.size);
+    x.onload = () => {
+      if (x.status === 401) { token = null; reject(new DriveError("auth")); return; }
+      if (x.status === 403 && /quota/i.test(x.responseText)) { reject(new DriveError("full")); return; }
+      if (x.status < 200 || x.status >= 300) { reject(new DriveError("http", `${x.status} ${String(x.responseText).slice(0, 200)}`)); return; }
+      try { resolve(JSON.parse(x.responseText)); } catch { reject(new DriveError("http", "bad reply")); }
+    };
+    x.onerror = () => reject(new DriveError("offline"));
+    x.send(blob);
+  });
+}
+
+/** Downloads a file this app made. onProgress(received, total). */
+export async function downloadFile(id, onProgress) {
+  if (!hasToken()) throw new DriveError("auth");
+  let r;
+  try { r = await fetch(`${API}/files/${encodeURIComponent(id)}?alt=media`, { headers: { Authorization: `Bearer ${token.value}` } }); } catch { throw new DriveError("offline"); }
+  if (r.status === 401) { token = null; throw new DriveError("auth"); }
+  if (r.status === 404) throw new DriveError("gone");
+  if (!r.ok) throw new DriveError("http", `${r.status}`);
+  const total = Number(r.headers.get("Content-Length")) || 0;
+  if (!r.body || !onProgress) return r.blob();
+  const reader = r.body.getReader(); const parts = []; let got = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    parts.push(value); got += value.length; onProgress(got, total);
+  }
+  return new Blob(parts, { type: "application/pdf" });
+}
+
+/** Moves a file to the Drive Bin (it can be restored from there for 30 days). */
+export const trashFile = (id) => call(`/files/${encodeURIComponent(id)}?fields=id`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trashed: true }) });
+
+/** Every study PDF this app put in Drive (not in the Bin). */
+export async function listPdfFiles() {
+  const query = "appProperties has { key='lakshyam' and value='pdf' } and trashed=false";
+  const out = []; let page = "";
+  do {
+    const r = await call(`/files?q=${encodeURIComponent(query)}&pageSize=100&fields=nextPageToken,files(id,name,size,md5Checksum,createdTime,appProperties)${page ? `&pageToken=${encodeURIComponent(page)}` : ""}`);
+    out.push(...(r.files || []));
+    page = r.nextPageToken || "";
+  } while (page && out.length < 1000);
+  return out;
+}
