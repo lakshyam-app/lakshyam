@@ -32,6 +32,10 @@ or any other app. Your data comes in only from an export file you choose.
 
 Search (🔍) and Settings (⚙) are in the top bar.
 
+**Focus check** (Settings → Tests & questions, on by default): leaving the app for 5 seconds or more during a test
+(not while paused) is counted and shown on the result. Smart insights → *When you focus best* shows your
+accuracy by time of day, compared with your usual on the same topics, and says only when a difference is clear.
+
 ### Adding papers with an AI
 
 Library → Papers → **+ Add paper** → **📋 Copy instructions for AI**. Paste them into any AI chat
@@ -155,4 +159,5 @@ and [`docs/feature-check.md`](docs/feature-check.md) for where every old-app fea
 | 1.3 | Up to 20 exam countdowns, with a choice of which and how Today shows them |
 | 1.6 | Automatic Drive backup without sign-in, through your own Google Apps Script (docs/apps-script); background backup on installed app |
 | 1.5 | How to use Lakshyam: illustrated demo + PDF (English, മലയാളം) in Settings |
+| 1.7 | Focus check (how often you leave the app during a test, Do Not Disturb and real-break tips) and your best time of day in Smart insights |
 | 1.4 | Mistake review (spaced repetition), Today's session, Google Drive backup, syllabus map, text size, crossing out options, screen kept on |

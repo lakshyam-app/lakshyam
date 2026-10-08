@@ -205,6 +205,7 @@ const PAGES = {
           <span class="row-main"><span>${t(`setx.awake.${v}`)}</span></span>${store.setting("keepAwake", "tests") === v ? html`<span class="tick">✓</span>` : ""}</button>`)}</div>
         <p class="hint">${awakeSupported() ? t("setx.awakeHint") : t("setx.awakeNo")}</p>
       </div>
+      <div class="group">${sw("focusCheck", "focusCheck", t("setx.focusCheck"), t("setx.focusCheckHint"))}</div>
       <div class="group">
         ${sw("difficulty", "difficultyEnabled", t("settings.difficulty"), t("settings.difficultyHint"))}
         ${diffOn ? html`<p class="hint">${autoTimesLine()}</p>

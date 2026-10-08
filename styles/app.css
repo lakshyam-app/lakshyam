@@ -1147,3 +1147,9 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .grid th, .grid td { padding: 6px 6px; }
 @media (max-width: 380px) { .grid th, .grid td { padding: 6px 4px; } .grid th[scope="row"] { min-width: 6.5em; } }
 .grid thead th:first-child { text-align: left; }
+
+/* Focus check on a result; best time of day in Smart insights */
+.focus-note { margin: 8px 0 4px; padding: 10px 12px; border-radius: 12px; background: var(--brand-soft); border: 1px solid var(--line); }
+.focus-note p { margin: 4px 0; }
+.focus-tip { margin-top: 10px; }
+.row.static.is-best { box-shadow: inset 3px 0 0 var(--brand); }

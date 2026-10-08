@@ -10,6 +10,7 @@ import { runFlow, chooseAction, confirmAction } from "../../core/dialogs.js";
 import { toast } from "../../core/toast.js";
 import { markingText } from "../../domain/scoring.js";
 import { maxScore, formatDuration } from "../../domain/testing.js";
+import { cleanFocus, LONG_SESSION_MS } from "../../domain/focus.js";
 import * as store from "../../data/store.js";
 import * as tests from "../../data/tests.js";
 import { questionCard, difficultyOf } from "../question/card.js";
@@ -80,6 +81,14 @@ export const resultScreen = {
     const pill = (f) => html`<button type="button" class="pill ${filter === f ? "on" : ""} f-${f}" data-action="filter" data-f="${f}" ${counts[f] || f === "all" ? "" : "disabled"}>
       ${t(`results.filter.${f}`)} <span class="count">${counts[f]}</span></button>`;
 
+    // Focus check: how often you left the app, and (right after a long test) a nudge to take a real break.
+    const focus = cleanFocus(a.focus);
+    const focusParts = !focus ? [] : [
+      focus.n ? html`<p>📵 ${t("focus.leftN", { n: focus.n, time: formatDuration(Math.max(focus.ms, 1000)) })}</p><p class="hint">${t("focus.dndTip")}</p>`
+        : totalMs >= 5 * 60000 ? html`<p>🎯 ${t("focus.stayed")}</p>` : "",
+      fresh && totalMs >= LONG_SESSION_MS ? html`<p class="hint">☕ ${t("focus.breakTip", { time: formatDuration(totalMs) })}</p>` : ""
+    ].filter(Boolean);
+    const focusHtml = focusParts.length ? html`<div class="focus-note">${focusParts}</div>` : "";
     const layout = store.setting("resultLayout", null) || listLayout(); // results remember their own layout
     container.innerHTML = html`<header class="screen-head">
         <div class="head-bar"><button type="button" class="back" data-action="back">
@@ -102,6 +111,7 @@ export const resultScreen = {
         ${missing ? html`<p class="hint">${t("results.missing", { n: missing })}</p>` : ""}
         ${graded < c.total ? html`<p class="hint">${t("results.ungraded", { n: c.total - graded })}</p>` : ""}
       </section>
+      ${focusHtml}
       <div class="actions-row">
         <button type="button" class="btn" data-action="retake">${t("results.retake")}</button>
         ${counts.wrong + counts.blank ? html`<button type="button" class="btn btn-quiet" data-action="wrong-again">${t("results.practiseWrong", { n: counts.wrong + counts.blank })}</button>` : ""}

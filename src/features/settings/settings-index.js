@@ -31,6 +31,7 @@ export const SETTINGS_INDEX = [
   item("listLayout", "tests", "setx.lists"),
   item("resultLayout", "tests", "setx.resultLayout"),
   item("keepAwake", "tests", "setx.keepAwake"),
+  item("focusCheck", "tests", "setx.focusCheck"),
   item("difficulty", "tests", "settings.difficulty"),
   item("diffTimes", "tests", "diffTimes.title", "diff-times"),
 

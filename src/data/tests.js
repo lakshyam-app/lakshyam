@@ -7,6 +7,7 @@ import { DEFAULT_MARKING } from "../domain/scoring.js";
 import { gradeTest, autoDifficulty, isGradable, AUTO_DIFF_DEFAULT, validThresholds, planAutoDifficulty } from "../domain/testing.js";
 import { takeSnapshot } from "./snapshots.js";
 import { localDate } from "../domain/study.js";
+import { cleanFocus } from "../domain/focus.js";
 
 /** The unfinished test, if any (only one at a time). */
 export function activeTest() {
@@ -72,6 +73,8 @@ export async function submitTest(attempt, run, { auto = false } = {}) {
     answers: graded.answers, counts: graded.counts, netScore: graded.netScore,
     layout: attempt.layout, run: undefined
   };
+  // Focus check: how often you left the app during this test (absent when the check is off).
+  if (run.focus) done.focus = cleanFocus(run.focus);
   delete done.run;
   await store.quietly(() => store.apply({
     attempts: { put: [done] },

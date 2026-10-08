@@ -22,6 +22,7 @@ import { examOf } from "../today/countdown.js";
 import { finishedTests } from "../progress/data.js";
 import { blockTitle, icon, fmt, fmtDuration, fmtDate } from "./common.js";
 import { scheduleLine } from "./timetable.js";
+import { clearBestSlot } from "../insights/focus-view.js";
 
 const PATTERNS = ["same", "5-2", "6-1", "alt"];
 let form = null; // kept while the app is open, so a redraw never loses what you entered
@@ -69,6 +70,7 @@ export const ttNewScreen = {
     const chosen = weights.filter((w) => form.subjects.includes(w.id));
     const wsum = chosen.reduce((a, w) => a + w.weight, 0) || 1;
     const today = T.isoDate();
+    const best = clearBestSlot(syllabus); // your clearly best time of day, if the data shows one
     container.innerHTML = html`<header class="screen-head"><div class="head-bar"><button type="button" class="back" data-action="back">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>${t("tt.title")}</span></button></div>
       <h1>${t("tt.create")}</h1><p class="hint">${t("tt.newHint")}</p></header>
@@ -87,6 +89,7 @@ export const ttNewScreen = {
           <button type="button" class="icon-sm" data-action="win-del" data-p="${pi}" data-i="${wi}" aria-label="${t("common.delete")}" ${form.windows[pi].length < 2 ? "disabled" : ""}>✕</button></div>`)}
         <button type="button" class="link" data-action="win-add" data-p="${pi}">＋ ${t("tt.addWindow")}</button>
         <p class="hint">${t("tt.windowTotal", { time: fmtDuration(minutesOf(form.windows[pi])) })}</p></section>`)}
+      ${best ? html`<p class="ok-box">🌅 ${t("focus.ttHint", { slot: t(`focus.slot.${best.id}`) })}</p>` : ""}
       <h3>${t("tt.sessionLen")}</h3>
       <div class="chip-wrap">${[30, 45, 50, 60, 75, 90].map((v) => html`<button type="button" class="pill ${form.session === v ? "on" : ""}" data-action="session" data-v="${v}">${fmtDuration(v)}</button>`)}</div>
       <h3>${t("tt.breakLen")}</h3>
@@ -200,6 +203,14 @@ function aiFacts(syllabus, weights) {
   }).join("\n");
 }
 
+/** For the AI: the student's clearly best time of day (from their tests), if any. */
+function bestLine(syllabus) {
+  const b = clearBestSlot(syllabus);
+  if (!b) return "";
+  const hh = (h) => `${String(h % 24).padStart(2, "0")}:00`;
+  return `Their test accuracy is clearly best between ${hh(b.from)} and ${hh(b.to)}: where that falls inside the free study time, put the weakest, most-asked subjects there.`;
+}
+
 function aiPrompt(syllabus, weights, feedback = "", previous = null) {
   const names = planNames(form.pattern);
   const exam = examOf(syllabus);
@@ -212,6 +223,7 @@ Pattern: ${pat}.
 Free time for study, per day plan:
 ${windows}
 ${form.routine ? `Daily routine (keep these as break blocks, and never put study over them): ${form.routine}\n` : ""}Preferred study session: about ${form.session} minutes, with ${form.gap}-minute breaks.
+${bestLine(syllabus)}
 ${form.wish ? `Student's wishes: ${form.wish}\n` : ""}
 Subjects (share the study time roughly as given; weaker, frequently-asked subjects get more):
 ${aiFacts(syllabus, weights)}

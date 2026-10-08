@@ -4,7 +4,9 @@
      visible (not while paused, in the background, or closed).
    - Per-question time goes to the question you are on: in "one at a time" the
      shown question; in "scroll" the question you last tapped or the one in the
-     middle of the screen (this fixes the old scroll-mode timing bug). */
+     middle of the screen (this fixes the old scroll-mode timing bug).
+   - Focus check (Settings → Tests): leaving the app for 5 s or more during a test (not while
+     paused) is counted, and shown on the result. */
 import { html, onAction } from "../../core/dom.js";
 import { t } from "../../core/i18n.js";
 import { go } from "../../core/router.js";
@@ -19,6 +21,7 @@ import { label as nameLabel } from "../../core/names.js";
 import * as mut from "../../data/mutations.js";
 import * as tests from "../../data/tests.js";
 import { mountCards, setPlace } from "../question/pager.js";
+import { addLeave } from "../../domain/focus.js";
 
 const SAVE_EVERY_MS = 10000;
 const PAUSE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>';
@@ -148,7 +151,17 @@ export const testScreen = {
       requestAnimationFrame(() => body.querySelector(`[data-i="${run.index}"]`)?.scrollIntoView({ block: "center" }));
     }
 
-    const onVisibility = () => { account(); if (document.hidden) save(); };
+    // Focus check: when you come back, the time you were away is added (also after the app was closed).
+    const focusOn = store.setting("focusCheck", true) !== false;
+    if (focusOn) {
+      run.focus ||= { n: 0, ms: 0 };
+      if (run.awayAt) { run.focus = addLeave(run.focus, Date.now() - run.awayAt); delete run.awayAt; }
+    } else delete run.awayAt;
+    const onVisibility = () => {
+      account();
+      if (document.hidden) { if (focusOn && !run.paused && !finished) run.awayAt = Date.now(); save(); }
+      else if (run.awayAt) { run.focus = addLeave(run.focus, Date.now() - run.awayAt); delete run.awayAt; }
+    };
     const onPageHide = () => save();
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("pagehide", onPageHide);

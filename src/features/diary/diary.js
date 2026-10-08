@@ -21,6 +21,7 @@ import { ask } from "../../ai/client.js";
 import { tutorSystem } from "../../ai/prompts.js";
 import { ensureAi, errorText } from "../ai/ai-ui.js";
 import { blockTitle, icon, fmt, fmtDate } from "../timetable/common.js";
+import { focusReportLine } from "../insights/focus-view.js";
 
 const TAGS = ["focused", "revised", "mock", "notes", "distracted", "tired", "phone", "late", "unwell", "busy"];
 
@@ -232,6 +233,7 @@ async function writeReport(syllabus, kind, from, to, key, btn) {
 
 Totals: average score ${s.avgScore}, studied on ${s.studied} of ${s.days} days, ${s.missed} planned day(s) missed, timetable kept ${s.planRate ?? "–"}%, ${s.questions} questions${s.accuracy !== null ? ` at ${s.accuracy}% accuracy` : ""}, ${s.topics} topics, average mood ${s.avgMood ?? "not rated"}.
 The period before: average score ${before.avgScore}, studied ${before.studied}/${before.days} days, ${before.questions} questions.
+${focusReportLine(syllabus, from, to)}
 
 Day by day:
 ${kind === "week" ? lines.join("\n") : lines.filter((l) => !/score 0\/100.*no review/.test(l)).slice(-31).join("\n")}

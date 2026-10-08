@@ -16,6 +16,7 @@ import * as mut from "../../data/mutations.js";
 import * as tests from "../../data/tests.js";
 import { isGradable, pickQuestions, sampleRandom, shuffle, suggestedMinutes, distributeProportionally, clock } from "../../domain/testing.js";
 import { answerRecords, weakTopics } from "../../domain/stats.js";
+import { suggestDnd } from "../../domain/focus.js";
 import { dueMistakes } from "../../data/review.js";
 import { flaggedQuestions, stillWrongQuestions } from "../library/banks.js";
 import { pickExams } from "../question/exam-filter.js";
@@ -73,6 +74,8 @@ export function progressText(attempt) {
 
 function startSheet(preset) {
   const syllabus = store.currentSyllabus();
+  // You left the app in recent tests: suggest Do Not Disturb before this one.
+  const dndTip = store.setting("focusCheck", true) !== false && suggestDnd(store.attemptsOf(syllabus.id).filter((a) => a.status === "submitted"));
   const d = defaults();
   const s = {
     what: preset ? "listing" : "mock", bankId: null,
@@ -218,6 +221,7 @@ function startSheet(preset) {
       <button type="button" class="link" data-action="more">${s.more ? "▾" : "▸"} ${t("start.more")}</button>
       ${s.more ? moreOptions() : ""}` : ""}
 
+      ${dndTip ? html`<p class="hint focus-tip">📵 ${t("focus.startTip")}</p>` : ""}
       <div class="sheet-actions">
         <button type="button" class="btn btn-quiet" data-action="cancel">${t("common.cancel")}</button>
         <button type="button" class="btn" data-action="start" ${n ? "" : "disabled"}>${t("start.start", { n })}</button>

@@ -4,7 +4,7 @@
      (Other apps on the same site keep their caches.)
    - A new version waits until the user taps "Refresh" in the app. */
 
-const VERSION = "1.6.4";
+const VERSION = "1.7.0";
 // Background backup through your own Google script (see src/cloud/sw-backup.js).
 importScripts("./src/cloud/sw-backup.js");
 const PREFIX = "lakshyam-";
@@ -101,6 +101,7 @@ const SHELL_FILES = [
   "./src/domain/cards.js",
   "./src/domain/diary.js",
   "./src/domain/exams.js",
+  "./src/domain/focus.js",
   "./src/domain/habits.js",
   "./src/domain/insights.js",
   "./src/domain/review.js",
@@ -118,6 +119,7 @@ const SHELL_FILES = [
   "./src/features/guide/content.js",
   "./src/features/guide/guide.js",
   "./src/features/import/import-flow.js",
+  "./src/features/insights/focus-view.js",
   "./src/features/insights/insights.js",
   "./src/features/library/banks.js",
   "./src/features/library/library.js",

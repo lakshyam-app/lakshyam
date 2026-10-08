@@ -1,5 +1,5 @@
 /* Smart insights: your tests + the past-paper collection + your study PDFs.
-   #/insights            weak spots, mistake patterns, notes check per topic
+   #/insights            weak spots, mistake patterns, notes check per topic, best time of day & focus
    #/insight-topic?id=…  one topic: which missed facts are in your notes (with page),
                          and what to do (cards, focused practice from the PDF, retry)
    The counting and matching is done in code; AI only explains (optional). */
@@ -24,6 +24,7 @@ import { openStartTest } from "../test/start-sheet.js";
 import { askInSheet, ensureAi } from "../ai/ai-ui.js";
 import { openPrepared } from "../pdfs/pdfs.js";
 import { chev } from "../library/library.js";
+import { focusSection } from "./focus-view.js";
 
 const lang = async () => (await presets.getConfig()).lang || "en";
 
@@ -116,8 +117,9 @@ export const insightsScreen = {
           ${noNotesRows.length ? html`<p class="hint">${t("insights.noNotesFor")}</p><div class="rows">${noNotesRows.map(([id, n]) => html`<button type="button" class="row" data-action="topic" data-id="${id}">
             <span class="row-main"><span class="row-title">${nameHtml(store.topic(id))}</span><span class="row-sub">${t("insights.missedN", { n })} · ${t("insights.reason.nonotes")}</span></span>${chev}</button>`)}</div>` : ""}
         </section>
+        ${focusSection(syllabus, 4)}
         <section class="ins-block">
-          <h2 class="section-title">4 · ${t("insights.practiceTitle")}</h2>
+          <h2 class="section-title">5 · ${t("insights.practiceTitle")}</h2>
           <p class="hint">${t("insights.practiceHint")}</p>
         </section>`;
 
