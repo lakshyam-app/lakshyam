@@ -1147,6 +1147,19 @@ export default {
       other: "The Drive backup didn’t work. Try again later."
     }
   },
+  guide: {
+    title: "How to use Lakshyam",
+    rowSub: "A 2-minute illustrated demo · PDF in English and മലയാളം",
+    sub: "The best way to prepare with this app, in 11 short steps. English and Malayalam.",
+    openDemo: "Open the demo",
+    pdfHead: "As a PDF",
+    view: "View PDF",
+    download: "Download PDF",
+    downloaded: "Saving the PDF to Downloads",
+    pdfTitle: "Guide (PDF)",
+    loading: "Opening the PDF…",
+    pdfFailed: "The PDF couldn’t open here. Use “Download PDF” and open it from Downloads."
+  },
   map: {
     title: "Syllabus map",
     rowSub: "Every topic on one screen, coloured by how you do",
@@ -1813,7 +1826,8 @@ export default {
       timetable: "timetable plan schedule calendar",
       textSize: "text size font bigger smaller large small zoom read",
       keepAwake: "screen on awake sleep dim lock timeout",
-      drive: "google drive cloud backup automatic restore online"
+      drive: "google drive cloud backup automatic restore online",
+      guide: "help guide demo how to use tutorial pdf manual start"
     }
   }
 };

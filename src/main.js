@@ -14,6 +14,7 @@ import * as store from "./data/store.js";
 import { todayScreen } from "./features/today/today.js";
 import { examsScreen } from "./features/today/countdown.js";
 import { mapScreen } from "./features/progress/map.js";
+import { guideScreen, guidePdfScreen } from "./features/guide/guide.js";
 import { autoDriveBackup } from "./features/settings/drive.js";
 import { libraryScreen, subjectScreen, subjectAllScreen, topicScreen, paperScreen } from "./features/library/library.js";
 import { bankScreen, bankAddScreen } from "./features/library/banks.js";
@@ -34,7 +35,7 @@ import { notesScreen } from "./features/notes/notes.js";
 import { settingsScreen } from "./features/settings/settings.js";
 
 [todayScreen, libraryScreen, subjectScreen, subjectAllScreen, topicScreen, paperScreen, bankScreen, bankAddScreen,
-  searchScreen, aiHubScreen, pdfsScreen, pdfScreen, pdfPageScreen, pdfMakeScreen, insightsScreen, insightTopicScreen, timetableScreen, ttListScreen, ttPlansScreen, ttPlanScreen, ttScheduleScreen, ttNewScreen, ttReviewScreen, diaryScreen, progressScreen, historyScreen, testsScreen, statsSubjectScreen, statsTopicScreen, statsTopicsScreen, statsTablesScreen, testScreen, resultScreen, notesScreen, settingsScreen, examsScreen, mapScreen]
+  searchScreen, aiHubScreen, pdfsScreen, pdfScreen, pdfPageScreen, pdfMakeScreen, insightsScreen, insightTopicScreen, timetableScreen, ttListScreen, ttPlansScreen, ttPlanScreen, ttScheduleScreen, ttNewScreen, ttReviewScreen, diaryScreen, progressScreen, historyScreen, testsScreen, statsSubjectScreen, statsTopicScreen, statsTopicsScreen, statsTablesScreen, testScreen, resultScreen, notesScreen, settingsScreen, examsScreen, mapScreen, guideScreen, guidePdfScreen]
   .forEach(registerScreen);
 
 function renderTabbar(activeId) {

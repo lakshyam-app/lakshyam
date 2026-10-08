@@ -27,6 +27,7 @@ import { can } from "../../core/entitlements.js";
 import * as presets from "../../ai/presets.js";
 import { header, backHandler } from "../library/library.js";
 import { driveBlock, driveHandlers, driveConfig } from "./drive.js";
+import { openGuideSheet } from "../guide/guide.js";
 import { SETTINGS_INDEX, CATEGORIES, CATEGORY_ICON, searchSettings } from "./settings-index.js";
 
 const when = (ms) => new Date(ms).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
@@ -286,6 +287,8 @@ function homeHtml(subs) {
     <div class="set-search">
       <input class="field" type="search" id="setSearch" value="${query}" placeholder="${t("setx.searchHint")}" aria-label="${t("setx.search")}" autocomplete="off" enterkeyhint="search">
     </div>
+    <button type="button" class="row guide-row" data-action="guide"><span class="set-icon" aria-hidden="true">📖</span>
+      <span class="row-main"><span class="row-title">${t("guide.title")}</span><span class="row-sub">${t("guide.rowSub")}</span></span><span class="chev-txt">›</span></button>
     <div id="setBody">${query.trim() ? resultsHtml(query.trim()) : catList(subs)}</div>
   </section>`;
 }
@@ -320,6 +323,7 @@ const ACTIONS = {
   undo: () => openUndo(),
   "diff-times": () => openAutoTimes(),
   stats: () => openStatsSettings(),
+  guide: () => openGuideSheet(),
   timetable: () => go("timetable"),
   "names-import": () => namesHandlers["names-import"](),
   erase: () => confirmErase()
@@ -340,6 +344,7 @@ function handlers(container, goalNow) {
     ...driveHandlers,
     cat: (el) => go("settings", { section: el.dataset.id }),
     hit: (el) => openHit(el.dataset.id),
+    guide: () => openGuideSheet(),
     import: startImport,
     undo: openUndo,
     erase: confirmErase,

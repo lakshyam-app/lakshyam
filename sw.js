@@ -4,7 +4,7 @@
      (Other apps on the same site keep their caches.)
    - A new version waits until the user taps "Refresh" in the app. */
 
-const VERSION = "1.4.0";
+const VERSION = "1.5.0";
 const PREFIX = "lakshyam-";
 const SHELL_CACHE = `${PREFIX}shell-${VERSION}`;
 // The PDF reader is large (about 1.4 MB), so it is not downloaded with the app.
@@ -46,6 +46,9 @@ const SHELL_FILES = [
   "./vendor/katex/fonts/KaTeX_Size4-Regular.woff2",
   "./vendor/katex/fonts/KaTeX_Typewriter-Regular.woff2",
   "./content/taxonomy-ml.json",
+  "./styles/guide.css",
+  "./guide/lakshyam-guide-en.pdf",
+  "./guide/lakshyam-guide-ml.pdf",
   "./src/ai/client.js",
   "./src/ai/pdf-prompts.js",
   "./src/ai/presets.js",
@@ -106,6 +109,8 @@ const SHELL_FILES = [
   "./src/features/ai/ai-ui.js",
   "./src/features/ai/content.js",
   "./src/features/diary/diary.js",
+  "./src/features/guide/content.js",
+  "./src/features/guide/guide.js",
   "./src/features/import/import-flow.js",
   "./src/features/insights/insights.js",
   "./src/features/library/banks.js",

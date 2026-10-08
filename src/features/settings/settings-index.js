@@ -5,7 +5,7 @@ import { t } from "../../core/i18n.js";
 import en from "../../strings/en.js";
 
 export const CATEGORIES = ["today", "look", "tests", "progress", "syllabi", "ai", "data", "about"];
-export const CATEGORY_ICON = { today: "🎯", look: "🎨", tests: "📝", progress: "📊", syllabi: "📚", ai: "🤖", data: "💾", about: "ℹ️", elsewhere: "🗓", exam: "📅" };
+export const CATEGORY_ICON = { today: "🎯", look: "🎨", tests: "📝", progress: "📊", syllabi: "📚", ai: "🤖", data: "💾", about: "ℹ️", elsewhere: "🗓", exam: "📅", guide: "📖" };
 
 const item = (id, cat, labelKey, act = null) => ({ id, cat, act, label: () => t(labelKey) });
 
@@ -58,7 +58,8 @@ export const SETTINGS_INDEX = [
 
   item("update", "about", "settings.checkUpdate"),
 
-  item("timetable", "elsewhere", "setx.timetable", "timetable")
+  item("timetable", "elsewhere", "setx.timetable", "timetable"),
+  item("guide", "elsewhere", "guide.title", "guide")
 ];
 
 const fold = (s) => String(s || "").toLowerCase().normalize("NFC");
