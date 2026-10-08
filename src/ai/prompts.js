@@ -5,6 +5,9 @@ const L = (i) => String.fromCharCode(65 + i);
 
 const STYLE = "Formatting rules: plain text only. Use '-' for bullet points. No markdown headings, tables or code fences. You may wrap key facts in **double asterisks**. Use $...$ only for real maths. Be concise and exam-focused.";
 
+/** For long, multi-part answers: the app turns these into section cards and bullet lists. */
+export const SECTIONED = "For this answer, ignore the no-headings rule: start each part on its own line as '## <number>. <short title>'. Under it use '- ' bullets (sub-points indented with two spaces and '- '). Begin each bullet with a short key phrase in **double asterisks**, then a colon, then the detail. Keep bullets to one or two lines. Use numbered lines ('1.', '2.') only for steps of a plan.";
+
 export function langInstruction(lang) {
   if (lang === "ml") return "Write your answer in Malayalam (keep proper nouns, dates and technical terms accurate; English terms in brackets where helpful).";
   if (lang === "both") return "Write the answer in English first, then a Malayalam version under a line saying 'മലയാളം:'.";

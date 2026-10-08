@@ -11,7 +11,7 @@ import { openSheet, closeSheet, sheetBody } from "../../core/sheet.js";
 import { toast } from "../../core/toast.js";
 import { can } from "../../core/entitlements.js";
 import { label as nameLabel } from "../../core/names.js";
-import { richText } from "../../domain/text.js";
+import { richText, aiText } from "../../domain/text.js";
 import * as store from "../../data/store.js";
 import * as T from "../../domain/timetable.js";
 import * as D from "../../domain/diary.js";
@@ -180,7 +180,7 @@ function reportCard(syllabus, kind, from, to, title, { partial = false, key = fr
 }
 
 function reportBody(r) {
-  return html`<div class="report-text qtext">${richText(r.text)}</div>${r.quote ? html`<blockquote class="quote-card">“${r.quote}”</blockquote>` : ""}<p class="hint">${t("diary.writtenBy", { name: r.by || "AI", date: new Date(r.at).toLocaleDateString(dateLocale()) })}</p>`;
+  return html`<div class="report-text ai-answer">${aiText(r.text)}</div>${r.quote ? html`<blockquote class="quote-card">“${r.quote}”</blockquote>` : ""}<p class="hint">${t("diary.writtenBy", { name: r.by || "AI", date: new Date(r.at).toLocaleDateString(dateLocale()) })}</p>`;
 }
 
 function pastReports() {

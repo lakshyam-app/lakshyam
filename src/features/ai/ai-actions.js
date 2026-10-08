@@ -157,7 +157,7 @@ export async function topicStrategy(topic) {
   const label = `${nameLabel(subject)} · ${nameLabel(topic)}`;
   await askInSheet({
     title: `🤖 ${t("ai.strategyTitle")}`, sub: `${label} · ${t("ai.strategySub", { n: total, papers: f.papers })}`,
-    maxTokens: 4500, system: P.tutorSystem(await lang()),
+    maxTokens: 4500, system: P.tutorSystem(await lang(), P.SECTIONED),
     user: P.topicStrategyTask({ subject: subject?.name || "", topic: topic.name, f, lines, shown, total, mine, marking: mk }),
     actions: [{ id: "note", label: t("ai.addToNote", { topic: nameLabel(topic) }), run: async (text) => {
       await mut.appendNote({ type: "topic", id: topic.id }, topic.name, `🤖 ${t("ai.strategyTitle")} — ${new Date().toLocaleDateString()}\n${text}`);

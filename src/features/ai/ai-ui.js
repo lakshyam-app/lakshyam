@@ -7,7 +7,7 @@ import { typesetMath } from "../../core/math.js";
 import { toast } from "../../core/toast.js";
 import { go } from "../../core/router.js";
 import { can } from "../../core/entitlements.js";
-import { richText } from "../../domain/text.js";
+import { aiText } from "../../domain/text.js";
 import * as presets from "../../ai/presets.js";
 import { ask } from "../../ai/client.js";
 
@@ -61,7 +61,7 @@ export async function askInSheet({ title, sub = "", system, user, maxTokens = 25
 
 export function showAnswer({ head, text, actions, presetName, keepOpen }) {
   openSheet(html`${head}
-    <div class="ai-answer qtext">${richText(text)}</div>
+    <div class="ai-answer">${aiText(text)}</div>
     <p class="hint">${t("ai.byPreset", { name: presetName })} · ${t("ai.verify")}</p>
     <div class="ai-actions">
       <button type="button" class="btn btn-quiet btn-small" data-action="copy">${t("question.copy")}</button>

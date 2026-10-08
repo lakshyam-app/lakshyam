@@ -2,7 +2,7 @@
 import { html, onAction } from "../../core/dom.js";
 import { t } from "../../core/i18n.js";
 import { go } from "../../core/router.js";
-import { richText } from "../../domain/text.js";
+import { richText, noteText } from "../../domain/text.js";
 import * as store from "../../data/store.js";
 import { noteTarget, editNote } from "./note-editor.js";
 
@@ -30,7 +30,7 @@ export const notesScreen = {
       rowsEl.innerHTML = rows.length ? html`${rows.map(({ n, target }) => html`
         <article class="note-card">
           <header class="qcard-meta"><span>${target ? `${target.kind} · ${target.name}` : (n.label || t("notes.kind.other"))}</span></header>
-          <div class="qtext note-body">${richText(n.text)}</div>
+          <div class="qtext note-body ai-answer">${noteText(n.text)}</div>
           <div class="row-actions">
             ${target ? html`<button type="button" class="link" data-action="open" data-id="${n.id}">${t("notes.open")}</button>` : ""}
             <button type="button" class="link" data-action="edit" data-id="${n.id}">${t("common.edit")}</button>
