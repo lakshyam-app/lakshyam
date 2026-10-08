@@ -26,11 +26,11 @@ const leadBold = (s) => {
   return m ? `<strong>${m[1]}</strong>: ${m[2]}` : s;
 };
 
-export function aiText(value) {
+export function aiText(value, { sections = true } = {}) {
   const lines = escapeHtml(String(value ?? "").replace(/\r/g, "")).split("\n");
   const out = []; // { type: "h" | "li" | "sub" | "p", html, n }
   // With "## " headings present, numbered lines are steps, never headings.
-  const hashHeads = lines.some((l) => /^\s*#{1,4}\s/.test(l));
+  const hashHeads = !sections || lines.some((l) => /^\s*#{1,4}\s/.test(l));
   for (const line of lines) {
     const t = line.trim();
     if (!t) { out.push({ type: "gap" }); continue; }
@@ -55,7 +55,7 @@ export function aiText(value) {
   for (const x of out) {
     if (x.type === "h") {
       closeList();
-      if (heads >= 2) { if (inSec) html += "</div></details>"; html += `<details class="ai-sec" open><summary>${x.n ? `<span class="ai-n">${x.n}</span>` : ""}<span>${x.html}</span></summary><div class="ai-sec-body">`; inSec = true; }
+      if (sections && heads >= 2) { if (inSec) html += "</div></details>"; html += `<details class="ai-sec" open><summary>${x.n ? `<span class="ai-n">${x.n}</span>` : ""}<span>${x.html}</span></summary><div class="ai-sec-body">`; inSec = true; }
       else html += `<h4 class="ai-h">${x.n ? `${x.n}. ` : ""}${x.html}</h4>`;
     } else if (x.type === "sub" && item !== null) {
       sub.push(x.html);
@@ -70,5 +70,15 @@ export function aiText(value) {
   return raw(html);
 }
 
-/** A note: AI write-ups saved into it ("## " parts) get the AI layout; your own writing stays as typed. */
-export const noteText = (text) => (/^\s*#{1,4}\s/m.test(String(text || "")) ? aiText(text) : richText(text));
+/** Text that may have bullets or headings (an explanation, your own note): shown as lists and
+    headings when it has them, otherwise exactly as typed. No collapsible cards. */
+export function smartText(text) {
+  const s = String(text ?? "");
+  return /^\s*([-•*]|#{1,4}|\d+[.)])\s+\S/m.test(s) ? aiText(s, { sections: false }) : richText(s);
+}
+
+/** A note: AI write-ups saved into it ("## " parts, or marked 🤖) get the full AI layout. */
+export const noteText = (text) => (/^\s*#{1,4}\s/m.test(String(text || "")) ? aiText(text) : smartText(text));
+
+/** Plain one-line preview of formatted text (no ##, ** or bullets). */
+export const plainPreview = (text, max = 140) => String(text ?? "").split("\n").map((l) => l.replace(/^\s*(#{1,4}|[-•*]|\d+[.)])\s+/, "").replace(/\*\*/g, "").trim()).filter(Boolean).join(" · ").slice(0, max);

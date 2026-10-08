@@ -1178,3 +1178,11 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .ai-sub > li { margin: 0 0 4px; }
 .ai-answer strong { font-weight: 650; }
 .note-body.ai-answer, .report-text.ai-answer { background: none; border: 0; padding: 0; }
+
+/* Notes: read view, previews */
+.note-view { margin: 4px 0 8px; }
+.note-preview .note-text { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.note-body-btn { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 0; color: inherit; font: inherit; cursor: pointer; }
+.note-body.is-long { max-height: 15em; overflow: hidden; -webkit-mask-image: linear-gradient(#000 70%, transparent); mask-image: linear-gradient(#000 70%, transparent); }
+.note-body .ai-sec > summary { pointer-events: none; }
+.ai-answer.plain { background: none; border: 0; padding: 0; }

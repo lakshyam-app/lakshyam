@@ -16,7 +16,7 @@ import * as mut from "../../data/mutations.js";
 import { mountQuestions, visibleQuestions } from "../question/list.js";
 import { questionCard } from "../question/card.js";
 import { copyQuestions } from "../question/copy.js";
-import { noteBlock, editNote } from "../notes/note-editor.js";
+import { noteBlock, editNote, openNote } from "../notes/note-editor.js";
 import { addPaperFlow } from "./paper-files.js";
 import { openStartTest } from "../test/start-sheet.js";
 import { wrongTricks } from "../ai/ai-actions.js";
@@ -117,7 +117,7 @@ export const bankScreen = {
       add: () => go("bank-add", { id }),
       type: () => typeQuestionFlow(info.bank),
       practice: () => openStartTest({ scope: info.auto ? { type: id === AUTO.flagged ? "flagged" : "wrong", ref: syllabus.id, label: info.name } : { type: "bank", ref: id, label: info.name }, questions: visibleQuestions(key, info.questions), keepOrder: false }),
-      "note-edit": () => editNote(noteType, id, info.name),
+      "note-edit": () => openNote(noteType, id, info.name),
       menu: () => runFlow(async () => {
         const choice = await chooseAction({ title: info.name, items: info.auto ? [
           id === AUTO.wrong ? { id: "tricks", label: `🤖 ${t("ai.tricksTitle")}` } : null,
@@ -139,7 +139,7 @@ export const bankScreen = {
           case "rename": { const name = await askText({ title: t("banks.rename"), value: info.name }); if (name) await mut.renameBank(info.bank, name); return; }
           case "tricks": wrongTricks(info.questions); return;
           case "copy": return copyQuestions(visibleQuestions(key, info.questions), info.name);
-          case "note": return editNote(noteType, id, info.name);
+          case "note": return openNote(noteType, id, info.name);
           case "delete": {
             const ok = await confirmAction({ title: t("banks.deleteTitle", { name: info.name }), body: t("banks.deleteBody"), confirmLabel: t("common.delete"), danger: true });
             if (!ok) return;

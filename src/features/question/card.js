@@ -4,7 +4,7 @@
          "edit"    – tap an option to set the correct answer (tap again to clear) */
 import { html } from "../../core/dom.js";
 import { t } from "../../core/i18n.js";
-import { richText, letterFor } from "../../domain/text.js";
+import { richText, smartText, letterFor } from "../../domain/text.js";
 import * as store from "../../data/store.js";
 import { formatDuration } from "../../domain/testing.js";
 import { can } from "../../core/entitlements.js";
@@ -71,7 +71,7 @@ export function questionCard(q, { showPaper = true, mode = "study", revealed = n
     ${!review && !deleted && q.answerIndex === null && !hidden ? html`<p class="qcard-note quiet">${t("question.noAnswer")}</p>` : ""}
     ${hidden ? html`<button type="button" class="link" data-action="q-reveal">${t("question.showAnswer")}</button>` : ""}
     ${q.explanation && !hidden ? html`<details class="explain"><summary>${t("question.explanation")}</summary>
-      <div class="qtext">${richText(q.explanation)}</div></details>` : ""}
+      <div class="qtext ai-answer plain">${smartText(q.explanation)}</div></details>` : ""}
     ${can("ai") && store.setting("aiOnCards", true) !== false && !hidden && mode !== "edit" ? aiRow(q, review) : ""}
   </article>`;
 }

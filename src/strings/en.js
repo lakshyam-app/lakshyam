@@ -1629,6 +1629,8 @@ export default {
     emptyTitle: "No notes yet",
     emptyBody: "Notes you write on papers, subjects, topics and banks are collected here. Use ⋯ → My note on any of them.",
     myNote: "My note",
+    tapToRead: "tap to read",
+    read: "Read",
     editTitle: "My note",
     placeholder: "Write anything you want to remember here",
     saved: "Note saved",

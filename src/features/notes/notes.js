@@ -4,7 +4,7 @@ import { t } from "../../core/i18n.js";
 import { go } from "../../core/router.js";
 import { richText, noteText } from "../../domain/text.js";
 import * as store from "../../data/store.js";
-import { noteTarget, editNote } from "./note-editor.js";
+import { noteTarget, editNote, viewNote } from "./note-editor.js";
 
 let term = "";
 
@@ -30,8 +30,10 @@ export const notesScreen = {
       rowsEl.innerHTML = rows.length ? html`${rows.map(({ n, target }) => html`
         <article class="note-card">
           <header class="qcard-meta"><span>${target ? `${target.kind} · ${target.name}` : (n.label || t("notes.kind.other"))}</span></header>
-          <div class="qtext note-body ai-answer">${noteText(n.text)}</div>
+          <div class="note-body-btn" data-action="read" data-id="${n.id}">
+            <div class="qtext note-body ai-answer ${n.text.length > 600 || n.text.split("\n").length > 10 ? "is-long" : ""}">${noteText(n.text)}</div></div>
           <div class="row-actions">
+            <button type="button" class="link" data-action="read" data-id="${n.id}">📖 ${t("notes.read")}</button>
             ${target ? html`<button type="button" class="link" data-action="open" data-id="${n.id}">${t("notes.open")}</button>` : ""}
             <button type="button" class="link" data-action="edit" data-id="${n.id}">${t("common.edit")}</button>
           </div>
@@ -41,6 +43,7 @@ export const notesScreen = {
     let timer = null;
     container.querySelector("#noteSearch").addEventListener("input", (e) => { term = e.target.value; clearTimeout(timer); timer = setTimeout(draw, 120); });
     onAction(container, {
+      read: (el) => { const n = store.byId("notes", el.dataset.id); viewNote(n.target.type, n.target.id, n.label || noteTarget(n)?.name || ""); },
       open: (el) => { const target = noteTarget(store.byId("notes", el.dataset.id)); go(target.to, target.params); },
       edit: (el) => {
         const n = store.byId("notes", el.dataset.id);

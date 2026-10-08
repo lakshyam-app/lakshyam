@@ -15,7 +15,7 @@ import * as mut from "../../data/mutations.js";
 import { startImport } from "../import/import-flow.js";
 import { mountQuestions, visibleQuestions } from "../question/list.js";
 import { copyQuestions } from "../question/copy.js";
-import { noteBlock, editNote } from "../notes/note-editor.js";
+import { noteBlock, editNote, openNote } from "../notes/note-editor.js";
 import { topicMenu, labelFor, labelDot, LABELS, renameTopicFlow, renameSubjectFlow, markStudied } from "./topic-actions.js";
 import { addPaperFlow, answerKeyFlow } from "./paper-files.js";
 import { banksRows } from "./banks.js";
@@ -200,7 +200,7 @@ function listMenu(listId, syllabusId) {
       const name = await askText({ title: t("lists.rename"), value: list.name });
       if (name) await mut.renameList(list, name);
     } else if (id === "note") {
-      return editNote("list", list.id, list.name);
+      return openNote("list", list.id, list.name);
     } else if (id === "delete") {
       const ok = await confirmAction({ title: t("lists.deleteTitle", { name: list.name }), body: t("lists.deleteBody"), confirmLabel: t("common.delete"), danger: true });
       if (!ok) return;
@@ -285,7 +285,7 @@ export const libraryScreen = {
       }),
       "topic-sort": () => topicSortSheet().then(() => runFlow(async () => store.touch())),
       "list-menu": () => listMenu(topicView.chip, syllabus.id),
-      "note-edit": () => editNote("list", topicView.chip, store.byId("topicLists", topicView.chip)?.name || ""),
+      "note-edit": () => openNote("list", topicView.chip, store.byId("topicLists", topicView.chip)?.name || ""),
       "add-paper": () => addPaperFlow(),
       "new-bank": () => runFlow(async () => {
         const name = await askText({ title: t("banks.newBank"), placeholder: t("banks.namePlaceholder"), confirmLabel: t("common.create") });
@@ -371,7 +371,7 @@ export const subjectScreen = {
       all: () => go("subject-all", { id }),
       "sub-sort": () => topicSortSheet(subjectView, ["freq", "syllabus", "az", "most", "least", "label"]).then(() => runFlow(async () => store.touch())),
       practice: () => practice(`subject-all:${id}`, store.questionsFor({ syllabusId: syllabus.id, subjectId: id }), { type: "subject", ref: id, label: subject.name }),
-      "note-edit": () => editNote("subject", id, subject.name),
+      "note-edit": () => openNote("subject", id, subject.name),
       menu: () => runFlow(async () => {
         const choice = await chooseAction({ title: nameLabel(subject), items: [
           { id: "rename", label: t("subjectMenu.rename") },
@@ -382,7 +382,7 @@ export const subjectScreen = {
         if (choice === "pdfs") return go("pdfs", { type: "subject", id });
         if (choice === "rename") return renameSubjectFlow(subject);
         if (choice === "copy") return copyQuestions(visibleQuestions(`subject-all:${id}`, store.questionsFor({ syllabusId: syllabus.id, subjectId: id })), subject.name);
-        if (choice === "note") return editNote("subject", id, subject.name);
+        if (choice === "note") return openNote("subject", id, subject.name);
       })
     });
     onLongPress(container.querySelector("#subRows"), (el) => { const topic = store.topic(el.dataset.id); if (topic) topicMenu(topic); });
@@ -456,11 +456,11 @@ export const topicScreen = {
       strategy: () => topicStrategy(topic),
       practice: () => practice(key, questions, { type: "topic", ref: id, label: topic.name }),
       tests: () => (done.length === 1 ? go("result", { id: done[0].id, ...openedFrom("topic", { id }) }) : go("tests", { type: "topic", ref: id, ...openedFrom("topic", { id }) })),
-      "note-edit": () => editNote("topic", id, topic.name),
+      "note-edit": () => openNote("topic", id, topic.name),
       menu: () => topicMenu(topic, { onPage: true, extra: [
         st?.studiedCount ? { id: "minus", label: t("studied.minus", { n: st.studiedCount }), run: () => mut.addStudied(syllabus.id, id, -1) } : null,
         { id: "copy", label: t("listing.copy"), run: () => copyQuestions(visibleQuestions(key, questions), `${subject?.name} — ${topic.name}`) },
-        { id: "note", label: t("notes.myNote"), run: () => editNote("topic", id, topic.name) },
+        { id: "note", label: t("notes.myNote"), run: () => openNote("topic", id, topic.name) },
         aiItem,
         pdfItem
       ].filter(Boolean) })
@@ -497,7 +497,7 @@ export const paperScreen = {
     onAction(container, {
       ...backHandler,
       practice: () => practice(key, questions, { type: "paper", ref: id, label: paper.name }, true),
-      "note-edit": () => editNote("paper", id, paper.name),
+      "note-edit": () => openNote("paper", id, paper.name),
       menu: () => paperMenu(paper, questions, key),
       pfilter: () => runFlow(async () => {
         const bySub = new Map(); all.forEach((q) => bySub.set(q.subjectId, (bySub.get(q.subjectId) || 0) + 1));
@@ -549,7 +549,7 @@ function paperMenu(paper, questions, key) {
         return go("library", { view: "papers" });
       }
       case "copy": return copyQuestions(visibleQuestions(key, questions), paper.name);
-      case "note": return editNote("paper", paper.id, paper.name);
+      case "note": return openNote("paper", paper.id, paper.name);
       case "delete": {
         const ok = await confirmAction({ title: t("paperMenu.deleteTitle", { name: paper.name }), body: t("paperMenu.deleteBody", { n: questions.length }), confirmLabel: t("common.delete"), danger: true });
         if (!ok) return;
