@@ -18,7 +18,7 @@ import * as D from "../../domain/diary.js";
 import * as diary from "../../data/diary.js";
 import * as presets from "../../ai/presets.js";
 import { ask } from "../../ai/client.js";
-import { tutorSystem } from "../../ai/prompts.js";
+import { tutorSystem, inLang } from "../../ai/prompts.js";
 import { ensureAi, errorText } from "../ai/ai-ui.js";
 import { blockTitle, icon, fmt, fmtDate } from "../timetable/common.js";
 import { focusReportLine } from "../insights/focus-view.js";
@@ -248,7 +248,7 @@ Then, on the last line by itself, one short original motivational line that fits
   btn.textContent = t("ai.thinking");
   try {
     const lang = (await presets.getConfig()).lang || "en";
-    const { text, preset } = await ask(tutorSystem(lang), user, 1800);
+    const { text, preset } = await ask(tutorSystem(lang), inLang(user, lang), lang === "en" ? 1800 : 3500);
     const m = /\n?\s*\**Quote:?\**\s*[:\-–]?\s*(.+)\s*$/i.exec(text.trim());
     const quote = m ? m[1].replace(/^["“”*\s]+|["“”*\s]+$/g, "").slice(0, 200) : "";
     const body = m ? text.trim().slice(0, m.index).trim() : text.trim();

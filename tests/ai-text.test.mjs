@@ -30,3 +30,11 @@ test("notes: own notes get lists but never fold-up cards; AI write-ups get cards
   assert.equal(String(noteText("Just a line\nand another")), "Just a line\nand another");
   assert.match(String(noteText("🤖 Topic strategy\n## 1. What\n- point")), /ai-sec|ai-h/);
 });
+
+import { inLang, topicStrategyTask } from "../src/ai/prompts.js";
+test("the answer language is repeated at the very end of the request", () => {
+  assert.equal(inLang("Task", "en"), "Task");
+  const ml = inLang("Task", "ml");
+  assert.ok(ml.startsWith("Task\n\nLANGUAGE:") && /Malayalam/.test(ml) && /Quote:/.test(ml));
+  assert.match(inLang("Task", "both"), /English first/);
+});

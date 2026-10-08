@@ -46,7 +46,7 @@ export async function aiHelp(q, { selected, mode: preset = null } = {}) {
   const topic = store.topic(q.topicId);
   await askInSheet({
     title: t(`ai.${mode === "explain" && mistake ? "explainMistake" : mode}`), sub: q.text.slice(0, 100),
-    system: P.tutorSystem(await lang()), user: mode === "explain" ? P.tasks.explain(pq, selected) : P.tasks[mode](pq),
+    system: P.tutorSystem(await lang()), user: P.inLang(mode === "explain" ? P.tasks.explain(pq, selected) : P.tasks[mode](pq), await lang()),
     actions: [
       { id: "expl", label: t("ai.saveExplanation"), run: async (text) => {
         const fresh = store.question(q.id);
@@ -157,8 +157,9 @@ export async function topicStrategy(topic) {
   const label = `${nameLabel(subject)} · ${nameLabel(topic)}`;
   await askInSheet({
     title: `🤖 ${t("ai.strategyTitle")}`, sub: `${label} · ${t("ai.strategySub", { n: total, papers: f.papers })}`,
-    maxTokens: 4500, system: P.tutorSystem(await lang(), P.SECTIONED),
-    user: P.topicStrategyTask({ subject: subject?.name || "", topic: topic.name, f, lines, shown, total, mine, marking: mk }),
+    // Malayalam takes several times more tokens than English: give it room so it isn't cut off.
+    maxTokens: (await lang()) === "en" ? 4500 : 9000, system: P.tutorSystem(await lang(), P.SECTIONED),
+    user: P.inLang(P.topicStrategyTask({ subject: subject?.name || "", topic: topic.name, f, lines, shown, total, mine, marking: mk }), await lang()),
     actions: [{ id: "note", label: t("ai.addToNote", { topic: nameLabel(topic) }), run: async (text) => {
       await mut.appendNote({ type: "topic", id: topic.id }, topic.name, `🤖 ${t("ai.strategyTitle")} — ${new Date().toLocaleDateString()}\n${text}`);
       toast(t("ai.addedToNote", { topic: nameLabel(topic) }));
@@ -247,7 +248,7 @@ export async function guessCoach() {
     .map((r) => { const q = store.question(r.questionId); return q ? `- [${tName(q.topicId)}] ${q.text.slice(0, 110)}` : null; }).filter(Boolean);
   await askInSheet({
     title: t("ai.coachTitle"), sub: t("ai.coachSub", { be: Math.round(mk.breakEven * 100), right: all.right, wrong: all.wrong, net: all.net }), maxTokens: 2000,
-    system: P.tutorSystem(await lang()), user: P.guessCoachTask({ ...all, breakEven: mk.breakEven, pos: mk.pos, pen: mk.pen, byTopic, byDiff, recentWrong }),
+    system: P.tutorSystem(await lang()), user: P.inLang(P.guessCoachTask({ ...all, breakEven: mk.breakEven, pos: mk.pos, pen: mk.pen, byTopic, byDiff, recentWrong }), await lang()),
     actions: [{ id: "save", label: t("ai.saveToNotes"), run: async (text) => { await mut.appendNote({ type: "misc", id: "ai-tricks" }, t("ai.tricksNoteLabel"), `🎓 ${text}`); toast(t("ai.savedToNotes")); return true; } }]
   });
 }

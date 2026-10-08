@@ -14,6 +14,14 @@ export function langInstruction(lang) {
   return "Write in clear, simple English.";
 }
 
+/** The answer language, said once more at the very end of the request: with long English
+    material (questions, figures) models otherwise drift back to English. */
+export function inLang(user, lang) {
+  if (lang === "ml") return `${user}\n\nLANGUAGE: write your whole answer in Malayalam (മലയാളം), including all titles and headings. The material above is in English, but your answer must be in Malayalam. Keep names, Acts, years and technical terms accurate, with the English term in brackets where it helps. Keep the same layout markers (## , - , **) and any English marker words asked for above (such as "Quote:").`;
+  if (lang === "both") return `${user}\n\nLANGUAGE: write the whole answer in English first, then the same answer in Malayalam under a line saying 'മലയാളം:'.`;
+  return user;
+}
+
 export function tutorSystem(lang, extra = "") {
   return `You are an expert tutor for Kerala PSC (Public Service Commission) competitive exams, helping a student revise. Be accurate; if you are unsure of a fact, say so instead of guessing. ${STYLE} ${langInstruction(lang)} ${extra}`.trim();
 }

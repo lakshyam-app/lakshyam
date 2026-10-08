@@ -149,7 +149,7 @@ export const insightsScreen = {
           const mk = markingInfo(syllabus.marking);
           const rows = weak.slice(0, TOP_N).map((r, i) => `${i + 1}. ${pathEn(r.topicId)}: ${r.freq} past-paper questions; ${r.adj === null ? "not practised" : `${r.correct}/${r.n} right`}${r.avgSec ? `; ${Math.round(r.avgSec)}s per question` : ""}${r.guessNet < 0 ? `; guessing net ${r.guessNet} marks` : ""}${r.reasons.includes("nonotes") ? "; no study notes added" : ""}`);
           await askInSheet({
-            title: t("insights.aiWeak"), maxTokens: 2500, system: P.tutorSystem(await lang()), user: P.weakSpotsTask(rows, mk),
+            title: t("insights.aiWeak"), maxTokens: (await lang()) === "en" ? 2500 : 5000, system: P.tutorSystem(await lang()), user: P.inLang(P.weakSpotsTask(rows, mk), await lang()),
             actions: [{ id: "save", label: t("ai.saveToNotes"), run: async (text) => { await mut.saveNote({ type: "misc", id: "ai-weak" }, t("insights.weakNote"), `${t("insights.weakNote")} — ${new Date().toLocaleDateString(dateLocale())}\n\n${text}`); toast(t("ai.savedToNotes")); return true; } }]
           });
         },
@@ -159,7 +159,7 @@ export const insightsScreen = {
           const ex = sample.map(({ q, r }, i) => `${i + 1}. [${pathEn(q.topicId)}] ${q.text.slice(0, 220)}\n   Options: ${q.options.map((o, j) => `${letterFor(j)}) ${String(o).slice(0, 60)}`).join("  ")}\n   Your answer: ${r.selected === null ? "left blank" : letterFor(r.selected)}${r.guessed ? " (guess)" : ""} · Right: ${letterFor(q.answerIndex)}${r.timeMs ? ` · ${Math.round(r.timeMs / 1000)}s` : ""}`);
           const stats = `${ms.total} still wrong; ${ms.statement} statement-type, ${ms.notQ} 'NOT' questions, ${ms.numbers} with a number/year answer, ${ms.guessed} guessed, ${ms.quick} answered in under 10 s, ${ms.blank} left blank.`;
           await askInSheet({
-            title: t("insights.aiPatterns"), maxTokens: 3000, system: P.tutorSystem(await lang()), user: P.patternsTask(stats, ex),
+            title: t("insights.aiPatterns"), maxTokens: (await lang()) === "en" ? 3000 : 6000, system: P.tutorSystem(await lang()), user: P.inLang(P.patternsTask(stats, ex), await lang()),
             actions: [{ id: "save", label: t("ai.saveToNotes"), run: async (text) => { await mut.saveNote({ type: "misc", id: "ai-patterns" }, t("insights.patternsNote"), `${t("insights.patternsNote")} — ${new Date().toLocaleDateString(dateLocale())}\n\n${text}`); toast(t("ai.savedToNotes")); return true; } }]
           });
         }
