@@ -1637,7 +1637,16 @@ export default {
     removed: "Note removed",
     search: "Search notes",
     open: "Open",
-    kind: { question: "Question", topic: "Topic", subject: "Subject", paper: "Paper", bank: "Bank", list: "Topic list", other: "Note" }
+    kind: { question: "Question", topic: "Topic", subject: "Subject", paper: "Paper", bank: "Bank", list: "Topic list", other: "Note" },
+    count: "{n} of {of} notes",
+    asked: "{n} in papers",
+    noneHere: "No notes match these filters.",
+    sortTitle: "Sort notes by",
+    sort: { recent: "Recently edited", oldest: "Oldest edited", most: "Most asked first", least: "Least asked first", az: "A–Z", syllabus: "Syllabus order", longest: "Longest first" },
+    f: {
+      allSubjects: "All subjects", noSubject: "Not about a subject", subjectTitle: "Notes for which subject?", kindTitle: "Which notes?",
+      kind: { all: "All notes", topic: "Topic notes", subject: "Subject notes", paper: "Paper notes", question: "Question notes", bank: "Banks & lists", ai: "🤖 AI write-ups", own: "✍️ My own notes" }
+    }
   },
   search: {
     title: "Search",
