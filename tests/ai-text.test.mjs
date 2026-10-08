@@ -24,7 +24,9 @@ test("plain answers stay simple; everything is escaped", () => {
   assert.doesNotMatch(h("- <b>x</b>: y"), /<b>/);
 });
 
-test("notes: only AI write-ups get the layout", () => {
-  assert.doesNotMatch(String(noteText("my note\n- point")), /ai-list/);
+test("notes: own notes get lists but never fold-up cards; AI write-ups get cards", () => {
+  assert.match(String(noteText("my note\n- point")), /<ul class="ai-list">/);
+  assert.doesNotMatch(String(noteText("1. First idea\n- a\n2. Second idea\n- b")), /ai-sec/);
+  assert.equal(String(noteText("Just a line\nand another")), "Just a line\nand another");
   assert.match(String(noteText("🤖 Topic strategy\n## 1. What\n- point")), /ai-sec|ai-h/);
 });
