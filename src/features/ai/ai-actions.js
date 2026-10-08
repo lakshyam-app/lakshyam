@@ -4,7 +4,7 @@
      Topic strategy (the pattern of its past questions and how to prepare)
    - Still wrong: Memory tricks · Guessing: Guess coach */
 import { html } from "../../core/dom.js";
-import { t } from "../../core/i18n.js";
+import { t, dateLocale } from "../../core/i18n.js";
 import { openSheet, closeSheet, isSheetOpen, sheetBody } from "../../core/sheet.js";
 import { chooseAction, confirmAction } from "../../core/dialogs.js";
 import { typesetMath } from "../../core/math.js";
@@ -20,6 +20,7 @@ import { ask, parseJsonLoose } from "../../ai/client.js";
 import * as P from "../../ai/prompts.js";
 import { ensureAi, askInSheet, errorText } from "./ai-ui.js";
 import { topicFacts, questionLines } from "../../domain/topic-pattern.js";
+import { saveStrategy, strategyFor, patternFrom } from "../../data/strategy.js";
 
 const lang = async () => (await presets.getConfig()).lang || "en";
 
@@ -70,18 +71,23 @@ export async function generateQuestions(topic, seedQs = null) {
   if (!topic || !(await ensureAi())) return;
   const subject = store.subject(topic.subjectId);
   const syllabus = store.currentSyllabus();
-  const s = { n: 8, lang: subject?.name === "Malayalam" ? "ml" : "en", difficulty: "mixed" };
+  const strategy = strategyFor(topic.id);
+  const s = { n: 8, lang: subject?.name === "Malayalam" ? "ml" : "en", difficulty: "mixed", usePattern: Boolean(strategy) };
   const pills = (key, values, label) => html`<div class="chip-wrap">${values.map((v) => html`<button type="button" class="pill ${s[key] === v ? "on" : ""}" data-action="set" data-k="${key}" data-v="${v}">${label(v)}</button>`)}</div>`;
   const draw = () => openSheet(html`<h2>${t("ai.genTitle")}</h2>
     <p class="hint">${nameLabel(subject)} · ${nameLabel(topic)}${seedQs?.length === 1 ? ` · ${t("ai.genSimilar")}` : ""}</p>
     <h3>${t("ai.genCount")}</h3>${pills("n", [5, 8, 10, 15], (v) => v)}
     <h3>${t("ai.genLang")}</h3>${pills("lang", ["en", "ml"], (v) => t(`ai.langs.${v}`))}
     <h3>${t("ai.genDiff")}</h3>${pills("difficulty", ["mixed", "E", "M", "D"], (v) => (v === "mixed" ? t("ai.mixed") : t(`question.difficulty.${v}`)))}
+    ${strategy ? html`<div class="checks"><button type="button" class="check ${s.usePattern ? "on" : ""}" data-action="pattern" aria-pressed="${String(s.usePattern)}"><span class="box">${s.usePattern ? "✓" : ""}</span>
+      <span class="row-main"><span>🎯 ${t("ai.usePattern")}</span><span class="row-sub">${t("ai.usePatternHint", { date: strategy.at ? new Date(strategy.at).toLocaleDateString(dateLocale()) : "—" })}</span></span></button></div>`
+      : html`<p class="hint">💡 ${t("ai.noPatternYet")}</p>`}
     <p class="hint">${t("ai.genNote")}</p>
     <div class="sheet-actions"><button type="button" class="btn btn-quiet" data-action="cancel">${t("common.cancel")}</button>
       <button type="button" class="btn" data-action="go">${t("ai.generate")}</button></div>`, {
     set: (el) => { s[el.dataset.k] = el.dataset.k === "n" ? Number(el.dataset.v) : el.dataset.v; draw(); },
     cancel: () => closeSheet(),
+    pattern: () => { s.usePattern = !s.usePattern; draw(); },
     go: () => run()
   }, { label: t("ai.genTitle") });
   draw();
@@ -90,7 +96,7 @@ export async function generateQuestions(topic, seedQs = null) {
     openSheet(html`<h2>${t("ai.genTitle")}</h2><p class="sheet-status">${t("ai.generating")}</p>`, {});
     const examples = (seedQs?.length ? seedQs : store.questionsFor({ syllabusId: syllabus.id, topicId: topic.id }).slice(0, 5)).map((q) => ({ text: q.text, options: q.options }));
     try {
-      const { text } = await ask(P.GENERATE_SYSTEM, P.generateTask({ subject: subject?.name || "", topic: topic.name, n: s.n, lang: s.lang, difficulty: s.difficulty, examples }), 4000);
+      const { text } = await ask(P.GENERATE_SYSTEM, P.generateTask({ subject: subject?.name || "", topic: topic.name, n: s.n, lang: s.lang, difficulty: s.difficulty, examples, pattern: s.usePattern && strategy ? patternFrom(strategy.text) : "" }), 4000);
       const items = P.cleanGenerated(parseJsonLoose(text));
       if (!items.length) throw new Error(t("ai.err.noQuestions"));
       if (isSheetOpen()) review(items);
@@ -155,7 +161,7 @@ export async function topicStrategy(topic) {
     : "not practised yet.";
   const mk = markingInfo(syllabus.marking);
   const label = `${nameLabel(subject)} · ${nameLabel(topic)}`;
-  await askInSheet({
+  const strategyText = await askInSheet({
     title: `🤖 ${t("ai.strategyTitle")}`, sub: `${label} · ${t("ai.strategySub", { n: total, papers: f.papers })}`,
     // Malayalam takes several times more tokens than English: give it room so it isn't cut off.
     maxTokens: (await lang()) === "en" ? 4500 : 9000, system: P.tutorSystem(await lang(), P.SECTIONED),
@@ -166,6 +172,8 @@ export async function topicStrategy(topic) {
       return true;
     } }]
   });
+  // Kept for the question makers (AI questions, questions from a PDF) to follow this pattern.
+  if (strategyText) { await saveStrategy(topic.id, { text: strategyText, lang: await lang() }); toast(t("ai.strategyKept")); }
 }
 
 /* ---------- shared figures for AI (guess coach) ---------- */

@@ -65,3 +65,22 @@ test("lines stay within the budget", () => {
   assert.ok(l.lines.join("\n").length <= 20000);
   assert.ok(l.shown < 500 && l.total === 500);
 });
+
+import { patternFrom } from "../src/domain/topic-pattern.js";
+import { genTask } from "../src/ai/pdf-prompts.js";
+import { generateTask } from "../src/ai/prompts.js";
+test("pattern keeps parts 1-4 of a strategy, leaves out the plan and checklist", () => {
+  const s = "## 1. What is asked\n- A\n## 2. How it is asked\n- B\n## 3. Repeated\n- C\n## 4. Likely next\n- D\n## 5. Strategy\n1. Read\n## 6. Last-day checklist\n- E";
+  const p = patternFrom(s);
+  assert.ok(p.includes("What is asked") && p.includes("Likely next") && !p.includes("Strategy\n") && !p.includes("checklist"));
+  assert.equal(patternFrom("no parts at all"), "no parts at all");
+  assert.ok(patternFrom("x".repeat(5000), 100).length <= 101);
+});
+test("pattern in prompts: PDF version forbids using it as a source", () => {
+  const chunk = { pages: [1], parts: [{ n: 1, t: "Passage text." }] };
+  const withP = genTask({ style: "S", pattern: "## 1. What is asked\n- Acts" }, chunk, 5);
+  assert.match(withP, /NOT a source of facts/);
+  assert.ok(withP.indexOf("TOPIC PATTERN") < withP.indexOf("SOURCE PASSAGE"));
+  assert.doesNotMatch(genTask({ style: "S" }, chunk, 5), /TOPIC PATTERN/);
+  assert.match(generateTask({ subject: "H", topic: "T", n: 5, lang: "en", difficulty: "mixed", examples: [], pattern: "- Acts" }), /PATTERN OF THIS TOPIC/);
+});

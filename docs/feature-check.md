@@ -135,3 +135,9 @@ Today screen with Quick 10 and daily goal · exam countdown · timetable (any da
 |---|---|---|
 | AI topic strategy: years, posts, question styles, repeated answers and near-repeat questions counted in code; AI explains sub-areas, styles, favourite facts, likely next, a plan fitted to your results, and a last-day checklist; save to the topic's note | Topic page → 🤖 AI strategy (3+ past questions) | ✅ |
 | Smart insights weak spots: All · Practised · Not practised yet filter, Show all topics (1.8.1) | Progress → Smart insights | ✅ |
+
+## Added in 1.9
+
+| Feature | Where | Status |
+|---|---|---|
+| Topic AI strategy kept per topic (also found in older notes); AI practice questions and PDF questions follow its pattern (parts 1-4), switchable; for PDFs it only steers which passage facts are asked, the passage stays the only source and quotes are still checked | Topic ⋯ → Make practice questions (AI); Study PDF → Questions | ✅ |

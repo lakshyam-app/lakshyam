@@ -25,6 +25,7 @@ import { DEFAULT_STYLE } from "../../ai/pdf-prompts.js";
 import { header, backHandler, chev } from "../library/library.js";
 import { pickTopic } from "../library/topic-picker.js";
 import { ensureAi, errorText } from "../ai/ai-ui.js";
+import { strategyFor, patternFrom } from "../../data/strategy.js";
 
 const PDF_SCREENS = ["pdfs", "pdf", "pdf-page", "pdf-make"];
 const KINDS = ["questions", "cards", "note", "read"];
@@ -353,7 +354,7 @@ function newJob(rec, kind) {
     cfg: {
       target, from: readable[0] || 1, to: readable[readable.length - 1] || rec.pages.length,
       n: kind === "cards" ? 20 : 10, difficulty: "mixed", lang: "same", check: true, detail: "detailed",
-      style: s?.text || DEFAULT_STYLE, styleAt: s?.at || null, styleNote: "", readCount: "all",
+      style: s?.text || DEFAULT_STYLE, styleAt: s?.at || null, styleNote: "", readCount: "all", usePattern: true,
       subjectName
     }
   };
@@ -460,6 +461,7 @@ function formView(rec, job, handlers) {
 
   if (job.kind === "questions") {
     const pool = pyqPool(cfg.target).length;
+    const strategy = cfg.target?.topicId ? strategyFor(cfg.target.topicId) : null;
     handlers.learn = async (el) => {
       if (!(await ensureAi())) return;
       const examples = pickRandom(pyqPool(cfg.target), 20);
@@ -485,6 +487,7 @@ function formView(rec, job, handlers) {
       <p class="hint" id="styleNote">${note}</p>
       <div class="actions-row"><button type="button" class="btn btn-quiet btn-small" data-action="learn">🔄 ${t("pdf.styleLearn")}</button>
         <button type="button" class="btn btn-quiet btn-small" data-action="style-default">${t("pdf.styleDefault")}</button></div>
+      ${strategy ? html`<label class="switch-row"><input type="checkbox" data-cfg="usePattern" ${cfg.usePattern ? "checked" : ""}><span>🎯 ${t("ai.usePattern")}<span class="row-sub">${t("pdf.patternHint", { date: strategy.at ? new Date(strategy.at).toLocaleDateString(dateLocale()) : "—" })}</span></span></label>` : html`<p class="hint">💡 ${t("ai.noPatternYet")}</p>`}
       <label class="switch-row"><input type="checkbox" data-cfg="check" ${cfg.check ? "checked" : ""}><span>${t("pdf.check")}<span class="row-sub">${t("pdf.checkHint")}</span></span></label>
       <p class="hint">${t("pdf.groundedNote")}</p>
       <div class="actions-row"><button type="button" class="btn" data-action="start">${t("ai.generate")}</button></div>` };
@@ -506,6 +509,9 @@ function formView(rec, job, handlers) {
 async function start(rec, job) {
   if (!(await ensureAi())) return;
   const cfg = job.cfg;
+  // The topic's past-paper pattern (from its AI strategy) steers which passage facts to ask; never a source of facts.
+  const strat = job.kind === "questions" && cfg.usePattern && cfg.target?.topicId ? strategyFor(cfg.target.topicId) : null;
+  cfg.pattern = strat ? patternFrom(strat.text, 3000) : "";
   const fresh = await pdfStore.getPdf(rec.id); // page text may have been corrected meanwhile
   if (!fresh) return go("pdfs");
   let pagesToRead = [];

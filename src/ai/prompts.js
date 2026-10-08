@@ -53,10 +53,10 @@ export const tasks = {
 export const GENERATE_SYSTEM = "You write multiple-choice questions for Kerala PSC exams in the style of past papers. Accuracy matters more than cleverness: every question must have exactly one unambiguously correct option you are certain about. Output ONLY a JSON array, no commentary.";
 
 /** examples: [{ text, options }] */
-export function generateTask({ subject, topic, n, lang, difficulty, examples }) {
+export function generateTask({ subject, topic, n, lang, difficulty, examples, pattern = "" }) {
   const seed = examples.map((q, i) => `Example ${i + 1}:\n${q.text}\n${q.options.map((o, j) => `${L(j)}) ${o}`).join("\n")}`).join("\n\n");
   const diff = difficulty === "mixed" ? "a mix of easy, medium and difficult" : { E: "easy", M: "medium", D: "difficult" }[difficulty];
-  return `Subject: ${subject}\nTopic: ${topic}\nWrite ${n} NEW multiple-choice questions on this topic in the style of the examples below (do not copy them). Language: ${lang === "ml" ? "Malayalam" : "English"}. Difficulty: ${diff}. 4 options each.\n\nReturn a JSON array where each item is: {"question_text": "...", "options": ["...","...","...","..."], "correct_answer_index": 0-3, "explanation": "1-3 sentence explanation", "difficulty": "E" | "M" | "D"}\n\n${seed ? `Style examples:\n${seed}` : "(No examples available — use typical PSC style.)"}`;
+  return `Subject: ${subject}\nTopic: ${topic}\nWrite ${n} NEW multiple-choice questions on this topic in the style of the examples below (do not copy them). Language: ${lang === "ml" ? "Malayalam" : "English"}. Difficulty: ${diff}. 4 options each.\n\nReturn a JSON array where each item is: {"question_text": "...", "options": ["...","...","...","..."], "correct_answer_index": 0-3, "explanation": "1-3 sentence explanation", "difficulty": "E" | "M" | "D"}\n\n${seed ? `Style examples:\n${seed}` : "(No examples available — use typical PSC style.)"}${pattern ? `\n\nPATTERN OF THIS TOPIC'S PAST PAPERS (an earlier analysis; use it to choose WHICH sub-areas and facts to ask about and HOW to ask — spread the questions over the sub-areas in about the same proportions, use the same question styles, include favourite and likely-next facts, but don't repeat past questions word for word). It is guidance, not a source of truth: a fact must still be one you are certain of; if the analysis states something you believe is wrong, ignore that part.\n<<<\n${pattern}\n>>>` : ""}`;
 }
 
 /** Keeps only well-formed generated questions. */

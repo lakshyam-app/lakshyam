@@ -122,3 +122,16 @@ export function questionLines(questions, paperOf, { budget = 40000 } = {}) {
   }
   return { lines: lines.map((l, i) => `${i + 1}. ${l}`), shown: lines.length, total: questions.length };
 }
+
+/**
+ * The parts of a strategy that describe the PATTERN (what is asked, how, repeated facts, likely
+ * next), for a question maker; the study plan and checklist are left out. Within `max` characters.
+ */
+export function patternFrom(text, max = 3500) {
+  const s = String(text || "").trim();
+  if (!s) return "";
+  const parts = s.split(/\n(?=\s*(?:#{1,4}\s*)?\d+[.)]\s)/);
+  const keep = parts.filter((p) => { const n = Number((/^\s*(?:#{1,4}\s*)?(\d+)[.)]/.exec(p) || [])[1]); return !n || n <= 4; });
+  const out = (keep.length ? keep : parts).join("\n").trim();
+  return out.length > max ? `${out.slice(0, max)}…` : out;
+}

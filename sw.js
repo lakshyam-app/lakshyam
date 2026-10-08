@@ -4,7 +4,7 @@
      (Other apps on the same site keep their caches.)
    - A new version waits until the user taps "Refresh" in the app. */
 
-const VERSION = "1.8.7";
+const VERSION = "1.9.0";
 // Background backup through your own Google script (see src/cloud/sw-backup.js).
 importScripts("./src/cloud/sw-backup.js");
 const PREFIX = "lakshyam-";
@@ -94,6 +94,7 @@ const SHELL_FILES = [
   "./src/data/schema.js",
   "./src/data/snapshots.js",
   "./src/data/store.js",
+  "./src/data/strategy.js",
   "./src/data/taxonomy-seed.js",
   "./src/data/tests.js",
   "./src/data/timetable.js",
