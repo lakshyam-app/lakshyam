@@ -4,7 +4,7 @@
      (Other apps on the same site keep their caches.)
    - A new version waits until the user taps "Refresh" in the app. */
 
-const VERSION = "1.6.2";
+const VERSION = "1.6.3";
 // Background backup through your own Google script (see src/cloud/sw-backup.js).
 importScripts("./src/cloud/sw-backup.js");
 const PREFIX = "lakshyam-";
@@ -59,6 +59,7 @@ const SHELL_FILES = [
   "./src/cloud/relay-script.js",
   "./src/cloud/relay.js",
   "./src/cloud/sw-backup.js",
+  "./src/core/back.js",
   "./src/core/charts.js",
   "./src/core/clipboard.js",
   "./src/core/dialogs.js",

@@ -3,6 +3,7 @@
    #/history             test history grouped by what was tested
    #/tests?type=&ref=    every test of one group
    Drill-down (subject → topic) is in drill.js; detailed tables in tables.js. */
+import { openedFrom, backFrom } from "../../core/back.js";
 import { html, onAction } from "../../core/dom.js";
 import { t, formatNumber, dateLocale } from "../../core/i18n.js";
 import { go } from "../../core/router.js";
@@ -341,19 +342,21 @@ export const historyScreen = {
 export const testsScreen = {
   id: "tests",
   parent: "progress",
-  render(container, { type, ref }) {
+  render(container, { type, ref, bt, bp }) {
     const syllabus = store.currentSyllabus();
+    // Opened from a topic's "tests" link: Back goes to that topic; otherwise to Test history.
+    const back = backFrom({ bt, bp }, ["topic"], "history");
     const list = finishedTests(syllabus.id).filter((a) => (a.scope?.type || "") === type && (a.scope?.ref || a.scope?.label) === ref)
       .sort((x, y) => y.submittedAt - x.submittedAt);
     if (!list.length) return go("history");
     container.innerHTML = html`<header class="screen-head">
       <div class="head-bar"><button type="button" class="back" data-action="back">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>${t("history.title")}</span></button></div>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>${back.to === "topic" ? (store.topic(back.params.id)?.name || t("history.title")) : t("history.title")}</span></button></div>
       <h1>${list[0].scope?.label || ""}</h1><p class="hint">${t("common.tests", { n: list.length })}</p></header>
       <div class="rows">${list.map((a) => html`<button type="button" class="row" data-action="open" data-id="${a.id}">
         <span class="row-main"><span class="row-title">${new Date(a.submittedAt).toLocaleString(dateLocale(), { dateStyle: "medium", timeStyle: "short" })}</span>
         <span class="row-sub">${t("history.testSub", { right: a.counts.correct, wrong: a.counts.wrong, blank: a.counts.unanswered })}${a.timerMinutes ? ` · ${t("results.timed", { n: a.timerMinutes })}` : ""}${a.autoSubmitted ? ` · ${t("results.autoSubmitted")}` : ""}</span></span>
         <span class="row-count">${scoreLine(a)}</span>${chev}</button>`)}</div>`;
-    onAction(container, { back: () => go("history"), open: (el) => go("result", { id: el.dataset.id }) });
+    onAction(container, { back: () => go(back.to, back.params), open: (el) => go("result", { id: el.dataset.id, ...openedFrom("tests", { type, ref, ...back.keep }) }) });
   }
 };

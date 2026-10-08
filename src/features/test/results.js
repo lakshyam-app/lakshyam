@@ -2,6 +2,7 @@
    Score in plain words, filters (right / wrong / left / guessed right / guessed wrong),
    sort (test order, slowest, fastest, hardest), review cards, Retake, Practise the
    wrong ones, delete with Undo. */
+import { backFrom } from "../../core/back.js";
 import { html, onAction } from "../../core/dom.js";
 import { t, formatNumber, dateLocale } from "../../core/i18n.js";
 import { go } from "../../core/router.js";
@@ -28,10 +29,23 @@ export function scoreLine(a) {
   return t("results.short", { score: formatNumber(a.netScore ?? 0), max: formatNumber(maxScore(c, a.marking)) });
 }
 
+/** The Back label: the group's name, the topic's name, or "Test history". */
+function backLabel(to, params) {
+  if (to === "topic") return store.topic(params.id)?.name || t("history.title");
+  if (to === "tests") {
+    const a = store.all("attempts").find((x) => x.scope?.type === params.type && (x.scope?.ref || x.scope?.label) === params.ref);
+    return a?.scope?.label || t("history.title");
+  }
+  if (to === "today") return t("tabs.today");
+  return t("history.title");
+}
+
 export const resultScreen = {
   id: "result",
   parent: "progress",
-  render(container, { id, fresh }) {
+  render(container, { id, fresh, bt, bp }) {
+    // Where Back goes: the screen this result was opened from (a group of tests, a topic), else Test history.
+    const { to: backTo, params: backParams, keep } = backFrom({ bt, bp }, ["tests", "topic", "history", "today"], "history");
     const a = store.byId("attempts", id);
     if (!a || a.status === "in_progress") return go("history");
     const c = a.counts;
@@ -69,7 +83,7 @@ export const resultScreen = {
     const layout = store.setting("resultLayout", null) || listLayout(); // results remember their own layout
     container.innerHTML = html`<header class="screen-head">
         <div class="head-bar"><button type="button" class="back" data-action="back">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>${t("history.title")}</span></button>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>${backLabel(backTo, backParams)}</span></button>
           <button type="button" class="icon-btn" data-action="menu" aria-label="${t("common.more")}">⋯</button></div>
         <h1>${a.scope?.label || t("test.title")}</h1>
         <p class="hint">${[when, a.timerMinutes ? t("results.timed", { n: a.timerMinutes }) : t("results.untimed"), a.autoSubmitted ? t("results.autoSubmitted") : null].filter(Boolean).join(" · ")}</p>
@@ -107,12 +121,12 @@ export const resultScreen = {
     bindCardActions(container, { view, selectedFor: (q) => { const r = recFor.get(q.id); return r ? (r.selected === null ? "none" : r.selected) : undefined; } });
 
     onAction(container, {
-      back: () => go("history"),
+      back: () => go(backTo, backParams),
       layout: (el) => { if (el.dataset.v !== layout) store.setSetting("resultLayout", el.dataset.v); },
-      filter: (el) => { filterBy.set(id, el.dataset.f); forgetPlace(`result:${id}`); go("result", { id }); },
+      filter: (el) => { filterBy.set(id, el.dataset.f); forgetPlace(`result:${id}`); go("result", { id, ...keep }); },
       sort: () => runFlow(async () => {
         const s = await chooseAction({ title: t("sort.title"), items: ["test", "slow", "fast", "hard"].map((x) => ({ id: x, label: t(`results.sort.${x}`), current: x === sort })) });
-        if (s) { sortBy.set(id, s); go("result", { id }); }
+        if (s) { sortBy.set(id, s); go("result", { id, ...keep }); }
       }),
       retake: () => startAgain(a, null),
       "wrong-again": () => startAgain(a, recs.filter((x) => ["wrong", "blank"].includes(stateOf(x.r))).map((x) => x.q.id)),

@@ -2,6 +2,7 @@
    Tab:      #/library?view=subjects|topics|papers|banks[&list=…]
    Screens:  #/subject?id=…  #/subject-all?id=…  #/topic?id=…  #/paper?id=…
    (Banks live in banks.js.) */
+import { openedFrom } from "../../core/back.js";
 import { html, onAction } from "../../core/dom.js";
 import { t } from "../../core/i18n.js";
 import { go } from "../../core/router.js";
@@ -452,7 +453,7 @@ export const topicScreen = {
       ...backHandler, ...contentHandler,
       studied: () => markStudied(syllabus.id, topic),
       practice: () => practice(key, questions, { type: "topic", ref: id, label: topic.name }),
-      tests: () => (done.length === 1 ? go("result", { id: done[0].id }) : go("tests", { type: "topic", ref: id })),
+      tests: () => (done.length === 1 ? go("result", { id: done[0].id, ...openedFrom("topic", { id }) }) : go("tests", { type: "topic", ref: id, ...openedFrom("topic", { id }) })),
       "note-edit": () => editNote("topic", id, topic.name),
       menu: () => topicMenu(topic, { onPage: true, extra: [
         st?.studiedCount ? { id: "minus", label: t("studied.minus", { n: st.studiedCount }), run: () => mut.addStudied(syllabus.id, id, -1) } : null,
