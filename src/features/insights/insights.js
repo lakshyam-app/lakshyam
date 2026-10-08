@@ -98,16 +98,18 @@ export const insightsScreen = {
 
       body.innerHTML = html`
         ${records.length ? "" : html`<p class="warn-box">${t("insights.noTests")}</p>`}
-        <section class="ins-block">
+        <section class="ins-block" id="weakSec">
           <h2 class="section-title">1 · ${t("insights.weakTitle")}</h2>
           <p class="hint">${t("insights.weakHint")}</p>
           <div class="chip-row" role="group" aria-label="${t("insights.weakTitle")}">${WEAK_FILTERS.map((f) => html`<button type="button" class="pill ${weakView.filter === f ? "on" : ""}" data-action="wfilter" data-f="${f}" aria-pressed="${String(weakView.filter === f)}">${t(`insights.wf.${f}`)} <span class="count">${filterCount(f)}</span></button>`)}</div>
           ${weakView.filter === "todo" ? html`<p class="hint">${t("insights.todoHint")}</p>` : ""}
+          ${weakView.showAll ? html`<p class="hint">${t("insights.showingAll", { n: weak.length })} · <button type="button" class="link inline" data-action="wall">${t("insights.showTop", { n: TOP_N })}</button></p>` : ""}
           ${weak.length ? html`<div class="rows">${weak.map((r, i) => html`<button type="button" class="row" data-action="topic" data-id="${r.topicId}">
             <span class="row-main"><span class="row-title">${i + 1}. ${nameHtml(store.topic(r.topicId))}</span>
               <span class="row-sub">${nameLabel(store.subject(store.topic(r.topicId)?.subjectId))} · ${t("insights.inPapers", { n: r.freq })} · ${r.adj === null ? t("stats.notTried") : t("insights.right", { pct: pct(r.correct / Math.max(1, r.n)), n: r.n })}${r.avgSec ? ` · ${Math.round(r.avgSec)} s` : ""}</span>
               ${reasonChips(r)}</span>${chev}</button>`)}</div>
-            ${ranked.length > TOP_N || weakView.showAll ? html`<button type="button" class="link" data-action="wall">${weakView.showAll ? t("insights.showTop", { n: TOP_N }) : t("insights.showAll")}</button>` : ""}
+            ${weakView.showAll ? html`<div class="collapse-bar"><button type="button" class="btn btn-small" data-action="wall">▲ ${t("insights.showTop", { n: TOP_N })}</button></div>`
+              : ranked.length > TOP_N ? html`<button type="button" class="link" data-action="wall">${t("insights.showAll")}</button>` : ""}
             ${ai ? html`<button type="button" class="btn btn-quiet" data-action="ai-weak">🤖 ${t("insights.aiWeak")}</button>` : ""}`
           : html`<p class="hint pad">${weakView.filter === "all" ? t("insights.noWeak") : t("insights.noneInFilter")}</p>
             ${weakView.showAll ? "" : html`<button type="button" class="link" data-action="wall">${t("insights.showAll")}</button>`}`}
@@ -136,10 +138,12 @@ export const insightsScreen = {
           <p class="hint">${t("insights.practiceHint")}</p>
         </section>`;
 
+      if (weakView.scrollBack) { weakView.scrollBack = false; body.querySelector("#weakSec")?.scrollIntoView({ block: "start" }); }
       onAction(body, {
         topic: (el) => go("insight-topic", { id: el.dataset.id }),
         wfilter: (el) => { weakView.filter = el.dataset.f; store.touch(); },
-        wall: () => { weakView.showAll = !weakView.showAll; store.touch(); },
+        // Back to the top 10: jump to the start of Weak spots, so the rest of the page is right below.
+        wall: () => { weakView.showAll = !weakView.showAll; if (!weakView.showAll) weakView.scrollBack = true; store.touch(); },
         "ai-weak": async () => {
           if (!(await ensureAi())) return;
           const mk = markingInfo(syllabus.marking);

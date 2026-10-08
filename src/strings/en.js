@@ -1060,6 +1060,7 @@ export default {
     todoHint: "Never practised, most-asked first. Until you try one, the app assumes you’d miss about 6 in 10 of its questions, which is why they rank high.",
     showAll: "Show all topics ›",
     showTop: "Show only the top {n}",
+    showingAll: "Showing all {n}",
     noneInFilter: "No topics here.",
     inPapers: "{n} in papers",
     right: "{pct} right of {n}",

@@ -1153,3 +1153,8 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .focus-note p { margin: 4px 0; }
 .focus-tip { margin-top: 10px; }
 .row.static.is-best { box-shadow: inset 3px 0 0 var(--brand); }
+
+/* A long list you opened: the "show fewer" button stays in reach while you scroll it */
+.collapse-bar { position: sticky; bottom: calc(80px + env(safe-area-inset-bottom)); z-index: 5; display: flex; justify-content: center; padding: 8px 0; pointer-events: none; }
+.collapse-bar .btn { pointer-events: auto; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18); }
+.ins-block { scroll-margin-top: calc(env(safe-area-inset-top) + 72px); }
