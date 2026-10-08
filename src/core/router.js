@@ -3,7 +3,7 @@
    A screen: { id, tab?, parent?, render(container, params) }.
    `tab` puts it in the bottom bar; `parent` says which tab stays lit. */
 
-import { isSheetOpen, closeSheet } from "./sheet.js";
+import { isSheetOpen, closeSheet, whenBackDone } from "./sheet.js";
 
 const screens = new Map();
 let onChange = () => {};
@@ -19,6 +19,10 @@ export function listTabs() {
 }
 
 export function go(id, params = {}) {
+  whenBackDone(() => goNow(id, params));
+}
+
+function goNow(id, params) {
   const query = new URLSearchParams(params).toString();
   const target = `#/${id}${query ? `?${query}` : ""}`;
   // Leaving from inside a sheet: the sheet's history entry becomes the new screen,

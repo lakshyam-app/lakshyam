@@ -9,6 +9,13 @@ let current = null;
 // that Back to finish before adding its own history entry.
 let backPending = false;
 let pushWaiting = false;
+let afterBack = []; // moves to other screens that must wait for that Back (see whenBackDone)
+
+/** Runs fn now, or right after a sheet's pending Back has finished — otherwise that Back
+    would land after the move and undo it (e.g. "Continue the test" staying on the topic). */
+export function whenBackDone(fn) {
+  if (backPending) afterBack.push(fn); else fn();
+}
 
 function pushEntry() {
   if (!current) return;
@@ -83,7 +90,9 @@ export function closeSheet(fromPopState = false) {
     backPending = true;
     window.addEventListener("popstate", () => {
       backPending = false;
+      const queued = afterBack; afterBack = [];
       if (pushWaiting) { pushWaiting = false; pushEntry(); }
+      queued.forEach((fn) => fn());
     }, { once: true });
     history.back();
   }

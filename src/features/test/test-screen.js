@@ -33,7 +33,8 @@ function testCard(q, i, run) {
   const sel = run.answers[q.id];
   const guessed = Boolean(run.guesses[q.id]);
   const flagged = Boolean(store.questionState(q.id)?.flagged);
-  const where = [paper?.name, nameLabel(store.subject(q.subjectId)), nameLabel(store.topic(q.topicId))].filter(Boolean).join(" · ");
+  // Which paper (and the post it was for), then subject and topic — as on question lists.
+  const where = [paper?.name, paper?.postName, nameLabel(store.subject(q.subjectId)), nameLabel(store.topic(q.topicId))].filter(Boolean).join(" · ");
   return html`<article class="qcard tcard ${sel !== undefined ? "is-answered" : ""}" data-qid="${q.id}" data-i="${i}" lang="${q.lang === "ml" ? "ml" : "en"}">
     <header class="qcard-meta"><span class="qcard-where"><strong>${t("test.qOf", { n: i + 1, of: run.questionIds.length })}</strong>${q.number ? ` · ${t("question.paperNumber", { n: q.number })}` : ""}<br>${where}</span>
       <span class="qcard-badges"><button type="button" class="icon-sm ${flagged ? "on" : ""}" data-action="flag" aria-pressed="${String(flagged)}" aria-label="${t("question.flag")}">${star(flagged)}</button></span>
