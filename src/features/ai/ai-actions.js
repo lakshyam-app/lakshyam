@@ -1,6 +1,7 @@
 /* AI help in context:
    - a question: Explain (or Explain my mistake), Mnemonic, Revision note, Similar questions
-   - a topic: Make practice questions (reviewed before saving, kept apart from PYQs)
+   - a topic: Make practice questions (reviewed before saving, kept apart from PYQs);
+     Topic strategy (the pattern of its past questions and how to prepare)
    - Still wrong: Memory tricks · Guessing: Guess coach */
 import { html } from "../../core/dom.js";
 import { t } from "../../core/i18n.js";
@@ -18,6 +19,7 @@ import * as presets from "../../ai/presets.js";
 import { ask, parseJsonLoose } from "../../ai/client.js";
 import * as P from "../../ai/prompts.js";
 import { ensureAi, askInSheet, errorText } from "./ai-ui.js";
+import { topicFacts, questionLines } from "../../domain/topic-pattern.js";
 
 const lang = async () => (await presets.getConfig()).lang || "en";
 
@@ -131,6 +133,38 @@ export async function generateQuestions(topic, seedQs = null) {
     };
     drawReview();
   }
+}
+
+/* ---------- a topic: pattern of past questions + preparation strategy ---------- */
+
+export async function topicStrategy(topic) {
+  if (!topic || !(await ensureAi())) return;
+  const syllabus = store.currentSyllabus();
+  const subject = store.subject(topic.subjectId);
+  const questions = store.questionsFor({ syllabusId: syllabus.id, topicId: topic.id });
+  if (questions.length < 3) { toast(t("ai.strategyFew")); return; }
+  const f = topicFacts(questions, (id) => store.paper(id));
+  const { lines, shown, total } = questionLines(questions, (id) => store.paper(id));
+  // The student's own results here (first tries), so the plan fits them.
+  const recs = pickByBasis(answerRecords(store.attemptsOf(syllabus.id).filter((a) => a.kind !== "ai")).filter((r) => r.topicId === topic.id), "first");
+  const right = recs.filter((r) => r.isCorrect).length;
+  const timed = recs.filter((r) => r.timeMs > 0);
+  const g = guessSummary(recs.filter((r) => r.guessed), syllabus.marking);
+  const mine = recs.length
+    ? `${recs.length} of ${total} questions tried, ${Math.round((right / recs.length) * 100)}% right${timed.length ? `, ${Math.round(timed.reduce((a, r) => a + r.timeMs, 0) / timed.length / 1000)} s per question` : ""}${g.n ? `, guessed ${g.n} (${g.right} right, net ${g.net} marks)` : ""}.`
+    : "not practised yet.";
+  const mk = markingInfo(syllabus.marking);
+  const label = `${nameLabel(subject)} · ${nameLabel(topic)}`;
+  await askInSheet({
+    title: `🤖 ${t("ai.strategyTitle")}`, sub: `${label} · ${t("ai.strategySub", { n: total, papers: f.papers })}`,
+    maxTokens: 4500, system: P.tutorSystem(await lang()),
+    user: P.topicStrategyTask({ subject: subject?.name || "", topic: topic.name, f, lines, shown, total, mine, marking: mk }),
+    actions: [{ id: "note", label: t("ai.addToNote", { topic: nameLabel(topic) }), run: async (text) => {
+      await mut.appendNote({ type: "topic", id: topic.id }, topic.name, `🤖 ${t("ai.strategyTitle")} — ${new Date().toLocaleDateString()}\n${text}`);
+      toast(t("ai.addedToNote", { topic: nameLabel(topic) }));
+      return true;
+    } }]
+  });
 }
 
 /* ---------- shared figures for AI (guess coach) ---------- */

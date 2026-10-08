@@ -21,7 +21,7 @@ import { addPaperFlow, answerKeyFlow } from "./paper-files.js";
 import { banksRows } from "./banks.js";
 import { openStartTest } from "../test/start-sheet.js";
 import { contentSwitch, contentHandler, renderAiPanel, renderCardsPanel, aiQuestions, cardsOf } from "../ai/content.js";
-import { generateQuestions } from "../ai/ai-actions.js";
+import { generateQuestions, topicStrategy } from "../ai/ai-actions.js";
 import { testsFor } from "../progress/progress.js";
 import { pdfMenuItem } from "../pdfs/pdfs.js";
 import { can } from "../../core/entitlements.js";
@@ -445,6 +445,7 @@ export const topicScreen = {
     <div class="actions-row">
       ${questions.length ? html`<button type="button" class="btn" data-action="practice">${playIcon} ${t("practice.button")}</button>` : ""}
       <button type="button" class="btn btn-quiet" data-action="studied">${t("studied.button")}</button>
+      ${can("ai") && questions.length >= 3 ? html`<button type="button" class="btn btn-quiet" data-action="strategy">🤖 ${t("ai.strategyButton")}</button>` : ""}
     </div>
     ${noteBlock("topic", id)}
     <div id="qHost"></div>`;
@@ -452,6 +453,7 @@ export const topicScreen = {
     onAction(container, {
       ...backHandler, ...contentHandler,
       studied: () => markStudied(syllabus.id, topic),
+      strategy: () => topicStrategy(topic),
       practice: () => practice(key, questions, { type: "topic", ref: id, label: topic.name }),
       tests: () => (done.length === 1 ? go("result", { id: done[0].id, ...openedFrom("topic", { id }) }) : go("tests", { type: "topic", ref: id, ...openedFrom("topic", { id }) })),
       "note-edit": () => editNote("topic", id, topic.name),

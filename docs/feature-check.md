@@ -128,3 +128,9 @@ Today screen with Quick 10 and daily goal · exam countdown · timetable (any da
 |---|---|---|
 | Focus check: leaves of 5 s+ during a test counted (not while paused), shown on the result; Do Not Disturb tip before a test after repeated leaving; real-break tip after 25+ min | Test → Result; Start test sheet; Settings → Tests & questions | ✅ |
 | Best time of day (first tries vs your usual on the same topics, shown only when the gap is clear) and stayed-vs-left comparison | Progress → Smart insights → When you focus best; timetable hint and AI prompt; weekly/monthly diary report | ✅ |
+
+## Added in 1.8
+
+| Feature | Where | Status |
+|---|---|---|
+| AI topic strategy: years, posts, question styles, repeated answers and near-repeat questions counted in code; AI explains sub-areas, styles, favourite facts, likely next, a plan fitted to your results, and a last-day checklist; save to the topic's note | Topic page → 🤖 AI strategy (3+ past questions) | ✅ |

@@ -4,7 +4,7 @@
      (Other apps on the same site keep their caches.)
    - A new version waits until the user taps "Refresh" in the app. */
 
-const VERSION = "1.7.0";
+const VERSION = "1.8.0";
 // Background backup through your own Google script (see src/cloud/sw-backup.js).
 importScripts("./src/cloud/sw-backup.js");
 const PREFIX = "lakshyam-";
@@ -111,6 +111,7 @@ const SHELL_FILES = [
   "./src/domain/testing.js",
   "./src/domain/text.js",
   "./src/domain/timetable.js",
+  "./src/domain/topic-pattern.js",
   "./src/features/ai/ai-actions.js",
   "./src/features/ai/ai-settings.js",
   "./src/features/ai/ai-ui.js",

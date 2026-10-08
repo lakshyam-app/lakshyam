@@ -81,3 +81,33 @@ export function weakSpotsTask(rows, marking) {
 export function patternsTask(stats, examples) {
   return `Here are recent past-paper questions a Kerala PSC aspirant got wrong (with their answer, the right answer and their time). Summary: ${stats}\n\n${examples.join("\n\n")}\n\nFind the 3-5 clearest PATTERNS in these mistakes (for example: confusing similar names, dates and years, statement-type questions, 'which is NOT' questions, rushing, guessing, a particular sub-area). For each pattern: name it, quote 1-2 of the examples above as evidence (by number), and give one specific habit to fix it. Only state patterns the examples actually show. End with a 2-line memory trick for any 2 facts that were missed.`;
 }
+
+/** Topic strategy: the pattern of a topic's past-paper questions and how to prepare for it.
+    f: figures worked out by the app (topicFacts); lines: the questions; mine: the student's own results. */
+export function topicStrategyTask({ subject, topic, f, lines, shown, total, mine, marking }) {
+  const styles = Object.entries(f.styles).filter(([, n]) => n).map(([k, n]) => `${{ statement: "statement-type", notQ: "'NOT / except'", match: "match the following", order: "chronology / correct order", who: "who", when: "when / which year", where: "where / which place", number: "answer is a number or year" }[k]} ${n}`).join(", ");
+  const answers = f.answers.map((a) => `"${a.answer.slice(0, 80)}" ×${a.n}`).join("; ");
+  const repeats = f.repeats.map((g) => `${g.length}× "${String(g[0].text).replace(/\s+/g, " ").slice(0, 120)}"`).join("\n");
+  return `Kerala PSC topic: ${subject} › ${topic}.
+FIGURES (worked out by the app from ALL ${total} past-paper questions on this topic; use them as given, don't recount):
+- ${total} questions from ${f.papers} papers (about ${f.perPaper} per paper, up to ${f.maxPerPaper} in one paper)${f.deleted ? `; ${f.deleted} deleted by PSC` : ""}${f.noKey ? `; ${f.noKey} without an answer key` : ""}.
+- By year: ${f.years.length ? f.years.map(([y, n]) => `${y}: ${n}`).join(", ") : "years not known"}.
+- Posts/exams: ${f.posts.length ? f.posts.map(([p, n]) => `${p} (${n})`).join(", ") : "not recorded"}.
+- Question styles (by wording): ${styles || "mostly direct factual questions"}.
+- Answers that appear more than once: ${answers || "none"}.
+- Nearly the same question asked again:\n${repeats || "none found"}
+- Marking: +${marking.pos} right, −${Math.round(marking.pen * 100) / 100} wrong.
+STUDENT'S OWN RESULTS ON THIS TOPIC: ${mine}
+
+THE QUESTIONS (${shown === total ? `all ${total}` : `${shown} of ${total}, newest first`}; format: [year · post] question → correct answer):
+${lines.join("\n")}
+
+Task: analyse these questions and write a preparation guide for this topic, with these parts:
+1. **What is asked**: the 4-8 sub-areas the questions actually cover, each with roughly how many questions (count from the list) and the kind of facts asked.
+2. **How it is asked**: the question styles and traps you see (e.g. statements, 'NOT', similar-looking options), with one short example each by its number.
+3. **Repeated and favourite facts**: what PSC keeps coming back to (use the repeated answers and questions above). These are must-know.
+4. **Likely next**: closely related facts that fit the pattern but haven't been asked yet. Mark this part clearly as a prediction.
+5. **Strategy**: a step-by-step plan for this topic (what to read first, what to make notes or tables of, how many past questions to practise, when to revise, when to guess and when to leave a question blank under this marking), fitted to the student's own results.
+6. **Last-day checklist**: 6-10 one-line facts to revise just before the exam, only from the questions above.
+Base parts 1-3 and 6 only on the questions given. Don't invent statistics. If an answer in the list looks wrong to you, say so briefly instead of repeating it.`;
+}
