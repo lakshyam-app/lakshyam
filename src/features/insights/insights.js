@@ -52,6 +52,10 @@ function topicFigures(syllabus, records) {
 }
 
 const pct = (x) => `${Math.round(x * 100)}%`;
+/* Weak spots: which topics (all / practised / not practised yet) and top 10 or all. Kept while the app is open. */
+const weakView = { filter: "all", showAll: false };
+const WEAK_FILTERS = ["all", "done", "todo"];
+const TOP_N = 10;
 function reasonChips(r) {
   return html`<span class="chips-inline">${r.reasons.map((k) => html`<span class="mini-chip r-${k}">${t(`insights.reason.${k}`)}</span>`)}</span>`;
 }
@@ -77,7 +81,12 @@ export const insightsScreen = {
       pdfs.forEach((p) => { if (p.owner?.type === "topic") pdfTopics.add(p.owner.id); if (p.owner?.type === "subject") pdfSubjects.add(p.owner.id); });
       const hasNotes = (id) => pdfTopics.has(id) || pdfSubjects.has(store.topic(id)?.subjectId);
       const byTopic = topicFigures(syllabus, records);
-      const weak = rankWeakSpots(byTopic, { hasNotes, limit: 10 });
+      const KEEP = { all: () => true, done: (r) => r.adj !== null, todo: (r) => r.adj === null };
+      const pool = rankWeakSpots(byTopic, { hasNotes, limit: Infinity, all: weakView.showAll });
+      const ranked = pool.filter(KEEP[weakView.filter]);
+      const weak = weakView.showAll ? ranked : ranked.slice(0, TOP_N);
+      const everyTopic = weakView.showAll ? pool : rankWeakSpots(byTopic, { hasNotes, limit: Infinity, all: true });
+      const filterCount = (f) => everyTopic.filter(KEEP[f]).length; // counts are always of every topic
       const wrongQs = stillWrongQuestions(syllabus.id);
       const lastRec = new Map(); records.forEach((r) => { if (r.graded) lastRec.set(r.questionId, r); });
       const wrong = wrongQs.map((q) => ({ q, r: lastRec.get(q.id) })).filter((x) => x.r);
@@ -92,12 +101,16 @@ export const insightsScreen = {
         <section class="ins-block">
           <h2 class="section-title">1 · ${t("insights.weakTitle")}</h2>
           <p class="hint">${t("insights.weakHint")}</p>
+          <div class="chip-row" role="group" aria-label="${t("insights.weakTitle")}">${WEAK_FILTERS.map((f) => html`<button type="button" class="pill ${weakView.filter === f ? "on" : ""}" data-action="wfilter" data-f="${f}" aria-pressed="${String(weakView.filter === f)}">${t(`insights.wf.${f}`)} <span class="count">${filterCount(f)}</span></button>`)}</div>
+          ${weakView.filter === "todo" ? html`<p class="hint">${t("insights.todoHint")}</p>` : ""}
           ${weak.length ? html`<div class="rows">${weak.map((r, i) => html`<button type="button" class="row" data-action="topic" data-id="${r.topicId}">
             <span class="row-main"><span class="row-title">${i + 1}. ${nameHtml(store.topic(r.topicId))}</span>
               <span class="row-sub">${nameLabel(store.subject(store.topic(r.topicId)?.subjectId))} · ${t("insights.inPapers", { n: r.freq })} · ${r.adj === null ? t("stats.notTried") : t("insights.right", { pct: pct(r.correct / Math.max(1, r.n)), n: r.n })}${r.avgSec ? ` · ${Math.round(r.avgSec)} s` : ""}</span>
               ${reasonChips(r)}</span>${chev}</button>`)}</div>
+            ${ranked.length > TOP_N || weakView.showAll ? html`<button type="button" class="link" data-action="wall">${weakView.showAll ? t("insights.showTop", { n: TOP_N }) : t("insights.showAll")}</button>` : ""}
             ${ai ? html`<button type="button" class="btn btn-quiet" data-action="ai-weak">🤖 ${t("insights.aiWeak")}</button>` : ""}`
-          : html`<p class="hint pad">${t("insights.noWeak")}</p>`}
+          : html`<p class="hint pad">${weakView.filter === "all" ? t("insights.noWeak") : t("insights.noneInFilter")}</p>
+            ${weakView.showAll ? "" : html`<button type="button" class="link" data-action="wall">${t("insights.showAll")}</button>`}`}
         </section>
         <section class="ins-block">
           <h2 class="section-title">2 · ${t("insights.patternsTitle")}</h2>
@@ -125,10 +138,12 @@ export const insightsScreen = {
 
       onAction(body, {
         topic: (el) => go("insight-topic", { id: el.dataset.id }),
+        wfilter: (el) => { weakView.filter = el.dataset.f; store.touch(); },
+        wall: () => { weakView.showAll = !weakView.showAll; store.touch(); },
         "ai-weak": async () => {
           if (!(await ensureAi())) return;
           const mk = markingInfo(syllabus.marking);
-          const rows = weak.map((r, i) => `${i + 1}. ${pathEn(r.topicId)}: ${r.freq} past-paper questions; ${r.adj === null ? "not practised" : `${r.correct}/${r.n} right`}${r.avgSec ? `; ${Math.round(r.avgSec)}s per question` : ""}${r.guessNet < 0 ? `; guessing net ${r.guessNet} marks` : ""}${r.reasons.includes("nonotes") ? "; no study notes added" : ""}`);
+          const rows = weak.slice(0, TOP_N).map((r, i) => `${i + 1}. ${pathEn(r.topicId)}: ${r.freq} past-paper questions; ${r.adj === null ? "not practised" : `${r.correct}/${r.n} right`}${r.avgSec ? `; ${Math.round(r.avgSec)}s per question` : ""}${r.guessNet < 0 ? `; guessing net ${r.guessNet} marks` : ""}${r.reasons.includes("nonotes") ? "; no study notes added" : ""}`);
           await askInSheet({
             title: t("insights.aiWeak"), maxTokens: 2500, system: P.tutorSystem(await lang()), user: P.weakSpotsTask(rows, mk),
             actions: [{ id: "save", label: t("ai.saveToNotes"), run: async (text) => { await mut.saveNote({ type: "misc", id: "ai-weak" }, t("insights.weakNote"), `${t("insights.weakNote")} — ${new Date().toLocaleDateString(dateLocale())}\n\n${text}`); toast(t("ai.savedToNotes")); return true; } }]

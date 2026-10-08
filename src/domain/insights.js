@@ -53,9 +53,10 @@ export function checkFact(q, pages) {
 /**
  * Topics ranked by marks at stake.
  * byTopic: Map topicId → { freq, n, correct, adj (shrunk accuracy or null), avgSec, guessNet }
+ * all: keep every topic (also strong ones), still ranked by marks at stake.
  * → [{ topicId, score, reasons: [ "often" | "weak" | "untried" | "slow" | "guess" | "nonotes" ], … }]
  */
-export function rankWeakSpots(byTopic, { hasNotes = () => true, slowSec = 50, limit = 10 } = {}) {
+export function rankWeakSpots(byTopic, { hasNotes = () => true, slowSec = 50, limit = 10, all = false } = {}) {
   const maxFreq = Math.max(1, ...[...byTopic.values()].map((x) => x.freq));
   return [...byTopic.entries()].map(([topicId, x]) => {
     const share = x.freq / maxFreq;
@@ -70,7 +71,7 @@ export function rankWeakSpots(byTopic, { hasNotes = () => true, slowSec = 50, li
     if (x.guessNet < 0) reasons.push("guess");
     if (!hasNotes(topicId)) reasons.push("nonotes");
     return { topicId, score, ...x, reasons };
-  }).filter((r) => r.score > 0 && (r.adj === null || r.adj < 0.85)).sort((a, b) => b.score - a.score).slice(0, limit);
+  }).filter((r) => all || (r.score > 0 && (r.adj === null || r.adj < 0.85))).sort((a, b) => b.score - a.score || b.freq - a.freq).slice(0, limit);
 }
 
 /** What kind of questions you miss. wrong: [{ q, r }] (r = the answer record). */
