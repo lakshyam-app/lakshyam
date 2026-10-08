@@ -84,3 +84,14 @@ test("pattern in prompts: PDF version forbids using it as a source", () => {
   assert.doesNotMatch(genTask({ style: "S" }, chunk, 5), /TOPIC PATTERN/);
   assert.match(generateTask({ subject: "H", topic: "T", n: 5, lang: "en", difficulty: "mixed", examples: [], pattern: "- Acts" }), /PATTERN OF THIS TOPIC/);
 });
+
+import { cardTask, noteTask } from "../src/ai/pdf-prompts.js";
+test("cards and notes from a PDF: pattern only steers, full coverage asked", () => {
+  const chunk = { pages: [2], parts: [{ n: 2, t: "Passage text." }] };
+  const c = cardTask({ pattern: "- Acts" }, chunk, 10);
+  assert.match(c, /NOT a source of facts/); assert.match(c, /"pyq"/); assert.match(c, /cover the passage's important exam points/);
+  assert.doesNotMatch(cardTask({}, chunk, 10), /TOPIC PATTERN|"pyq"/);
+  const n = noteTask({ pattern: "- Acts" }, chunk);
+  assert.match(n, /EVERY exam-worthy fact/); assert.match(n, /⭐/); assert.match(n, /never drop a point/);
+  assert.doesNotMatch(noteTask({}, chunk), /⭐|TOPIC PATTERN/);
+});

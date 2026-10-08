@@ -107,7 +107,7 @@ export function renderCardsPanel(host, { syllabus, scope }) {
             <button type="button" class="btn" data-action="fc-learn">${t("ai.fcStudyLearn")}</button>`
           : html`<p class="hint">${t("ai.fcPos", { n: st.index + 1, of: deck.length })}</p>
             <button type="button" class="fc-card ${st.flipped ? "flipped" : ""}" data-action="fc-flip" aria-label="${t("ai.fcFlip")}">
-              <span class="fc-side">${st.flipped ? t("ai.fcAnswer") : t("ai.fcQuestion")}</span>
+              <span class="fc-side">${st.flipped ? t("ai.fcAnswer") : t("ai.fcQuestion")}${card.sourceRef?.pyq ? ` · ⭐ ${t("pdf.pyqArea")}` : ""}</span>
               <span class="fc-text">${richText(st.flipped ? card.back : card.front)}</span>
               ${st.flipped && card.sourceRef?.pdf ? html`<span class="hint">📄 ${card.sourceRef.pdf}${card.sourceRef.page ? `, p.${card.sourceRef.page}` : ""}</span>` : ""}
               ${st.flipped ? "" : html`<span class="hint">${t("ai.fcTap")}</span>`}
@@ -118,7 +118,7 @@ export function renderCardsPanel(host, { syllabus, scope }) {
       : html`<div class="fc-list">${all.filter(pass).map((c) => {
           const s = stateOf(c);
           return html`<article class="qcard" data-cid="${c.id}">
-            <header class="qcard-meta"><span>${t(`ai.fcStatus.${s.status}`)}${s.dueAt && s.status === "known" ? ` · ${t("ai.fcNext", { date: new Date(s.dueAt).toLocaleDateString(dateLocale()) })}` : ""}</span></header>
+            <header class="qcard-meta"><span>${c.sourceRef?.pyq ? `⭐ ${t("pdf.pyqArea")} · ` : ""}${t(`ai.fcStatus.${s.status}`)}${s.dueAt && s.status === "known" ? ` · ${t("ai.fcNext", { date: new Date(s.dueAt).toLocaleDateString(dateLocale()) })}` : ""}</span></header>
             <div class="qtext"><strong>Q:</strong> ${richText(c.front)}</div><div class="qtext"><strong>A:</strong> ${richText(c.back)}</div>
             <div class="row-actions"><button type="button" class="link" data-action="fc-set" data-v="known">✓ ${t("ai.fcKnow")}</button>
               <button type="button" class="link" data-action="fc-set" data-v="again">↺ ${t("ai.fcAgain")}</button>

@@ -458,10 +458,12 @@ function formView(rec, job, handlers) {
       <label class="field-label">${t("pdf.toPage")}<input class="field" type="number" min="1" max="${rec.pages.length}" value="${cfg.to}" data-cfg="to" inputmode="numeric"></label></div>
     ${c.need ? html`<p class="hint">${t("pdf.skipsScanned", { n: c.need })}</p>` : ""}`;
   const langPills = html`<h3>${t("pdf.lang")}</h3>${pills(job, "lang", ["same", "en", "ml"], (v) => t(`pdf.langs.${v}`))}`;
+  // Follow the topic's past-paper pattern (from its AI strategy), if it has one.
+  const strategy = cfg.target?.topicId ? strategyFor(cfg.target.topicId) : null;
+  const patternSwitch = (hintKey) => (strategy ? html`<label class="switch-row"><input type="checkbox" data-cfg="usePattern" ${cfg.usePattern ? "checked" : ""}><span>🎯 ${t("ai.usePattern")}<span class="row-sub">${t(hintKey, { date: strategy.at ? new Date(strategy.at).toLocaleDateString(dateLocale()) : "—" })}</span></span></label>` : html`<p class="hint">💡 ${t("ai.noPatternYet")}</p>`);
 
   if (job.kind === "questions") {
     const pool = pyqPool(cfg.target).length;
-    const strategy = cfg.target?.topicId ? strategyFor(cfg.target.topicId) : null;
     handlers.learn = async (el) => {
       if (!(await ensureAi())) return;
       const examples = pickRandom(pyqPool(cfg.target), 20);
@@ -487,7 +489,7 @@ function formView(rec, job, handlers) {
       <p class="hint" id="styleNote">${note}</p>
       <div class="actions-row"><button type="button" class="btn btn-quiet btn-small" data-action="learn">🔄 ${t("pdf.styleLearn")}</button>
         <button type="button" class="btn btn-quiet btn-small" data-action="style-default">${t("pdf.styleDefault")}</button></div>
-      ${strategy ? html`<label class="switch-row"><input type="checkbox" data-cfg="usePattern" ${cfg.usePattern ? "checked" : ""}><span>🎯 ${t("ai.usePattern")}<span class="row-sub">${t("pdf.patternHint", { date: strategy.at ? new Date(strategy.at).toLocaleDateString(dateLocale()) : "—" })}</span></span></label>` : html`<p class="hint">💡 ${t("ai.noPatternYet")}</p>`}
+      ${patternSwitch("pdf.patternHint")}
       <label class="switch-row"><input type="checkbox" data-cfg="check" ${cfg.check ? "checked" : ""}><span>${t("pdf.check")}<span class="row-sub">${t("pdf.checkHint")}</span></span></label>
       <p class="hint">${t("pdf.groundedNote")}</p>
       <div class="actions-row"><button type="button" class="btn" data-action="start">${t("ai.generate")}</button></div>` };
@@ -496,11 +498,13 @@ function formView(rec, job, handlers) {
     return { body: html`${target}${range}
       <h3>${t("pdf.howManyCards")}</h3>${pills(job, "n", [10, 20, 30, 50], (v) => v)}
       ${langPills}
+      ${patternSwitch("pdf.patternHintCards")}
       <p class="hint">${t("pdf.groundedNote")}</p>
       <div class="actions-row"><button type="button" class="btn" data-action="start">${t("ai.generate")}</button></div>` };
   }
   return { body: html`${target}${range}
     <h3>${t("pdf.length")}</h3>${pills(job, "detail", ["short", "detailed"], (v) => t(`pdf.detail.${v}`))}
+    ${patternSwitch("pdf.patternHintNote")}
     ${langPills}
     <p class="hint">${t("pdf.noteLimit", { n: jobsApi.NOTE_MAX_SECTIONS })}</p>
     <div class="actions-row"><button type="button" class="btn" data-action="start">${t("ai.generate")}</button></div>` };
@@ -510,8 +514,9 @@ async function start(rec, job) {
   if (!(await ensureAi())) return;
   const cfg = job.cfg;
   // The topic's past-paper pattern (from its AI strategy) steers which passage facts to ask; never a source of facts.
-  const strat = job.kind === "questions" && cfg.usePattern && cfg.target?.topicId ? strategyFor(cfg.target.topicId) : null;
+  const strat = job.kind !== "read" && cfg.usePattern && cfg.target?.topicId ? strategyFor(cfg.target.topicId) : null;
   cfg.pattern = strat ? patternFrom(strat.text, 3000) : "";
+  cfg.starLegend = t("pdf.starLegend");
   const fresh = await pdfStore.getPdf(rec.id); // page text may have been corrected meanwhile
   if (!fresh) return go("pdfs");
   let pagesToRead = [];
@@ -626,7 +631,7 @@ function reviewView(rec, job, handlers) {
     const syllabus = store.currentSyllabus();
     const ref = (it) => ({ pdf: rec.name, pdfId: rec.id, page: it.page, quote: it.quote });
     if (isCards) {
-      await mut.saveCards(syllabus.id, topic.subjectId, topic.id, chosen.map((it) => ({ front: it.front, back: it.back, sourceRef: ref(it) })));
+      await mut.saveCards(syllabus.id, topic.subjectId, topic.id, chosen.map((it) => ({ front: it.front, back: it.back, sourceRef: { ...ref(it), ...(it.pyq ? { pyq: true } : {}) } })));
       toast(t("pdf.cardsSaved", { n: chosen.length }));
     } else {
       await mut.saveAiQuestions(syllabus, topic.subjectId, topic.id, chosen.map((it) => ({
@@ -640,7 +645,7 @@ function reviewView(rec, job, handlers) {
     go("topic", { id: topic.id, mode: isCards ? "cards" : "ai" });
   };
   const list = items.map((it, i) => html`<article class="qcard gen ${job.keep.has(i) ? "" : "off"}">
-    <label class="switch-row"><input type="checkbox" data-i="${i}" ${job.keep.has(i) ? "checked" : ""}><strong>${isCards ? `${i + 1}.` : t("ai.genQ", { n: i + 1 })}</strong>${it.type ? html`<span class="hint"> · ${it.type}</span>` : ""}</label>
+    <label class="switch-row"><input type="checkbox" data-i="${i}" ${job.keep.has(i) ? "checked" : ""}><strong>${isCards ? `${i + 1}.` : t("ai.genQ", { n: i + 1 })}</strong>${it.type ? html`<span class="hint"> · ${it.type}</span>` : ""}${it.pyq ? html` <span class="mini-chip">⭐ ${t("pdf.pyqArea")}</span>` : ""}</label>
     ${isCards ? html`<div class="qtext"><strong>Q:</strong> ${richText(it.front)}</div><div class="qtext"><strong>A:</strong> ${richText(it.back)}</div>`
       : html`<div class="qtext">${richText(it.text)}</div>
       <ol class="options">${it.options.map((o, j) => html`<li class="${j === it.answerIndex ? "right" : ""}"><span class="opt-letter">${letterFor(j)}</span><span class="opt-text">${richText(o)}</span>${j === it.answerIndex ? html`<span class="tick">✓</span>` : ""}</li>`)}</ol>`}

@@ -134,7 +134,8 @@ test("prompts carry the passage as untrusted data and ask for quotes", () => {
   assert.match(g, /up to 3 multiple-choice questions/);
   assert.match(checkTask(c, [{ text: "Q", options: ["a", "b", "c"] }]), /1-3, or 0/);
   assert.match(cardTask({ lang: "same" }, c, 2), /source_quote/);
-  assert.match(noteTask({ detail: "short" }, c), /3–5 bullets.*\[p\.1\]/s);
+  assert.match(noteTask({ detail: "short" }, c), /3–6 bullets.*\[p\.1\]/s);
+  assert.match(noteTask({ detail: "detailed" }, c), /EVERY exam-worthy fact/);
 });
 
 test("image requests: Anthropic base64 blocks, OpenAI image_url, temperature 0", () => {

@@ -116,7 +116,10 @@ export async function makeCards(pages, cfg, job, onStep = () => {}) {
     }
     if (i < plan.length - 1) await sleep(PAUSE_MS.between);
   }
-  return { items: T.dropDuplicates(all, (c) => c.front).slice(0, cfg.n), tot, abortMsg };
+  // Cards on past-paper areas first (when the topic pattern was used), then the rest.
+  const cards = T.dropDuplicates(all, (c) => c.front);
+  const ordered = cfg.pattern ? [...cards.filter((c) => c.pyq), ...cards.filter((c) => !c.pyq)] : cards;
+  return { items: ordered.slice(0, cfg.n), tot, abortMsg };
 }
 
 /* ---------- revision note ---------- */
@@ -132,7 +135,7 @@ export async function makeNote(pages, cfg, job, onStep = () => {}) {
     const chunk = chunks[i];
     onStep({ section: i + 1, sections: chunks.length, pages: T.pageRange(chunk.pages) });
     try {
-      const { text } = await ask(PP.NOTE_SYSTEM, PP.noteTask(cfg, chunk), 1600);
+      const { text } = await ask(PP.NOTE_SYSTEM, PP.noteTask(cfg, chunk), cfg.lang === "ml" ? 4500 : 2600);
       const r = T.noteLines(text, chunk);
       if (r.lines.length) lines.push(`**Pages ${T.pageRange(chunk.pages)}**`, ...r.lines, "");
       tot.dropped += r.dropped;
@@ -142,5 +145,6 @@ export async function makeNote(pages, cfg, job, onStep = () => {}) {
     }
     if (i < chunks.length - 1) await sleep(PAUSE_MS.between);
   }
-  return { text: lines.join("\n").trim(), tot, abortMsg, sections: chunks.length };
+  const starred = cfg.pattern && lines.some((l) => /^- ⭐/.test(l));
+  return { text: [starred ? cfg.starLegend || "" : "", ...lines].join("\n").trim(), tot, abortMsg, sections: chunks.length };
 }

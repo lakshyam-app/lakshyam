@@ -261,7 +261,7 @@ export function verifyCards(arr, chunk) {
     const quote = String(x.source_quote ?? "").trim();
     const qc = checkQuote(quote, chunk);
     if (qc.level === "none") { stats.badQuote++; return; }
-    const it = { front, back, quote, page: qc.page || Number(x.page) || chunk.pages[0], quoteLevel: qc.level, flag: false };
+    const it = { front, back, quote, page: qc.page || Number(x.page) || chunk.pages[0], quoteLevel: qc.level, flag: false, pyq: x.pyq === true };
     if (!numbersSupported(`${front} ${back}`, src)) { it.flag = true; stats.flagged++; }
     items.push(it);
   });

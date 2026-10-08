@@ -141,3 +141,4 @@ Today screen with Quick 10 and daily goal · exam countdown · timetable (any da
 | Feature | Where | Status |
 |---|---|---|
 | Topic AI strategy kept per topic (also found in older notes); AI practice questions and PDF questions follow its pattern (parts 1-4), switchable; for PDFs it only steers which passage facts are asked, the passage stays the only source and quotes are still checked | Topic ⋯ → Make practice questions (AI); Study PDF → Questions | ✅ |
+| PDF flashcards and revision notes follow the topic pattern too: past-paper areas first and marked ⭐ (with a legend in notes), every other important point of the PDF still covered; nothing taken from outside the PDF (1.9.1) | Study PDF → Flashcards / Revision note | ✅ |
