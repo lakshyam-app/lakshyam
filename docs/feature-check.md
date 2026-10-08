@@ -78,7 +78,7 @@ imported, in English and Malayalam.
 | Difficulty on/off | Settings | ✅ |
 | Overview cards, recent scores | Progress summary + sparkline | ✅ |
 | Subject → topic drill-down, all-topics list | Progress layers | ✅ |
-| Time / Difficulty / Right-Wrong / Guesswork tabs | Progress → Detailed tables | ✅ |
+| Time / Difficulty / Right-Wrong / Guesswork tabs | Progress → Detailed tables (filter by subject, sort, minimum answers, hide empty rows — 1.6.4) | ✅ |
 | Counting basis | Progress ⚙ | ✅ |
 | Low-data mark | "few answers" tag | ✅ |
 | PYQ vs AI stats | Progress header switch | ✅ |

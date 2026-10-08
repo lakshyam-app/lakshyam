@@ -1137,3 +1137,13 @@ table.report td { text-align: right; font-weight: 600; padding: 4px 0; }
 .rs-step .field-label { width: 100%; }
 .ok-box { background: var(--brand-soft); color: var(--text); border-color: var(--brand); }
 a.btn { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+
+/* Detailed tables: sort & filter bar, two-line right/wrong cells */
+.tf-bar { margin: 4px 0 12px; align-items: center; }
+.tf-bar .link { padding: 6px 4px; }
+.grid td b { display: block; font-weight: 600; }
+.grid td small { display: block; color: var(--muted); font-size: 0.75rem; }
+.grid th[scope="row"] { min-width: 7.5em; overflow-wrap: anywhere; }
+.grid th, .grid td { padding: 6px 6px; }
+@media (max-width: 380px) { .grid th, .grid td { padding: 6px 4px; } .grid th[scope="row"] { min-width: 6.5em; } }
+.grid thead th:first-child { text-align: left; }
