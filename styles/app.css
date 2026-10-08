@@ -1127,3 +1127,13 @@ table.report td { text-align: right; font-weight: 600; padding: 4px 0; }
 .drive-box.on { border-color: color-mix(in srgb, var(--brand) 40%, var(--line)); }
 .danger-text { color: var(--danger); }
 .drive-row { border: 1px solid var(--brand); border-radius: 12px; padding: 10px 12px; background: var(--brand-soft); }
+
+/* ======================= 1.6: automatic backup set-up ======================= */
+.pill-mini { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; background: var(--brand-soft); color: var(--brand); vertical-align: middle; }
+.rs-steps { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 14px; }
+.rs-step { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; }
+.rs-step > div { display: grid; gap: 6px; justify-items: start; }
+.rs-n { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: var(--brand); color: var(--brand-ink); font-weight: 700; font-size: 0.875rem; }
+.rs-step .field-label { width: 100%; }
+.ok-box { background: var(--brand-soft); color: var(--text); border-color: var(--brand); }
+a.btn { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }

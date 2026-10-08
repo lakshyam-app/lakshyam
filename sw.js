@@ -4,7 +4,9 @@
      (Other apps on the same site keep their caches.)
    - A new version waits until the user taps "Refresh" in the app. */
 
-const VERSION = "1.5.0";
+const VERSION = "1.6.0";
+// Background backup through your own Google script (see src/cloud/sw-backup.js).
+importScripts("./src/cloud/sw-backup.js");
 const PREFIX = "lakshyam-";
 const SHELL_CACHE = `${PREFIX}shell-${VERSION}`;
 // The PDF reader is large (about 1.4 MB), so it is not downloaded with the app.
@@ -54,6 +56,9 @@ const SHELL_FILES = [
   "./src/ai/presets.js",
   "./src/ai/prompts.js",
   "./src/cloud/drive.js",
+  "./src/cloud/relay-script.js",
+  "./src/cloud/relay.js",
+  "./src/cloud/sw-backup.js",
   "./src/core/charts.js",
   "./src/core/clipboard.js",
   "./src/core/dialogs.js",
@@ -185,6 +190,10 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("message", (event) => {
   if (event.data === "SKIP_WAITING") self.skipWaiting();
+});
+
+self.addEventListener("periodicsync", (event) => {
+  if (event.tag === "lakshyam-backup") event.waitUntil(self.lakshyamBackup.run(VERSION).catch(() => "error"));
 });
 
 self.addEventListener("fetch", (event) => {

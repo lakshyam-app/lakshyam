@@ -26,7 +26,7 @@ import { openStatsSettings } from "../progress/progress.js";
 import { can } from "../../core/entitlements.js";
 import * as presets from "../../ai/presets.js";
 import { header, backHandler } from "../library/library.js";
-import { driveBlock, driveHandlers, driveConfig } from "./drive.js";
+import { driveBlock, driveHandlers, driveConfig, paintBackgroundLine } from "./drive.js";
 import { openGuideSheet } from "../guide/guide.js";
 import { SETTINGS_INDEX, CATEGORIES, CATEGORY_ICON, searchSettings } from "./settings-index.js";
 
@@ -429,6 +429,7 @@ export const settingsScreen = {
     container.querySelectorAll("[data-switch]").forEach((box) => box.addEventListener("change", () => store.setSetting(box.dataset.switch, box.checked)));
     container.querySelector("#userName")?.addEventListener("change", (e) => store.quietly(() => store.setSetting("userName", e.target.value.trim().slice(0, 40))).then(() => toast(t("settings.saved"))));
     if (section === "ai") aiBlock().then((markup) => { const el = container.querySelector("#aiBlock"); if (el) el.innerHTML = String(markup); });
+    if (section === "data") paintBackgroundLine(container);
     if (section === "data") storageBlock().then((markup) => { const el = container.querySelector("#storageBlock"); if (el) el.innerHTML = String(markup); });
     // One-off requests (open the AI sheet, highlight a search hit) are removed from the
     // address, so a redraw after a change doesn't repeat them.

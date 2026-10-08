@@ -101,7 +101,7 @@ src/domain/                                pure logic, no screen code: scoring, 
                                            timetable, diary, insights, AI instructions
 src/ai/                                    AI client (presets, fallback, pausing) and prompts
 src/pdf/                                   Study PDFs: text tools, storage, reader, AI jobs
-src/cloud/                                 Google Drive backup client
+src/cloud/                                 Google Drive backup client; relay-script.js (your own Apps Script), relay.js, sw-backup.js (background)
 src/features/<name>/                       one folder per area: today, library, question, test, progress,
                                            insights, timetable, diary, notes, search, ai, pdfs, import, settings
 src/strings/                               interface text: en.js, ml.js (ml-1 … ml-6); missing ml text falls back to English
@@ -153,5 +153,6 @@ and [`docs/feature-check.md`](docs/feature-check.md) for where every old-app fea
 | 1.1 | Theme choice, clearer question cards (especially dark), Settings in groups with search |
 | 1.2 | Paper theme |
 | 1.3 | Up to 20 exam countdowns, with a choice of which and how Today shows them |
+| 1.6 | Automatic Drive backup without sign-in, through your own Google Apps Script (docs/apps-script); background backup on installed app |
 | 1.5 | How to use Lakshyam: illustrated demo + PDF (English, മലയാളം) in Settings |
 | 1.4 | Mistake review (spaced repetition), Today's session, Google Drive backup, syllabus map, text size, crossing out options, screen kept on |

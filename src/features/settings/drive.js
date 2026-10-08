@@ -13,12 +13,18 @@ import { DB_VERSION } from "../../data/schema.js";
 import { APP_VERSION } from "../../core/version.js";
 import { newId } from "../../data/ids.js";
 import * as D from "../../cloud/drive.js";
-import { restoreFromJson } from "../import/import-flow.js";
+import { restoreFromJson, startImport } from "../import/import-flow.js";
+import * as R from "../../cloud/relay.js";
+import { scriptFor, MANIFEST, newRelayKey, isRelayUrl, RELAY_ROOT } from "../../cloud/relay-script.js";
+import { copyText } from "../../core/clipboard.js";
 
 const DAY = 86400000;
 export const EVERY = [1, 3, 7];
 
-export const driveConfig = () => ({ connected: false, phoneId: null, phoneName: "", email: "", folderId: null, every: 1, lastAt: 0, lastName: "", lastSize: 0, lastError: "", ...(store.setting("drive") || {}) });
+/* mode "signin": Lakshyam signs in to Google (a tap when the sign-in has expired).
+   mode "relay": your own script in your Google account receives the backups (no sign-in). */
+export const driveConfig = () => ({ connected: false, mode: "signin", phoneId: null, phoneName: "", email: "", folderId: null, relayUrl: "", relayKey: "", pendingKey: "", every: 1, lastAt: 0, lastName: "", lastSize: 0, lastError: "", ...(store.setting("drive") || {}) });
+export const isRelay = (c = driveConfig()) => c.connected && c.mode === "relay" && c.relayUrl && c.relayKey;
 const saveConfig = (patch) => store.quietly(() => store.setSetting("drive", { ...driveConfig(), ...patch }));
 
 export const driveDue = (c = driveConfig(), now = Date.now()) => c.connected && (!c.lastAt || now - c.lastAt >= c.every * DAY - 2 * 3600000);
@@ -35,6 +41,7 @@ export async function backupToDrive({ interactive = false } = {}) {
   running = (async () => {
     let c = driveConfig();
     if (!c.connected) return { status: "off" };
+    if (isRelay(c)) return relayBackup(c);
     try {
       if (!D.hasToken()) {
         if (!interactive) return { status: "needs-tap" };
@@ -67,9 +74,28 @@ export async function backupToDrive({ interactive = false } = {}) {
   try { return await running; } finally { running = null; }
 }
 
+async function relayBackup(c) {
+  try {
+    const backup = makeBackup();
+    const r = await R.relayUpload(c.relayUrl, c.relayKey, JSON.stringify(backup), {
+      phoneId: c.phoneId, phone: c.phoneName, questions: backup.counts.questions, tests: backup.counts.attempts, app: APP_VERSION
+    });
+    const now = Date.now();
+    await saveConfig({ lastAt: now, lastName: r.name, lastSize: Number(r.size) || 0, lastError: "" });
+    await store.quietly(() => store.setSetting("lastBackupAt", now));
+    store.touch();
+    return { status: "done", file: { name: r.name, size: r.size } };
+  } catch (e) {
+    await saveConfig({ lastError: `relay-${e.kind || "other"}` });
+    store.touch();
+    return { status: "error", error: { kind: `relay-${e.kind || "other"}`, message: e.message } };
+  }
+}
+
 /** Called when the app opens or comes back: back up quietly if due and possible. */
 export async function autoDriveBackup() {
-  if (!driveDue() || !D.hasToken() || !navigator.onLine) return;
+  if (!driveDue() || !navigator.onLine) return;
+  if (!isRelay() && !D.hasToken()) return;
   const r = await backupToDrive();
   if (r.status === "done") toast(t("drive.autoDone"));
 }
@@ -91,7 +117,7 @@ async function connect() {
     await D.signIn({ consent: true });
     const me = await D.whoAmI();
     const folderId = await D.phoneFolder(name.slice(0, 40));
-    await saveConfig({ connected: true, email: me.email, phoneName: name.slice(0, 40), phoneId: c.phoneId || newId("phone"), folderId, lastError: "" });
+    await saveConfig({ connected: true, mode: "signin", email: me.email, phoneName: name.slice(0, 40), phoneId: c.phoneId || newId("phone"), folderId, lastError: "" });
     toast(t("drive.connected", { email: me.email }));
     await backupTap();
   } catch (e) {
@@ -108,9 +134,10 @@ async function rename() {
 }
 
 async function disconnect() {
-  if (!(await confirmAction({ title: t("drive.disconnectTitle"), body: t("drive.disconnectBody"), confirmLabel: t("drive.disconnect") }))) return;
-  await D.signOut().catch(() => {});
-  await saveConfig({ connected: false, folderId: null, lastError: "" });
+  if (!(await confirmAction({ title: t("drive.disconnectTitle"), body: isRelay() ? t("relay.disconnectBody") : t("drive.disconnectBody"), confirmLabel: t("drive.disconnect") }))) return;
+  if (isRelay()) await disableBackground();
+  else await D.signOut().catch(() => {});
+  await saveConfig({ connected: false, mode: "signin", relayUrl: "", relayKey: "", pendingKey: "", folderId: null, lastError: "" });
   store.touch();
 }
 
@@ -164,35 +191,124 @@ async function restoreSheet() {
 
 export function driveBlock() {
   const c = driveConfig();
-  setTimeout(D.preload, 300);
+  if (!isRelay(c)) setTimeout(D.preload, 300);
   if (!c.connected) {
     return html`<div class="group drive-box" data-set="drive">
       <h3>☁ ${t("drive.title")}</h3>
       <p>${t("drive.pitch")}</p>
       <button type="button" class="btn" data-action="drive-connect">${t("drive.connect")}</button>
+      <button type="button" class="link" data-action="relay-setup">⚡ ${t("relay.offer")}</button>
       <p class="hint">${t("drive.privacy")}</p>
     </div>`;
   }
+  const relay = isRelay(c);
   return html`<div class="group drive-box on" data-set="drive">
-    <h3>☁ ${t("drive.title")}</h3>
-    <p>${t("drive.connectedAs", { email: c.email || "?", phone: c.phoneName })}</p>
+    <h3>☁ ${t("drive.title")}${relay ? html` <span class="pill-mini">⚡ ${t("relay.badge")}</span>` : ""}</h3>
+    <p>${relay ? t("relay.connectedAs", { phone: c.phoneName, folder: RELAY_ROOT }) : t("drive.connectedAs", { email: c.email || "?", phone: c.phoneName })}</p>
     <p class="hint">${c.lastAt ? t("drive.last", { when: when(c.lastAt), size: kb(c.lastSize) }) : t("drive.never")}${c.lastError ? html` · <span class="danger-text">${t(`drive.err.${c.lastError}`, { detail: "" })}</span>` : ""}</p>
     <p class="field-label">${t("drive.every")}</p>
     <div class="segmented three" role="group">${EVERY.map((n) => html`<button type="button" class="${c.every === n ? "on" : ""}" data-action="drive-every" data-n="${n}" aria-pressed="${String(c.every === n)}">${t(`drive.everyN.${n}`)}</button>`)}</div>
-    <p class="hint">${t("drive.howAuto", { keep: D.KEEP })}</p>
+    <p class="hint">${relay ? t("relay.howAuto") : t("drive.howAuto", { keep: D.KEEP })}</p>
+    ${relay ? html`<p class="hint" id="bgLine"></p>` : ""}
     <div class="actions-row">
       <button type="button" class="btn" data-action="drive-now">${t("drive.now")}</button>
       <button type="button" class="btn btn-quiet" data-action="drive-restore">${t("drive.restore")}</button>
     </div>
+    ${relay ? "" : html`<button type="button" class="link" data-action="relay-setup">⚡ ${t("relay.offer")}</button>`}
     <button type="button" class="link" data-action="drive-rename">${t("drive.rename")}</button>
     <button type="button" class="link danger" data-action="drive-disconnect">${t("drive.disconnect")}</button>
   </div>`;
 }
 
+/* ---------- automatic backup through your own script ---------- */
+
+const SCRIPT_NEW = "https://script.google.com/home/projects/create";
+
+async function relaySetup() {
+  let c = driveConfig();
+  if (!c.pendingKey) { await saveConfig({ pendingKey: newRelayKey() }); c = driveConfig(); }
+  const key = c.pendingKey;
+  const stepRow = (n, title, body) => html`<li class="rs-step"><span class="rs-n">${n}</span><div><b>${title}</b>${body}</div></li>`;
+  const body = openSheet(html`<h2>⚡ ${t("relay.title")}</h2>
+    <p class="hint">${t("relay.intro")}</p>
+    <ol class="rs-steps">
+      ${stepRow(1, t("relay.s1"), html`<p class="hint">${t("relay.s1h")}</p><a class="btn btn-quiet btn-small" href="${SCRIPT_NEW}" target="_blank" rel="noopener">${t("relay.s1b")} ↗</a>`)}
+      ${stepRow(2, t("relay.s2"), html`<p class="hint">${t("relay.s2h")}</p><button type="button" class="btn btn-quiet btn-small" data-action="copy-script">📋 ${t("relay.s2b")}</button>`)}
+      ${stepRow(3, t("relay.s3"), html`<p class="hint">${t("relay.s3h")}</p><button type="button" class="btn btn-quiet btn-small" data-action="copy-manifest">📋 ${t("relay.s3b")}</button>`)}
+      ${stepRow(4, t("relay.s4"), html`<p class="hint">${t("relay.s4h")}</p>`)}
+      ${stepRow(5, t("relay.s5"), html`<p class="hint">${t("relay.s5h")}</p>
+        <label class="field-label">${t("relay.url")}<input class="field" id="rsUrl" type="url" inputmode="url" autocomplete="off" placeholder="https://script.google.com/macros/s/…/exec" value="${c.relayUrl || ""}"></label>
+        <label class="field-label">${t("drive.phoneTitle")}<input class="field" id="rsPhone" type="text" maxlength="40" value="${c.phoneName || t("drive.phoneDefault")}"></label>`)}
+    </ol>
+    <p class="warn-box" id="rsMsg" hidden></p>
+    <p class="hint">${t("relay.safety")}</p>
+    <div class="sheet-actions"><button type="button" class="btn btn-quiet" data-action="close">${t("common.cancel")}</button>
+      <button type="button" class="btn" data-action="test">${t("relay.test")}</button></div>`, {
+    close: () => closeSheet(),
+    "copy-script": () => copyText(scriptFor(key)),
+    "copy-manifest": () => copyText(MANIFEST),
+    test: async (el) => {
+      const url = body.querySelector("#rsUrl").value.trim();
+      const phone = body.querySelector("#rsPhone").value.trim().slice(0, 40) || t("drive.phoneDefault");
+      const msg = body.querySelector("#rsMsg");
+      const say = (text, ok = false) => { msg.hidden = false; msg.textContent = text; msg.classList.toggle("ok-box", ok); };
+      if (!isRelayUrl(url)) { say(t("relay.badUrl")); return; }
+      el.disabled = true; el.textContent = t("relay.testing");
+      try {
+        await R.relayPing(url, key);
+        await saveConfig({ connected: true, mode: "relay", relayUrl: url, relayKey: key, pendingKey: "", phoneName: phone, phoneId: c.phoneId || newId("phone"), lastError: "" });
+        closeSheet();
+        toast(t("relay.saved"));
+        enableBackground();
+        await backupTap();
+      } catch (e) {
+        el.disabled = false; el.textContent = t("relay.test");
+        say(t(`drive.err.relay-${e.kind || "other"}`, { detail: e.message }));
+      }
+    }
+  }, { label: t("relay.title") });
+}
+
+/** Asks Android to wake the app now and then to back up in the background (installed app only). */
+export async function enableBackground() {
+  try {
+    const reg = await navigator.serviceWorker?.ready;
+    if (!reg || !("periodicSync" in reg)) return "unsupported";
+    const st = await navigator.permissions.query({ name: "periodic-background-sync" });
+    if (st.state !== "granted") return "not-installed";
+    await reg.periodicSync.register("lakshyam-backup", { minInterval: 12 * 3600000 });
+    return "on";
+  } catch { return "unsupported"; }
+}
+
+async function disableBackground() {
+  try { const reg = await navigator.serviceWorker?.ready; await reg?.periodicSync?.unregister("lakshyam-backup"); } catch { /* fine */ }
+}
+
+/** Fills the "background backups" line in the Drive box. */
+export async function paintBackgroundLine(root) {
+  const el = root.querySelector("#bgLine");
+  if (!el) return;
+  const state = await enableBackground();
+  el.textContent = t(`relay.bg.${state}`);
+}
+
+function relayRestore() {
+  const c = driveConfig();
+  openSheet(html`<h2>${t("drive.restoreTitle")}</h2>
+    <p>${t("relay.restoreHow", { folder: RELAY_ROOT, phone: c.phoneName })}</p>
+    <div class="sheet-actions"><button type="button" class="btn btn-quiet" data-action="close">${t("common.cancel")}</button>
+      <button type="button" class="btn" data-action="pick">${t("relay.restorePick")}</button></div>`, {
+    close: () => closeSheet(),
+    pick: () => { closeSheet(); startImport(); }
+  }, { label: t("drive.restoreTitle") });
+}
+
 export const driveHandlers = {
   "drive-connect": () => runFlow(connect),
+  "relay-setup": () => relaySetup(),
   "drive-now": () => backupTap(),
-  "drive-restore": () => restoreSheet(),
+  "drive-restore": () => (isRelay() ? relayRestore() : restoreSheet()),
   "drive-rename": () => runFlow(rename),
   "drive-disconnect": () => runFlow(disconnect),
   "drive-every": (el) => { saveConfig({ every: Number(el.dataset.n) }).then(() => store.touch()); },
@@ -203,7 +319,9 @@ export const driveHandlers = {
 export function driveTodayRow() {
   const c = driveConfig();
   if (!c.connected || (!driveDue(c) && !c.lastError)) return "";
-  setTimeout(D.preload, 300);
+  // With your own script, backups run by themselves; ask only if one failed or is a day late.
+  if (isRelay(c) && !c.lastError && c.lastAt && Date.now() - c.lastAt < (c.every + 1) * DAY) return "";
+  if (!isRelay(c)) setTimeout(D.preload, 300);
   const days = c.lastAt ? Math.floor((Date.now() - c.lastAt) / DAY) : null;
   return html`<button type="button" class="row drive-row" data-action="drive-backup">
     <span class="row-main"><span class="row-title">☁ ${t("drive.todayTitle")}</span>
