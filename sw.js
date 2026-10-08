@@ -4,7 +4,7 @@
      (Other apps on the same site keep their caches.)
    - A new version waits until the user taps "Refresh" in the app. */
 
-const VERSION = "1.8.1";
+const VERSION = "1.8.2";
 // Background backup through your own Google script (see src/cloud/sw-backup.js).
 importScripts("./src/cloud/sw-backup.js");
 const PREFIX = "lakshyam-";
@@ -176,8 +176,10 @@ const SHELL_FILES = [
   "./src/strings/ml.js"
 ];
 
+// cache: "reload" fetches every file fresh from the server, never from the browser's own
+// short-term cache, so a new version can't be installed with some of the old files.
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(SHELL_CACHE).then((cache) => cache.addAll(SHELL_FILES)));
+  event.waitUntil(caches.open(SHELL_CACHE).then((cache) => cache.addAll(SHELL_FILES.map((url) => new Request(url, { cache: "reload" })))));
 });
 
 self.addEventListener("activate", (event) => {

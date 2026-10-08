@@ -1793,6 +1793,7 @@ export default {
     version: "Version {version}",
     checkUpdate: "Check for update",
     upToDate: "You have the latest version",
+    downloading: "A new version is downloading. Tap Refresh when it appears.",
     checking: "Checking…",
     offlineNow: "You’re offline. Connect to check for updates.",
     comingTitle: "Coming in later updates",

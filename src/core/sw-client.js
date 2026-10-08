@@ -9,7 +9,8 @@ export async function registerServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
   const hadController = Boolean(navigator.serviceWorker.controller);
   try {
-    registration = await navigator.serviceWorker.register("sw.js", { scope: "./" });
+    // updateViaCache "none": checking for an update always asks the server, never the browser cache.
+    registration = await navigator.serviceWorker.register("sw.js", { scope: "./", updateViaCache: "none" });
   } catch {
     return; // app still works online without it
   }
@@ -40,10 +41,14 @@ function offerRefresh(worker) {
   });
 }
 
-/** Returns "offline" | "updating" | "latest". */
+/** Returns "offline" | "updating" | "ready" | "latest". "updating" and "ready" show their own message. */
 export async function checkForUpdate() {
   if (!navigator.onLine) return "offline";
   if (!registration) return "latest";
   await registration.update();
-  return registration.installing || registration.waiting ? "updating" : "latest";
+  // Already downloaded: offer Refresh (again). Still downloading: say so now; the Refresh
+  // offer replaces this message as soon as the download finishes.
+  if (registration.waiting) { offerRefresh(registration.waiting); return "ready"; }
+  if (registration.installing) { toast(t("settings.downloading"), { duration: 0 }); return "updating"; }
+  return "latest";
 }
