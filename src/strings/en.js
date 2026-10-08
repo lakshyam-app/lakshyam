@@ -542,7 +542,7 @@ export default {
   start: {
     title: "Start a test",
     whatTitle: "What",
-    what: { ai: "These AI questions", topic: "This topic", subject: "This subject", paper: "This paper", bank: "A bank", search: "These results", flagged: "Flagged", wrong: "Still wrong", mock: "Mock exam", weak: "Weak areas", review: "These questions", timetable: "This week’s topics" },
+    what: { ai: "These AI questions", topic: "This topic", subject: "This subject", paper: "This paper", bank: "A bank", search: "These results", flagged: "Flagged", wrong: "Still wrong", mock: "Mock exam", weak: "Weak areas", review: "These questions", timetable: "This week’s topics", mistakes: "Mistakes due", session: "Today’s session" },
     pickBank: "Choose a bank",
     howMany: "How many",
     all: "All {n}",
@@ -571,9 +571,11 @@ export default {
       wrong: "Questions where your latest answer was wrong or blank.",
       wrongNone: "Nothing here yet. Questions you get wrong in tests will come here.",
       flagged: "Questions you flagged with ☆.",
-      flaggedNone: "No flagged questions yet."
+      flaggedNone: "No flagged questions yet.",
+      mistakes: "Questions you got wrong (or guessed), brought back after 1, 3, 7 and 21 days. Right at the 21-day check and they leave review.",
+      mistakesNone: "Nothing due today. Wrong answers in your tests come back here the next day."
     },
-    label: { mock: "Mock exam ({n})", weak: "Weak areas ({n})", wrong: "Still wrong ({n})", flagged: "Flagged ({n})" },
+    label: { mock: "Mock exam ({n})", weak: "Weak areas ({n})", wrong: "Still wrong ({n})", flagged: "Flagged ({n})", mistakes: "Mistake review ({n})" },
     weakBankName: "Weak areas – {date}",
     bankSaved: "Saved as bank “{name}”",
     unfinishedTitle: "You have an unfinished test",
@@ -617,7 +619,12 @@ export default {
     leaveHint: "Continue later from Today. The timer stops while you’re away.",
     discard: "Discard this test",
     discardTitle: "Discard this test?",
-    discardBody: "Your answers in this test are thrown away and it won’t count in your history."
+    discardBody: "Your answers in this test are thrown away and it won’t count in your history.",
+    cross: "Cross out",
+    crossOn: "Crossing out",
+    crossHint: "Tap options to cross them out; tap “Crossing out” again to choose. Tip: long-press any option to cross it out.",
+    struck: "crossed out",
+    textSize: "Text size"
   },
   results: {
     short: "{score} / {max}",
@@ -1091,6 +1098,91 @@ export default {
     leftToday: "{h} h {m} min left",
     weeks: (v) => (v.w ? `That’s ${v.w} week${v.w === 1 ? "" : "s"}${v.d ? ` and ${v.d} day${v.d === 1 ? "" : "s"}` : ""}. Make each day count.` : "Less than a week. Make each day count."),
     todayGoodLuck: "Exam day. Stay calm, read each question fully. All the best!"
+  },
+  drive: {
+    title: "Google Drive backup",
+    pitch: "Back up automatically to your own Google Drive, so a lost phone or cleared browser data doesn’t lose your tests, diary, timetable and notes.",
+    privacy: "Lakshyam can only see the backup files it makes (not your other Drive files). Your AI keys and study PDFs are never uploaded.",
+    connect: "Connect Google Drive",
+    connectGo: "Continue to Google",
+    phoneTitle: "Name this phone",
+    phoneHint: "Backups go in “Lakshyam backups/<this name>” in your Drive. If someone else uses Lakshyam with the same Google account, each phone keeps its own copies.",
+    phoneDefault: "My phone",
+    renameHint: "New backups go to a folder with this name. Older ones stay where they are.",
+    connected: "Connected to {email}",
+    connectedAs: "Connected to {email} · this phone: “{phone}”",
+    last: "Last backup {when} · {size}",
+    never: "No Drive backup yet",
+    every: "Back up",
+    everyN: { 1: "Every day", 3: "Every 3 days", 7: "Every week" },
+    howAuto: "When one is due and you open Lakshyam, it backs up by itself if you’ve signed in to Google today; otherwise Today shows a one-tap “Back up to Google Drive”. The newest {keep} copies of this phone are kept.",
+    now: "Back up now",
+    restore: "Restore from Drive…",
+    rename: "Rename this phone",
+    disconnect: "Disconnect Google Drive",
+    disconnectTitle: "Disconnect Google Drive?",
+    disconnectBody: "Automatic Drive backups stop on this phone. The backups already in your Drive stay there.",
+    working: "Backing up to Google Drive…",
+    done: "Backed up to Google Drive ({size})",
+    autoDone: "Backed up to Google Drive",
+    todayTitle: "Back up to Google Drive",
+    daysAgo: (v) => (v.n === 0 ? "Due now" : v.n === 1 ? "Last backup yesterday" : `Last backup ${v.n} days ago`),
+    restoreTitle: "Restore from Google Drive",
+    restoreHint: "Backups in {email}, grouped by phone. Restoring keeps a safety copy first (Settings → Undo).",
+    thisPhone: "this phone",
+    unknownPhone: "Another phone",
+    none: "No Lakshyam backups in this Drive yet.",
+    listing: "Looking in your Drive…",
+    downloading: "Downloading the backup…",
+    otherPhone: "This backup is from “{phone}”, not this phone. Restoring it replaces or mixes in that phone’s data here.",
+    err: {
+      offline: "You’re offline. Connect to the internet and try again.",
+      denied: "Google sign-in was cancelled or not allowed. If it says “access blocked”, ask for your Gmail to be added as a test user.",
+      closed: "Sign-in closed.",
+      popup: "The Google sign-in window couldn’t open. Allow pop-ups for this site and try again.",
+      scope: "Drive access wasn’t allowed. Tick the Drive box on Google’s screen to back up.",
+      auth: "Google sign-in has expired. Tap to sign in again.",
+      full: "Your Google Drive is full.",
+      http: "Google Drive said no ({detail}).",
+      other: "The Drive backup didn’t work. Try again later."
+    }
+  },
+  map: {
+    title: "Syllabus map",
+    rowSub: "Every topic on one screen, coloured by how you do",
+    covered: "of past-paper questions are in topics you’ve practised",
+    coveredSub: "{n} of {of} topics practised",
+    all: "All",
+    band: { good: "Strong", fair: "Fair", weak: "Weak", none: "Not yet" },
+    legend: "Strong 70%+ · Fair 40–69% · Weak under 40%, from past-paper tests ({basis}). Biggest topics first. 📖 = times studied; a dashed edge = fewer than 5 answers.",
+    groupSub: "{n} of {of} practised",
+    notYet: "not yet",
+    noneHere: "No topics in this group.",
+    sheetLine: "{pct}% right in {n} answers · {q} questions in papers.",
+    sheetNone: "Not practised yet · {q} questions in papers.",
+    fewNote: "Few answers so far, so this can change quickly.",
+    stats: "See the details"
+  },
+  session: {
+    kicker: "Today’s session",
+    title: "{n} questions · about {m} min",
+    onlyCards: "Flashcards to review",
+    mistakes: (v) => (v.n === 1 ? "1 mistake due for review" : `${v.n} mistakes due for review`),
+    mistakesOf: "{n} of your {of} mistakes due (the most overdue)",
+    focus: {
+      timetable: "{n} from your timetable topic",
+      due: "{n} from a topic due for revision",
+      weak: "{n} from a weak topic",
+      new: "{n} from a topic you haven’t practised"
+    },
+    cards: (v) => (v.n === 1 ? "1 flashcard due" : `${v.n} flashcards due`),
+    start: "Start today’s session",
+    label: "Today’s session ({n})"
+  },
+  mreview: {
+    stop: "Stop reviewing this one",
+    stopHint: "It comes back only if you get it wrong again.",
+    stopped: "Removed from mistake review"
   },
   cd: {
     title: "Exam countdowns",
@@ -1672,6 +1764,14 @@ export default {
     timetableSub: "Study plans, days, hours, calendar export",
     goSettings: "Open",
     pausePreset: "Pause an AI preset for a while",
+    textSize: "Question text size",
+    sizes: { s: "Small", m: "Normal", l: "Large", xl: "Larger" },
+    textPreview: "Who was the first Chief Minister of Kerala?",
+    textSizeHint: "For questions, options and explanations everywhere. Also in a test’s ⋯ menu. This phone only.",
+    keepAwake: "Keep the screen on",
+    awake: { tests: "During tests and PDF reading", always: "Whenever Lakshyam is open", never: "Never (follow the phone)" },
+    awakeHint: "Stops the screen dimming mid-question. Uses a little more battery while it’s on; it turns off when you leave the app.",
+    awakeNo: "This browser can’t keep the screen on.",
     kw: {
       goal: "daily goal target questions per day",
       name: "name greeting",
@@ -1710,7 +1810,10 @@ export default {
       erase: "erase delete all data",
       protect: "protect storage persistent space",
       update: "update version check new",
-      timetable: "timetable plan schedule calendar"
+      timetable: "timetable plan schedule calendar",
+      textSize: "text size font bigger smaller large small zoom read",
+      keepAwake: "screen on awake sleep dim lock timeout",
+      drive: "google drive cloud backup automatic restore online"
     }
   }
 };

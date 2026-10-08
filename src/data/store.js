@@ -159,32 +159,42 @@ export function counts() {
 }
 
 /** Everything that goes into a backup, as plain arrays. */
+/* Settings that belong to this phone only and never leave it (not in backups or safety
+   copies): the Google Drive link (account, this phone's name and folder). */
+export const PHONE_ONLY_SETTINGS = ["drive"];
+
 export function exportRecords() {
-  return Object.fromEntries(BACKUP_STORES.map((name) => [name, [...cache[name].values()]]));
+  return Object.fromEntries(BACKUP_STORES.map((name) => [name, [...cache[name].values()]
+    .filter((r) => name !== "settings" || !PHONE_ONLY_SETTINGS.includes(r.id))]));
 }
 
 /* ---------- bulk writes (import / restore) ---------- */
 
 /** mode "replace": wipe the backed-up stores first. mode "merge": update matching
     IDs and keep everything else. One transaction: all or nothing. */
-const DEVICE_SETTINGS = ["appLang", "theme"];
+const DEVICE_SETTINGS = ["appLang", "theme", "textSize", "keepAwake", ...PHONE_ONLY_SETTINGS];
 
 export async function commitRecords(records, mode) {
   const changes = {};
+  let keptDevice = 0;
   BACKUP_STORES.forEach((name) => {
     let put = records[name] || [];
+    // Another phone's Drive link must never arrive with a file.
+    if (name === "settings") put = put.filter((r) => !PHONE_ONLY_SETTINGS.includes(r.id));
     // On merge, never overwrite the user's current settings (e.g. chosen syllabus).
     if (mode === "merge" && name === "settings") put = put.filter((r) => !cache.settings.has(r.id));
     // This phone's own choices (app language) survive a replace unless the file has them.
     if (mode === "replace" && name === "settings") {
       const keep = DEVICE_SETTINGS.map((id) => cache.settings.get(id)).filter((r) => r && !put.some((x) => x.id === r.id));
       put = [...put, ...keep];
+      keptDevice = keep.length;
     }
     if (mode === "replace" || put.length) changes[name] = { clear: mode === "replace", put };
   });
   await db.writeAll(changes);
   await load();
   notify();
+  return { keptDevice };
 }
 
 /** Re-reads counts straight from the database and compares them with what

@@ -19,6 +19,7 @@ export const SETTINGS_INDEX = [
   item("name", "today", "settings.name"),
 
   item("theme", "look", "setx.theme"),
+  item("textSize", "look", "setx.textSize"),
   item("appLang", "look", "settings.appLang"),
   item("names", "look", "names.setting"),
   item("namesFile", "look", "names.import"),
@@ -29,6 +30,7 @@ export const SETTINGS_INDEX = [
   item("listView", "tests", "view.title"),
   item("listLayout", "tests", "setx.lists"),
   item("resultLayout", "tests", "setx.resultLayout"),
+  item("keepAwake", "tests", "setx.keepAwake"),
   item("difficulty", "tests", "settings.difficulty"),
   item("diffTimes", "tests", "diffTimes.title", "diff-times"),
 
@@ -46,6 +48,7 @@ export const SETTINGS_INDEX = [
   item("aiOnCards", "ai", "ai.onCards"),
   item("removeKeys", "ai", "ai.removeAll", "ai-settings"),
 
+  item("drive", "data", "drive.title"),
   item("backup", "data", "settings.backupNow"),
   item("restore", "data", "settings.restore"),
   item("importOld", "data", "settings.importOld"),

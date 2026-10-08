@@ -230,6 +230,7 @@ export const progressScreen = {
         <button type="button" class="pill" data-action="sort">${t(`stats.sort.${subjectSort}`)} ▾</button></div>
       <div class="rows">${rows.map((r) => accRow(r, { title: nameHtml(store.subject(r.id)), sub: rowSub(r), action: "subject" }))}</div>` : ""}
       <div class="rows links">
+        <button type="button" class="row" data-action="go" data-to="syllabus-map"><span class="row-main"><span class="row-title">🗺 ${t("map.title")}</span><span class="row-sub">${t("map.rowSub")}</span></span>${chev}</button>
         <button type="button" class="row" data-action="go" data-to="stats-topics"><span class="row-main"><span class="row-title">${t("stats.allTopics")}</span></span>${chev}</button>
         <button type="button" class="row" data-action="go" data-to="history"><span class="row-main"><span class="row-title">${t("history.title")}</span><span class="row-sub">${t("common.tests", { n: history })}</span></span>${chev}</button>
         <button type="button" class="row" data-action="go" data-to="stats-tables"><span class="row-main"><span class="row-title">${t("stats.tables")}</span><span class="row-sub">${t("stats.tablesSub")}</span></span>${chev}</button>

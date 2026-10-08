@@ -1060,3 +1060,70 @@ table.report td { text-align: right; font-weight: 600; padding: 4px 0; }
 .cd-preview { padding: 12px; border: 1px dashed var(--line); border-radius: var(--radius-panel); background: var(--bg); }
 .cd-preview .exam-block, .cd-preview > .exam-card { margin: 0; }
 .cd-preview > * + * { margin-top: 10px; }
+
+/* ======================= 1.4: Today's session, a tidier Today ======================= */
+.session-card {
+  display: grid; gap: 8px; padding: 16px; border-radius: var(--radius-panel);
+  background: var(--surface); border: 1px solid var(--brand); box-shadow: inset 0 3px 0 var(--brand);
+}
+.session-card h2 { font-size: 1.25rem; }
+.ss-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.ss-list li { display: flex; gap: 10px; align-items: baseline; }
+.ss-ic { flex: none; width: 1.4em; text-align: center; }
+.session-card .btn.wide { margin-top: 4px; }
+.link.inline { min-height: 0; padding: 0; display: inline; }
+.today-strip { display: grid; gap: 14px; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius-panel); background: var(--surface); }
+.today-strip .goal-ring { width: 88px; height: 88px; }
+.today-strip .habits { padding-top: 12px; border-top: 1px solid var(--line); }
+.today-strip .goal:only-child, .today-strip .habits:only-child { padding-top: 0; border-top: 0; }
+.streak { white-space: nowrap; }
+
+/* ======================= 1.4: question text size ======================= */
+:root { --q-scale: 1; }
+:root[data-text="s"] { --q-scale: 0.92; }
+:root[data-text="l"] { --q-scale: 1.12; }
+:root[data-text="xl"] { --q-scale: 1.26; }
+.qcard[data-qid] > .qtext { font-size: calc(1.0625rem * var(--q-scale)); }
+:root[data-theme="paper"] .qcard[data-qid] > .qtext { font-size: calc(1.125rem * var(--q-scale)); }
+.opt-text, .qcard[data-qid] .explain .qtext { font-size: calc(1rem * var(--q-scale)); }
+
+/* Crossing out options in a test */
+.tcard-tools { display: flex; flex-wrap: wrap; gap: 8px; }
+.options li.struck .opt-text { text-decoration: line-through; text-decoration-thickness: 2px; color: var(--muted); }
+.options li.struck .opt-letter { opacity: 0.45; }
+.options li.struck { opacity: 0.8; }
+.guess.cross.on { border-style: solid; border-color: var(--brand); color: var(--text); background: var(--brand-soft); }
+.tcard .opt-btn { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.text-preview { padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--q-text); font-size: calc(1.0625rem * var(--q-scale)); font-weight: 500; }
+
+/* ======================= 1.4: Syllabus map ======================= */
+.map-page { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
+.map-summary { display: grid; gap: 8px; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius-panel); background: var(--surface); }
+.map-big b { font-size: 2rem; font-weight: 700; margin-right: 4px; }
+.map-bar { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--c-track); gap: 2px; }
+.map-bar > span { display: block; }
+.map-filters .pill { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; flex: none; }
+.mt-good { --mt: var(--c-good); } .mt-fair { --mt: var(--c-fair); } .mt-weak { --mt: var(--c-weak); } .mt-none { --mt: var(--c-track); }
+.map-bar > span, .swatch { background: var(--mt); }
+.map-bar > .mt-none, .swatch.mt-none { background: color-mix(in srgb, var(--muted) 35%, transparent); }
+.map-group { display: grid; gap: 8px; }
+.map-subject { font-size: 1rem; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.map-subject .hint { font-weight: 400; font-size: 0.8125rem; }
+.map-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 6px; }
+.map-tile {
+  display: grid; align-content: space-between; gap: 6px; min-height: 76px; padding: 8px 9px; text-align: left; font: inherit; color: var(--text);
+  border: 1px solid color-mix(in srgb, var(--mt) 55%, transparent); border-radius: 10px;
+  background: color-mix(in srgb, var(--mt) 16%, var(--surface));
+}
+.map-tile.mt-none { background: var(--surface); border: 1px dashed var(--line); }
+.map-tile.few { border-style: dashed; }
+.mt-name { font-size: 0.8125rem; line-height: 1.25; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.mt-foot { display: flex; justify-content: space-between; align-items: baseline; gap: 4px; font-size: 0.75rem; color: var(--muted); }
+.mt-foot b { font-size: 0.9375rem; color: var(--text); }
+.map-tile.mt-none .mt-foot b { font-size: 0.75rem; font-weight: 500; color: var(--muted); }
+
+/* ======================= 1.4: Google Drive backup ======================= */
+.drive-box.on { border-color: color-mix(in srgb, var(--brand) 40%, var(--line)); }
+.danger-text { color: var(--danger); }
+.drive-row { border: 1px solid var(--brand); border-radius: 12px; padding: 10px 12px; background: var(--brand-soft); }

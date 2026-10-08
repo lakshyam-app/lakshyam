@@ -4,7 +4,7 @@
      (Other apps on the same site keep their caches.)
    - A new version waits until the user taps "Refresh" in the app. */
 
-const VERSION = "1.3.0";
+const VERSION = "1.4.0";
 const PREFIX = "lakshyam-";
 const SHELL_CACHE = `${PREFIX}shell-${VERSION}`;
 // The PDF reader is large (about 1.4 MB), so it is not downloaded with the app.
@@ -50,6 +50,7 @@ const SHELL_FILES = [
   "./src/ai/pdf-prompts.js",
   "./src/ai/presets.js",
   "./src/ai/prompts.js",
+  "./src/cloud/drive.js",
   "./src/core/charts.js",
   "./src/core/clipboard.js",
   "./src/core/dialogs.js",
@@ -70,6 +71,7 @@ const SHELL_FILES = [
   "./src/core/theme.js",
   "./src/core/toast.js",
   "./src/core/version.js",
+  "./src/core/wake.js",
   "./src/data/backup.js",
   "./src/data/db.js",
   "./src/data/diary.js",
@@ -79,6 +81,7 @@ const SHELL_FILES = [
   "./src/data/ml-names.js",
   "./src/data/mutations.js",
   "./src/data/paper-json.js",
+  "./src/data/review.js",
   "./src/data/schema.js",
   "./src/data/snapshots.js",
   "./src/data/store.js",
@@ -91,6 +94,7 @@ const SHELL_FILES = [
   "./src/domain/exams.js",
   "./src/domain/habits.js",
   "./src/domain/insights.js",
+  "./src/domain/review.js",
   "./src/domain/scoring.js",
   "./src/domain/stats.js",
   "./src/domain/study.js",
@@ -114,6 +118,7 @@ const SHELL_FILES = [
   "./src/features/pdfs/pdfs.js",
   "./src/features/progress/data.js",
   "./src/features/progress/drill.js",
+  "./src/features/progress/map.js",
   "./src/features/progress/progress.js",
   "./src/features/progress/tables.js",
   "./src/features/question/card.js",
@@ -123,6 +128,7 @@ const SHELL_FILES = [
   "./src/features/question/pager.js",
   "./src/features/search/search.js",
   "./src/features/settings/difficulty-times.js",
+  "./src/features/settings/drive.js",
   "./src/features/settings/names.js",
   "./src/features/settings/settings-index.js",
   "./src/features/settings/settings.js",
@@ -136,6 +142,7 @@ const SHELL_FILES = [
   "./src/features/timetable/tt-edit.js",
   "./src/features/timetable/tt-new.js",
   "./src/features/today/countdown.js",
+  "./src/features/today/session.js",
   "./src/features/today/today.js",
   "./src/main.js",
   "./src/pdf/pdf-jobs.js",
@@ -151,6 +158,7 @@ const SHELL_FILES = [
   "./src/strings/ml-6.js",
   "./src/strings/ml-7.js",
   "./src/strings/ml-8.js",
+  "./src/strings/ml-9.js",
   "./src/strings/ml.js"
 ];
 

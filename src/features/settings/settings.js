@@ -8,7 +8,8 @@ import { isPersisted, requestPersistence, usage, formatBytes } from "../../core/
 import { checkForUpdate } from "../../core/sw-client.js";
 import { toast } from "../../core/toast.js";
 import { go } from "../../core/router.js";
-import { THEMES } from "../../core/theme.js";
+import { THEMES, TEXT_SIZES } from "../../core/theme.js";
+import { AWAKE_MODES, awakeSupported } from "../../core/wake.js";
 import { openSheet, updateSheet, closeSheet, setSheetDismissible } from "../../core/sheet.js";
 import * as store from "../../data/store.js";
 import { downloadBackup } from "../../data/backup.js";
@@ -25,6 +26,7 @@ import { openStatsSettings } from "../progress/progress.js";
 import { can } from "../../core/entitlements.js";
 import * as presets from "../../ai/presets.js";
 import { header, backHandler } from "../library/library.js";
+import { driveBlock, driveHandlers, driveConfig } from "./drive.js";
 import { SETTINGS_INDEX, CATEGORIES, CATEGORY_ICON, searchSettings } from "./settings-index.js";
 
 const when = (ms) => new Date(ms).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
@@ -157,6 +159,12 @@ const PAGES = {
           <span class="tp-swatch tp-${v}" aria-hidden="true"><i></i><i></i></span><span class="tp-name">${t(`setx.themes.${v}`)}</span></button>`)}</div>
         <p class="hint">${t("setx.themeHint")}</p>
       </div>
+      <div class="group" data-set="textSize">
+        <h3>${t("setx.textSize")}</h3>
+        ${seg(TEXT_SIZES.map((v) => ({ action: "text-size", v, on: store.setting("textSize", "m") === v, label: t(`setx.sizes.${v}`) })))}
+        <p class="text-preview">${t("setx.textPreview")}</p>
+        <p class="hint">${t("setx.textSizeHint")}</p>
+      </div>
       <div class="group" data-set="appLang">
         <h3>${t("settings.appLang")}</h3>
         ${seg(LANGUAGES.map((l) => ({ action: "app-lang", v: l.code, on: locale() === l.code, label: l.name, lang: l.code })))}
@@ -190,6 +198,12 @@ const PAGES = {
         <p class="field-label" data-set="resultLayout">${t("setx.resultLayout")}</p>
         ${seg([{ action: "r-layout", v: "", on: !resLayout, label: t("setx.resultSame") }, ...["scroll", "single"].map((v) => ({ action: "r-layout", v, on: resLayout === v, label: t(`layout.${v}`) }))])}
       </div>
+      <div class="group" data-set="keepAwake">
+        <h3>${t("setx.keepAwake")}</h3>
+        <div class="menu">${AWAKE_MODES.map((v) => html`<button type="button" class="menu-item ${store.setting("keepAwake", "tests") === v ? "is-current" : ""}" data-action="keep-awake" data-v="${v}">
+          <span class="row-main"><span>${t(`setx.awake.${v}`)}</span></span>${store.setting("keepAwake", "tests") === v ? html`<span class="tick">✓</span>` : ""}</button>`)}</div>
+        <p class="hint">${awakeSupported() ? t("setx.awakeHint") : t("setx.awakeNo")}</p>
+      </div>
       <div class="group">
         ${sw("difficulty", "difficultyEnabled", t("settings.difficulty"), t("settings.difficultyHint"))}
         ${diffOn ? html`<p class="hint">${autoTimesLine()}</p>
@@ -221,7 +235,8 @@ const PAGES = {
   },
 
   data() {
-    return html`<div class="group">${dataBlock()}</div>
+    return html`${store.isEmpty() ? "" : driveBlock()}
+      <div class="group">${dataBlock()}</div>
       <div class="group" data-set="protect">
         <h3>${t("settings.sectionStorage")}</h3>
         <div id="storageBlock"></div>
@@ -250,7 +265,7 @@ function catSubs(aiSummary) {
     progress: t("setx.catSub.progress", { basis: t(`stats.basis.${basis}`) }),
     syllabi: t("setx.catSub.syllabi", { n: store.syllabi().length, current: syl?.name || "–" }),
     ai: aiSummary,
-    data: last ? t("settings.lastBackup", { when: when(last) }) : t("settings.neverBackedUp"),
+    data: `${driveConfig().connected ? "☁ " : ""}${last ? t("settings.lastBackup", { when: when(last) }) : t("settings.neverBackedUp")}`,
     about: t("setx.catSub.about", { version: APP_VERSION })
   };
 }
@@ -322,6 +337,7 @@ function handlers(container, goalNow) {
   return {
     ...backHandler,
     ...namesHandlers,
+    ...driveHandlers,
     cat: (el) => go("settings", { section: el.dataset.id }),
     hit: (el) => openHit(el.dataset.id),
     import: startImport,
@@ -333,6 +349,8 @@ function handlers(container, goalNow) {
     "ai-settings": () => openAiSettings(),
     "app-lang": (el) => store.setSetting("appLang", el.dataset.v),
     theme: (el) => store.setSetting("theme", el.dataset.v),
+    "text-size": (el) => store.setSetting("textSize", el.dataset.v),
+    "keep-awake": (el) => store.setSetting("keepAwake", el.dataset.v),
     goal: (el) => store.setSetting("dailyGoal", Number(el.dataset.n)),
     "goal-custom": () => runFlow(async () => {
       const v = await askText({ title: t("settings.goal"), hint: t("settings.goalHint"), value: String(goalNow), inputMode: "numeric" });

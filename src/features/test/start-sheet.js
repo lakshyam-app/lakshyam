@@ -16,13 +16,14 @@ import * as mut from "../../data/mutations.js";
 import * as tests from "../../data/tests.js";
 import { isGradable, pickQuestions, sampleRandom, shuffle, suggestedMinutes, distributeProportionally, clock } from "../../domain/testing.js";
 import { answerRecords, weakTopics } from "../../domain/stats.js";
+import { dueMistakes } from "../../data/review.js";
 import { flaggedQuestions, stillWrongQuestions } from "../library/banks.js";
 import { pickExams } from "../question/exam-filter.js";
 
 const SIZES = [10, 25, 50, 100];
 const WEAK_TOPICS = 8;
 
-const defaults = () => ({ timerOn: false, layout: "single", count: 25, ...(store.setting("testDefaults") || {}) });
+export const defaults = () => ({ timerOn: false, layout: "single", count: 25, ...(store.setting("testDefaults") || {}) });
 
 /**
  * preset (optional): { scope: { type, ref, label }, questions, keepOrder }
@@ -33,7 +34,7 @@ export async function openStartTest(preset = null) {
 }
 
 /** If a test is unfinished, asks to continue it or discard it. True = OK to start a new one. */
-async function clearForNewTest() {
+export async function clearForNewTest() {
   const active = tests.activeTest();
   if (!active) return true;
   const choice = await runFlow(() => chooseAction({ title: t("start.unfinishedTitle"), sub: active.scope?.label, items: [
@@ -87,6 +88,7 @@ function startSheet(preset) {
   function pool() {
     switch (s.what) {
       case "listing": return preset.questions.filter(isGradable);
+      case "mistakes": return dueMistakes(syllabus.id);
       case "wrong": return stillWrongQuestions(syllabus.id).filter(isGradable);
       case "flagged": return flaggedQuestions(syllabus.id).filter(isGradable);
       case "bank": { const b = store.byId("sets", s.bankId); return b ? b.questionIds.map((id) => store.question(id)).filter((q) => q && isGradable(q)) : []; }
@@ -137,6 +139,7 @@ function startSheet(preset) {
       return out.slice(0, n);
     }
     const n = wanted(list.length);
+    if (s.what === "mistakes") return list.slice(0, n); // most overdue first
     return s.what === "listing" ? pickQuestions(list, n, { keepOrder: !s.mixed }) : (n >= list.length ? shuffle(list) : sampleRandom(list, n));
   }
 
@@ -161,6 +164,7 @@ function startSheet(preset) {
   function whatPills() {
     const items = [
       preset ? { id: "listing", label: t(`start.what.${preset.scope.type}`, {}), n: preset.questions.filter(isGradable).length } : null,
+      { id: "mistakes", label: t("start.what.mistakes"), n: dueMistakes(syllabus.id).length },
       { id: "mock", label: t("start.what.mock") },
       { id: "weak", label: t("start.what.weak") },
       { id: "wrong", label: t("start.what.wrong"), n: stillWrongQuestions(syllabus.id).filter(isGradable).length },
@@ -227,6 +231,7 @@ function startSheet(preset) {
       return html`<p class="hint">${t("start.hint.weak", { n: topics.length })}</p>
         <p class="examples">${topics.map((w) => `${nameLabel(w.topic)} (${nameLabel(store.subject(w.topic.subjectId))})`).join(" · ")}</p>`;
     }
+    if (s.what === "mistakes") return html`<p class="hint">${size ? t("start.hint.mistakes") : t("start.hint.mistakesNone")}</p>`;
     if (s.what === "wrong") return html`<p class="hint">${size ? t("start.hint.wrong") : t("start.hint.wrongNone")}</p>`;
     if (s.what === "flagged") return html`<p class="hint">${size ? t("start.hint.flagged") : t("start.hint.flaggedNone")}</p>`;
     if (s.what === "listing" && !size) return html`<p class="warn-box">${t("start.noGradable")}</p>`;

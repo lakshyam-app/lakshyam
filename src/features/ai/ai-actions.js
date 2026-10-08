@@ -206,6 +206,9 @@ export async function guessCoach() {
   const byTopic = [...byT.entries()].map(([id, rs]) => ({ id, g: guessSummary(rs, syllabus.marking) })).filter((x) => x.g.n)
     .sort((a, b) => a.g.net - b.g.net).slice(0, 12).map((x) => `${tName(x.id)}: guessed ${x.g.n}, right ${x.g.right}, wrong ${x.g.wrong}, net ${x.g.net}`);
   const byDiff = ["E", "M", "D"].map((d) => { const g = records.filter((r) => r.guessed && isAnswered(r) && r.difficulty === d); return g.length ? `${t(`question.difficulty.${d}`)}: ${g.filter((r) => r.isCorrect).length}/${g.length} right` : null; }).filter(Boolean);
+  // Guesses after crossing out options (tests from 1.4 on record how many were crossed out).
+  const byStruck = [[0, 1], [2, 9]].map(([lo, hi]) => { const g = records.filter((r) => r.guessed && isAnswered(r) && r.struck !== undefined && r.struck >= lo && r.struck <= hi); return g.length ? `${lo === 0 ? "0–1" : "2+"} options crossed out: ${g.filter((r) => r.isCorrect).length}/${g.length} right` : null; }).filter(Boolean);
+  if (byStruck.length) byDiff.push(...byStruck.map((x) => `Elimination — ${x}`));
   const recentWrong = records.filter((r) => r.guessed && isAnswered(r) && !r.isCorrect).slice(-8)
     .map((r) => { const q = store.question(r.questionId); return q ? `- [${tName(q.topicId)}] ${q.text.slice(0, 110)}` : null; }).filter(Boolean);
   await askInSheet({

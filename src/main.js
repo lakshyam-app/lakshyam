@@ -2,7 +2,8 @@
    registers screens and the service worker. */
 import { html, onAction } from "./core/dom.js";
 import { t, setLocale } from "./core/i18n.js";
-import { applyTheme } from "./core/theme.js";
+import { applyTheme, applyTextSize } from "./core/theme.js";
+import { setAwake, wantAwake } from "./core/wake.js";
 import { registerScreen, listTabs, startRouter, rerender, go, tabFor } from "./core/router.js";
 import { registerServiceWorker } from "./core/sw-client.js";
 import { requestPersistence } from "./core/storage-health.js";
@@ -12,6 +13,8 @@ import * as store from "./data/store.js";
 
 import { todayScreen } from "./features/today/today.js";
 import { examsScreen } from "./features/today/countdown.js";
+import { mapScreen } from "./features/progress/map.js";
+import { autoDriveBackup } from "./features/settings/drive.js";
 import { libraryScreen, subjectScreen, subjectAllScreen, topicScreen, paperScreen } from "./features/library/library.js";
 import { bankScreen, bankAddScreen } from "./features/library/banks.js";
 import { searchScreen } from "./features/search/search.js";
@@ -31,7 +34,7 @@ import { notesScreen } from "./features/notes/notes.js";
 import { settingsScreen } from "./features/settings/settings.js";
 
 [todayScreen, libraryScreen, subjectScreen, subjectAllScreen, topicScreen, paperScreen, bankScreen, bankAddScreen,
-  searchScreen, aiHubScreen, pdfsScreen, pdfScreen, pdfPageScreen, pdfMakeScreen, insightsScreen, insightTopicScreen, timetableScreen, ttListScreen, ttPlansScreen, ttPlanScreen, ttScheduleScreen, ttNewScreen, ttReviewScreen, diaryScreen, progressScreen, historyScreen, testsScreen, statsSubjectScreen, statsTopicScreen, statsTopicsScreen, statsTablesScreen, testScreen, resultScreen, notesScreen, settingsScreen, examsScreen]
+  searchScreen, aiHubScreen, pdfsScreen, pdfScreen, pdfPageScreen, pdfMakeScreen, insightsScreen, insightTopicScreen, timetableScreen, ttListScreen, ttPlansScreen, ttPlanScreen, ttScheduleScreen, ttNewScreen, ttReviewScreen, diaryScreen, progressScreen, historyScreen, testsScreen, statsSubjectScreen, statsTopicScreen, statsTopicsScreen, statsTablesScreen, testScreen, resultScreen, notesScreen, settingsScreen, examsScreen, mapScreen]
   .forEach(registerScreen);
 
 function renderTabbar(activeId) {
@@ -84,6 +87,7 @@ async function boot() {
     await store.load();
     setLocale(store.setting("appLang", "en"));
     applyTheme(store.setting("theme", "system"));
+    applyTextSize(store.setting("textSize", "m"));
     document.title = t("app.name");
   } catch {
     screen.innerHTML = html`<section class="empty"><p>${t("app.dbError")}</p></section>`;
@@ -96,15 +100,22 @@ async function boot() {
     "open-syllabus": openSyllabusPicker
   });
 
+  let screenNow = "today";
+  const awake = () => setAwake(wantAwake(store.setting("keepAwake", "tests"), screenNow));
   startRouter(screen, (activeId) => {
+    screenNow = activeId;
     renderTabbar(activeId);
     renderTopbar(activeId);
+    awake();
   });
   // Any data change (import, restore, syllabus switch) redraws the screen.
-  store.onChange(() => { setLocale(store.setting("appLang", "en")); applyTheme(store.setting("theme", "system")); rerender(); });
+  store.onChange(() => { setLocale(store.setting("appLang", "en")); applyTheme(store.setting("theme", "system")); applyTextSize(store.setting("textSize", "m")); awake(); rerender(); });
 
   registerServiceWorker();
   requestPersistence();
+  // Google Drive backup when due (quietly, only if Google's sign-in is still valid).
+  setTimeout(autoDriveBackup, 4000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) setTimeout(autoDriveBackup, 1500); });
 }
 
 boot();

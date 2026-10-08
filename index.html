@@ -8,9 +8,9 @@
   <meta name="theme-color" content="#F6F7F5" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#0F1513" media="(prefers-color-scheme: dark)">
   <meta name="color-scheme" content="light dark">
-  <!-- Only this app's own files and the AI providers the user configures are allowed. -->
+  <!-- Only this app's own files, the AI providers the user configures, and Google's sign-in (for Drive backup) are allowed. -->
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https:; worker-src 'self'; object-src 'none'; base-uri 'self'">
+        content="default-src 'self'; img-src 'self' data: blob: https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://accounts.google.com; script-src 'self' https://accounts.google.com/gsi/client; frame-src https://accounts.google.com; connect-src 'self' https:; worker-src 'self'; object-src 'none'; base-uri 'self'">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/icon-192.png">

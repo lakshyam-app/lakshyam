@@ -18,6 +18,7 @@ import { pickExams } from "./exam-filter.js";
 import { mountCards, forgetPlace } from "./pager.js";
 import { can } from "../../core/entitlements.js";
 import { aiHelp } from "../ai/ai-actions.js";
+import { inReview, stopReviewing } from "../../data/review.js";
 
 const examsBy = new Map();   // listing key → Set of included paper IDs (none = all)
 const sortBy = new Map();    // listing key → "none" | "diff-asc" | "diff-desc"
@@ -167,12 +168,15 @@ async function chooseDifficulty(q, quiet) {
 export async function questionMenu(q, { bank, quiet, removeCard, selected }) {
   const state = store.questionState(q.id);
   const deleted = q.status === "deleted_by_psc";
+  const syl = store.currentSyllabus();
+  const rev = syl ? inReview(syl.id, q.id) : null;
   const id = await chooseAction({
     title: q.number ? t("question.number", { n: q.number }) : t("question.question"),
     sub: [nameLabel(store.subject(q.subjectId)), nameLabel(store.topic(q.topicId))].filter(Boolean).join(" › "),
     items: [
       can("ai") ? { id: "ai", label: Number.isInteger(selected) && selected !== q.answerIndex ? `🤖 ${t("ai.explainMistake")}` : `🤖 ${t("ai.help")}` } : null,
       { id: "flag", label: state?.flagged ? t("question.unflag") : t("question.flag") },
+      rev ? { id: "unreview", label: t("mreview.stop"), sub: t("mreview.stopHint") } : null,
       { id: "difficulty", label: t("question.setDifficulty") },
       { id: "answer", label: t("question.setAnswer") },
       { id: "edit", label: t("question.edit") },
@@ -187,6 +191,7 @@ export async function questionMenu(q, { bank, quiet, removeCard, selected }) {
   switch (id) {
     case "ai": aiHelp(q, { selected }); return; // opens its own sheet once this menu has closed
     case "flag": return quiet(() => mut.setFlag(q.id, !state?.flagged), q.id);
+    case "unreview": await quiet(() => stopReviewing(q.id), q.id); toast(t("mreview.stopped")); return;
     case "difficulty": return chooseDifficulty(q, quiet);
     case "answer": {
       const pick = await chooseAction({ title: t("question.setAnswer"), items: [

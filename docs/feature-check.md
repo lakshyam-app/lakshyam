@@ -120,4 +120,4 @@ imported, in English and Malayalam.
 
 ## New in Lakshyam (not in the old app)
 
-Today screen with Quick 10 and daily goal · exam countdown · timetable (any days and hours, up to 6 months, calendar export) · study diary (automatic checklist, coloured days, day review with faces, weekly / monthly AI reports) · Smart insights · safety copies with Undo · app in Malayalam.
+Today screen with Quick 10 and daily goal · exam countdown · timetable (any days and hours, up to 6 months, calendar export) · study diary (automatic checklist, coloured days, day review with faces, weekly / monthly AI reports) · Smart insights · safety copies with Undo · app in Malayalam · themes (Phone / Light / Dark / Paper) · Settings search · up to 20 exam countdowns · mistake review on a schedule · Today's session · Google Drive backup · syllabus map · question text size · crossing out options · screen kept on in tests.

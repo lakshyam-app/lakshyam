@@ -117,6 +117,7 @@ export function gradeTest(questions, run, marking, difficultyOf = () => null) {
     return {
       questionId: q.id, selected, correct: graded ? q.answerIndex : null, isCorrect, graded,
       guessed: Boolean(run.guesses?.[q.id]), timeMs: ms > 0 ? Math.round(ms) : null,
+      struck: Array.isArray(run.struck?.[q.id]) ? run.struck[q.id].filter((k) => k !== selected).length : 0,
       subjectId: q.subjectId, topicId: q.topicId, difficulty: difficultyOf(q)
     };
   });

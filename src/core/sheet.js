@@ -44,7 +44,9 @@ export function openSheet(content, handlers = {}, { dismissible = true, label = 
   const dialog = backdrop.querySelector(".sheet");
   dialog.tabIndex = -1;
   setTimeout(() => { if (current && !dialog.contains(document.activeElement)) dialog.focus({ preventScroll: true }); }, 30);
-  backdrop.addEventListener("keydown", (event) => { if (event.key === "Escape" && current?.dismissible) closeSheet(); });
+  // On the document, so it still works after the sheet's content is redrawn (focus falls back to <body>).
+  current.onKey = (event) => { if (event.key === "Escape" && current?.dismissible) closeSheet(); };
+  document.addEventListener("keydown", current.onKey);
   return body;
 }
 
@@ -72,8 +74,9 @@ export function setSheetDismissible(value) {
 export function closeSheet(fromPopState = false) {
   const root = document.getElementById("sheetRoot");
   if (!current) { root.replaceChildren(); return; }
-  const { onPop, onClose, returnTo } = current;
+  const { onPop, onClose, returnTo, onKey } = current;
   current = null;
+  if (onKey) document.removeEventListener("keydown", onKey);
   window.removeEventListener("popstate", onPop);
   pushWaiting = false;
   if (!fromPopState && history.state?.sheet) {

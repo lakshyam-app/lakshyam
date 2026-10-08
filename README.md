@@ -50,6 +50,9 @@ Presets fall back to the next one if one fails, and can be paused.
 
 ### Keeping your data safe
 
+- Settings → Backup & data → **Google Drive backup**: connect once; backups go to *Lakshyam backups/<phone name>* in your own Drive
+  (only files Lakshyam makes are visible to it). The newest 10 copies per phone are kept; restore from the same screen.
+
 - Settings → Backup → **Export** saves everything to one file (a reminder appears if you haven't in a while).
 - Big changes (imports, restores, start fresh, merges, difficulty re-runs) keep a **safety copy** first:
   Settings → Undo.
@@ -98,6 +101,7 @@ src/domain/                                pure logic, no screen code: scoring, 
                                            timetable, diary, insights, AI instructions
 src/ai/                                    AI client (presets, fallback, pausing) and prompts
 src/pdf/                                   Study PDFs: text tools, storage, reader, AI jobs
+src/cloud/                                 Google Drive backup client
 src/features/<name>/                       one folder per area: today, library, question, test, progress,
                                            insights, timetable, diary, notes, search, ai, pdfs, import, settings
 src/strings/                               interface text: en.js, ml.js (ml-1 … ml-6); missing ml text falls back to English
@@ -114,7 +118,8 @@ docs/                                      redesign brief, feature check, AI ins
   a copy of the theme choice so the first paint has the right colours (`src/core/theme-boot.js`).
 - Offline cache: names starting with `lakshyam-`; the service worker never touches other caches.
   The PDF reader cache (`lakshyam-pdfjs-…`) is kept across updates.
-- Private stores, never in backups: `aiPresets`, `pdfs`, `snapshots`, `importLog`.
+- Private stores, never in backups: `aiPresets`, `pdfs`, `snapshots`, `importLog`. The `drive` setting (this phone's Drive link) is also never exported.
+- Google sign-in: Google Identity Services token client, scope `drive.file`; the access token stays in memory only. Client ID in `src/cloud/drive.js` (public by design; no secret).
 
 ### Releasing
 
@@ -146,3 +151,4 @@ and [`docs/feature-check.md`](docs/feature-check.md) for where every old-app fea
 | 1.1 | Theme choice, clearer question cards (especially dark), Settings in groups with search |
 | 1.2 | Paper theme |
 | 1.3 | Up to 20 exam countdowns, with a choice of which and how Today shows them |
+| 1.4 | Mistake review (spaced repetition), Today's session, Google Drive backup, syllabus map, text size, crossing out options, screen kept on |

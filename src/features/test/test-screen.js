@@ -10,6 +10,7 @@ import { t } from "../../core/i18n.js";
 import { go } from "../../core/router.js";
 import { typesetMath } from "../../core/math.js";
 import { toast } from "../../core/toast.js";
+import { TEXT_SIZES } from "../../core/theme.js";
 import { runFlow, chooseAction, confirmAction } from "../../core/dialogs.js";
 import { richText, letterFor } from "../../domain/text.js";
 import { clock } from "../../domain/testing.js";
@@ -22,7 +23,8 @@ import { mountCards, setPlace } from "../question/pager.js";
 const SAVE_EVERY_MS = 10000;
 const PAUSE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>';
 const PLAY = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7z"/></svg>';
-let live = null; // { id, run } — the run in memory is the source of truth while the screen is open
+let live = null;
+let crossMode = false; // "Cross out" on: tapping an option crosses it out instead of choosing it // { id, run } — the run in memory is the source of truth while the screen is open
 
 const star = (on) => html`<svg viewBox="0 0 24 24" aria-hidden="true" class="${on ? "filled" : ""}"><path d="M12 3.8l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16.8l-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/></svg>`;
 
@@ -37,10 +39,16 @@ function testCard(q, i, run) {
       <span class="qcard-badges"><button type="button" class="icon-sm ${flagged ? "on" : ""}" data-action="flag" aria-pressed="${String(flagged)}" aria-label="${t("question.flag")}">${star(flagged)}</button></span>
     </header>
     <div class="qtext">${richText(q.text)}</div>
-    <ol class="options">${q.options.map((opt, k) => html`<li class="tappable ${sel === k ? "chosen" : ""}">
-      <button type="button" class="opt-btn" data-action="pick" data-k="${k}" aria-pressed="${String(sel === k)}">
-        <span class="opt-letter">${letterFor(k)}</span><span class="opt-text">${richText(opt)}</span></button></li>`)}</ol>
-    <button type="button" class="guess ${guessed ? "on" : ""}" data-action="guess" aria-pressed="${String(guessed)}">🤔 ${guessed ? t("test.guessOn") : t("test.guess")}</button>
+    <ol class="options">${q.options.map((opt, k) => {
+      const struck = sel !== k && (run.struck?.[q.id] || []).includes(k);
+      return html`<li class="tappable ${sel === k ? "chosen" : ""} ${struck ? "struck" : ""}">
+      <button type="button" class="opt-btn" data-action="pick" data-k="${k}" aria-pressed="${String(sel === k)}" ${struck ? html`aria-description="${t("test.struck")}"` : ""}>
+        <span class="opt-letter">${letterFor(k)}</span><span class="opt-text">${richText(opt)}</span></button></li>`;
+    })}</ol>
+    <div class="tcard-tools">
+      <button type="button" class="guess ${guessed ? "on" : ""}" data-action="guess" aria-pressed="${String(guessed)}">🤔 ${guessed ? t("test.guessOn") : t("test.guess")}</button>
+      <button type="button" class="guess cross ${crossMode ? "on" : ""}" data-action="cross" aria-pressed="${String(crossMode)}">✕ ${crossMode ? t("test.crossOn") : t("test.cross")}</button>
+    </div>
   </article>`;
 }
 
@@ -171,14 +179,53 @@ export const testScreen = {
       go("result", { id: done.id, fresh: "1" });
     }
 
+    function toggleStrike(id, k) {
+      run.struck ||= {};
+      const list = new Set(run.struck[id] || []);
+      if (list.has(k)) list.delete(k); else { list.add(k); if (run.answers[id] === k) delete run.answers[id]; }
+      if (list.size) run.struck[id] = [...list]; else delete run.struck[id];
+      refresh(id);
+    }
+    function unstrike(id, k) {
+      if (!run.struck?.[id]?.includes(k)) return;
+      run.struck[id] = run.struck[id].filter((x) => x !== k);
+      if (!run.struck[id].length) delete run.struck[id];
+    }
+    // Long-press an option to cross it out (works without "Cross out" mode).
+    let pressTimer = null;
+    let swallowUntil = 0; // the finger-lift click after a long-press must not also choose the option
+    let pressFired = false;
+    const onDown = (e) => {
+      const btn = e.target.closest(".opt-btn[data-action='pick']");
+      if (!btn) return;
+      pressTimer = setTimeout(() => {
+        btn.dataset.longpress = "1"; navigator.vibrate?.(15); btn.click();
+        pressFired = true;
+      }, 480);
+    };
+    const cancelPress = (e) => {
+      clearTimeout(pressTimer);
+      if (pressFired && e?.type === "pointerup") swallowUntil = Date.now() + 250;
+      pressFired = false;
+    };
+    body.addEventListener("pointerdown", onDown);
+    ["pointerup", "pointercancel", "pointerleave", "scroll"].forEach((ev) => body.addEventListener(ev, cancelPress, { passive: true }));
+    body.addEventListener("contextmenu", (e) => { if (e.target.closest(".opt-btn")) e.preventDefault(); });
+    body.addEventListener("click", (e) => {
+      if (e.isTrusted && Date.now() < swallowUntil && e.target.closest(".opt-btn")) { e.stopPropagation(); e.preventDefault(); swallowUntil = 0; }
+    }, true);
+
     onAction(container, {
       pick: (el) => {
         const id = el.closest("[data-qid]").dataset.qid; const k = Number(el.dataset.k);
         setActive(id);
+        if (crossMode || el.dataset.longpress === "1") { delete el.dataset.longpress; toggleStrike(id, k); return; }
+        unstrike(id, k);
         if (run.answers[id] === k) delete run.answers[id]; else run.answers[id] = k;
         refresh(id);
         if (Date.now() - lastSave > 2000) save();
       },
+      cross: () => { crossMode = !crossMode; body.querySelectorAll(".tcard").forEach((c) => view.refresh(c.dataset.qid)); if (crossMode) toast(t("test.crossHint")); },
       guess: (el) => {
         const id = el.closest("[data-qid]").dataset.qid;
         setActive(id);
@@ -194,9 +241,15 @@ export const testScreen = {
       submit: () => submit(false),
       menu: () => runFlow(async () => {
         const choice = await chooseAction({ title: attempt.scope?.label || t("test.title"), items: [
+          { id: "size", label: `Aa ${t("test.textSize")}`, sub: t(`setx.sizes.${store.setting("textSize", "m")}`) },
           { id: "leave", label: t("test.leave"), sub: t("test.leaveHint") },
           { id: "discard", label: t("test.discard"), danger: true }
         ] });
+        if (choice === "size") {
+          const cur = store.setting("textSize", "m");
+          const size = await chooseAction({ title: t("test.textSize"), items: TEXT_SIZES.map((v) => ({ id: v, label: t(`setx.sizes.${v}`), current: v === cur })) });
+          if (size && size !== cur) { await save(); await store.setSetting("textSize", size); }
+        }
         if (choice === "leave") { await save(); go("today"); }
         if (choice === "discard") {
           const ok = await confirmAction({ title: t("test.discardTitle"), body: t("test.discardBody"), confirmLabel: t("test.discard"), danger: true });

@@ -8,6 +8,8 @@ import { openSheet } from "../../core/sheet.js";
 import { toast } from "../../core/toast.js";
 import * as store from "../../data/store.js";
 import { countdownCard, tickCountdown } from "./countdown.js";
+import { sessionPlan, sessionCard, startSession } from "./session.js";
+import { driveTodayRow, driveHandlers, driveConfig } from "../settings/drive.js";
 import { timetableNow, nowHandlers, nowTick } from "../timetable/now-card.js";
 import { todayDiaryCard, diaryHandlers } from "../diary/diary.js";
 import { nameHtml, label as nameLabel } from "../../core/names.js";
@@ -79,9 +81,11 @@ function reasonFor(step, freq) {
   return [t("next.new"), inPapers].join(" · ");
 }
 
-function nextCard(syllabus, cand) {
-  if (!cand.steps.length) return "";
-  const step = cand.steps[stepIndex % cand.steps.length];
+function nextCard(syllabus, cand, skipTopicId = null) {
+  // The session already covers its focus topic, so suggest a different one here.
+  const steps = cand.steps.filter((x) => x.topicId !== skipTopicId);
+  if (!steps.length) return "";
+  const step = steps[stepIndex % steps.length];
   const topic = store.topic(step.topicId);
   return html`<article class="next-card">
     <p class="kicker">${t(`next.kicker.${step.kind}`)}</p>
@@ -92,7 +96,7 @@ function nextCard(syllabus, cand) {
       <button type="button" class="btn" data-action="quick" data-id="${topic.id}">▶ ${t("next.quick")}</button>
       <button type="button" class="btn btn-quiet" data-action="topic" data-id="${topic.id}">${t("next.open")} ›</button>
     </div>
-    ${cand.steps.length > 1 ? html`<button type="button" class="link" data-action="another">${t("next.another")}</button>` : ""}
+    ${steps.length > 1 ? html`<button type="button" class="link" data-action="another">${t("next.another")}</button>` : ""}
   </article>`;
 }
 
@@ -136,6 +140,7 @@ function habitsRow(today) {
 
 function backupReminder() {
   if (store.isEmpty()) return "";
+  if (driveConfig().connected) return driveTodayRow();
   const last = store.setting("lastBackupAt");
   if (last && daysBetween(last, Date.now()) < BACKUP_DAYS) return "";
   return html`<p class="backup-line"><span>${last ? t("today.backupAgo", { n: daysBetween(last, Date.now()) }) : t("today.backupNever")}</span>
@@ -164,26 +169,30 @@ export const todayScreen = {
     const showGoal = store.setting("showGoal", true) !== false;
     const active = tests.activeTest();
     const cand = studyCandidates(syllabus);
+    const plan = sessionPlan(syllabus, cand.steps);
     const nowSlot = timetableNow(); // the timetable's current block, if you use one
 
     container.innerHTML = html`<section class="today">
       <h1 class="greeting">${greet}</h1>
       ${store.setting("showCountdown", true) !== false ? countdownCard() : ""}
-      ${nowSlot}
-      ${todayDiaryCard(syllabus)}
-      ${showStreak ? habitsRow(today) : ""}
-      ${showGoal ? html`<div class="goal">
-        ${goalRing(done, target, celebrate)}
-        <div class="goal-text">
-          <p class="goal-label">${t("today.goalLabel")}</p>
-          <p class="goal-sub">${done >= target ? t("today.goalMet") : t("today.goalProgress", { done, goal: target })}</p>
-          <button type="button" class="link" data-action="goal">${t("today.changeGoal")}</button>
-        </div>
-      </div>` : ""}
       ${active ? html`<button type="button" class="continue-card" data-action="continue">
         <span class="row-main"><span class="row-title">${t("today.continue", { label: active.scope?.label || "" })}</span>
         <span class="row-sub">${progressText(active)}</span></span><span class="chev-txt">›</span></button>` : ""}
-      ${nextCard(syllabus, cand)}
+      ${sessionCard(plan)}
+      ${nowSlot}
+      ${todayDiaryCard(syllabus)}
+      ${showStreak || showGoal ? html`<div class="today-strip">
+        ${showGoal ? html`<div class="goal">
+          ${goalRing(done, target, celebrate)}
+          <div class="goal-text">
+            <p class="goal-label">${t("today.goalLabel")}</p>
+            <p class="goal-sub">${done >= target ? t("today.goalMet") : t("today.goalProgress", { done, goal: target })}</p>
+            <button type="button" class="link" data-action="goal">${t("today.changeGoal")}</button>
+          </div>
+        </div>` : ""}
+        ${showStreak ? habitsRow(today) : ""}
+      </div>` : ""}
+      ${nextCard(syllabus, cand, plan.focus?.topic?.id)}
       ${cand.due.length ? html`<button type="button" class="row due-row" data-action="due">
         <span class="row-main"><span class="row-title">${t("next.dueTitle", { n: cand.due.length })}</span>
         <span class="row-sub">${cand.due.slice(0, 3).map((d) => nameLabel(store.topic(d.topicId))).filter(Boolean).join(", ")}${cand.due.length > 3 ? "…" : ""}</span></span>
@@ -198,11 +207,14 @@ export const todayScreen = {
       another: () => { stepIndex++; store.touch(); },
       due: () => dueSheet(cand.due),
       continue: () => go("test"),
+      "session-start": () => startSession(syllabus, plan),
+      "session-cards": () => go("ai-hub", { kind: "cards" }),
       start: () => openStartTest(),
       goal: () => go("settings", { section: "today" }),
       exams: () => go("exams"),
       "exam-add": () => go("exams", { add: "1" }),
       ...nowHandlers,
+      ...driveHandlers,
       ...diaryHandlers,
       backup: async () => {
         await store.setSetting("lastBackupAt", Date.now());

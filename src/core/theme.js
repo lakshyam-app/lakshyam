@@ -10,3 +10,10 @@ export function applyTheme(choice) {
 }
 
 export const currentMode = () => (typeof document !== "undefined" && document.documentElement.dataset.theme) || "light";
+
+/* Question text size (this phone only): s · m (default) · l · xl. */
+export const TEXT_SIZES = ["s", "m", "l", "xl"];
+export function applyTextSize(size) {
+  if (typeof document === "undefined") return;
+  document.documentElement.dataset.text = TEXT_SIZES.includes(size) ? size : "m";
+}

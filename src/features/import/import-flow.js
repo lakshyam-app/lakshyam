@@ -27,6 +27,13 @@ export async function startImport() {
   reviewLegacy(file, plan);
 }
 
+/** Restore a Lakshyam backup that came from somewhere other than a file pick (Google Drive). */
+export function restoreFromJson(json, name, { warning = "" } = {}) {
+  openSheet(html`<p class="sheet-status">${t("import.checking")}</p>`, {}, { label: t("import.reviewTitle") });
+  if (!isLakshyamBackup(json)) return showMessage(t("import.notBackup"));
+  reviewRestore({ json, name }, warning);
+}
+
 function showMessage(message) {
   updateSheet(html`<p>${message}</p>
     <div class="sheet-actions"><button type="button" class="btn" data-action="close">${t("common.close")}</button></div>`,
@@ -138,7 +145,7 @@ function selectedMode(fromEl) {
 
 /* ---------- review: Lakshyam backup ---------- */
 
-function reviewRestore(file) {
+function reviewRestore(file, warning = "") {
   const parsed = readBackup(file.json);
   if (!parsed.ok) return showMessage(parsed.error === "newer-version" ? t("import.restoreNewer") : t("import.notBackup"));
   const r = parsed.report; const c = r.counts;
@@ -146,6 +153,7 @@ function reviewRestore(file) {
   updateSheet(html`
     <h2>${t("import.restoreTitle")}</h2>
     <p class="hint">${t("import.restoreFrom", { date: when })} · ${file.name}</p>
+    ${warning ? html`<p class="warn-box">${warning}</p>` : ""}
     ${!r.checksumOk || !r.countsMatch ? html`<p class="warn-box">${t("import.restoreDamaged")}</p>` : ""}
     ${r.skippedRecords ? html`<p class="warn-box">${t("import.restoreSkipped", { n: r.skippedRecords })}</p>` : ""}
     <table class="counts"><tbody>
@@ -182,7 +190,11 @@ async function commit({ kind, fileName, mode, records, expected, checks, summary
   let verification;
   try {
     await takeSnapshot(kind === "legacy" ? "import" : "restore");
-    await store.commitRecords(records, mode);
+    const { keptDevice } = await store.commitRecords(records, mode);
+    // This phone's own settings (theme, language, Drive link) are kept on a replace, so count them too.
+    if (mode === "replace" && "settings" in expectedCounts) {
+      expectedCounts.settings = (records.settings || []).filter((r) => !store.PHONE_ONLY_SETTINGS.includes(r.id)).length + keptDevice;
+    }
     verification = await store.verifyAgainst(expectedCounts, mode, checks);
     await logImport({ kind, fileName, mode, counts: expectedCounts, verified: verification.ok, ...summary });
   } catch (error) {
