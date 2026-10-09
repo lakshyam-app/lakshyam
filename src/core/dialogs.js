@@ -21,16 +21,16 @@ export async function runFlow(fn) {
   finally { closeSheet(); }
 }
 
-/** items: [{ id, label, sub?, danger?, current? }] → chosen id or null. */
+/** items: [{ id, label, sub?, danger?, current? } | { heading }] → chosen id or null. */
 export function chooseAction({ title, sub = "", items }) {
   return new Promise((resolve) => {
     const finish = once(resolve);
     show(html`<h2>${title}</h2>${sub ? html`<p class="hint">${sub}</p>` : ""}
-      <div class="menu">${items.filter(Boolean).map((it) => html`
+      <div class="menu">${items.filter(Boolean).map((it) => (it.heading ? html`<p class="menu-head">${it.heading}</p>` : html`
         <button type="button" class="menu-item ${it.danger ? "danger" : ""} ${it.current ? "is-current" : ""}" data-action="pick" data-id="${it.id}">
           <span class="row-main"><span>${it.label}</span>${it.sub ? html`<span class="row-sub">${it.sub}</span>` : ""}</span>
           ${it.current ? html`<span class="tick">✓</span>` : ""}
-        </button>`)}</div>`,
+        </button>`))}</div>`,
     { pick: (el) => finish(el.dataset.id) }, title, finish);
   });
 }

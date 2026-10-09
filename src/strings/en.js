@@ -105,6 +105,8 @@ export default {
     noQuestions: "No questions here yet."
   },
   question: {
+    pageShort: "p. {n}",
+    sourceLine: "Source line",
     number: "Q{n}",
     question: "Question",
     inTest: "Q{n}",
@@ -149,6 +151,7 @@ export default {
     difficulty: { E: "Easy", M: "Medium", D: "Hard" }
   },
   view: {
+    showHead: "Show",
     title: "How to show answers",
     study: "Study view",
     studyHint: "Correct answers shown",
@@ -680,6 +683,17 @@ export default {
     keyChanged: "The correct answer was changed after this test."
   },
   ai: {
+    madeLabel: "AI-made",
+    aboutThis: "About this",
+    make: {
+      more: "Make more",
+      title: { questions: "Make AI questions", cards: "Make flashcards", note: "Make a revision note" },
+      fromPdf: { questions: "Questions only from this PDF’s text", cards: "Cards only from this PDF’s text", note: "A note only from this PDF’s text" },
+      addPdf: "Add a study PDF",
+      addPdfSub: "Then make them from it",
+      general: "From AI’s general knowledge",
+      generalSub: "No PDF needed; check the answers"
+    },
     explainShort: "Explain",
     onCards: "AI buttons on question cards",
     onCardsHint: "Explain, Why was I wrong?, Memory trick: one tap on each question.",
@@ -801,7 +815,7 @@ export default {
     nothingChosen: "Nothing ticked",
     savedN: (v) => (v.n === 1 ? "1 AI question saved (topic → AI)" : "{n} AI questions saved (topic → AI)"),
     cs: { pyq: "PYQs", ai: "🤖 AI", cards: "🃏 Cards", notes: "📝 Notes" },
-    from: { label: "From which study PDF", all: "All together", none: "Not from a PDF" },
+    from: { label: "From which study PDF", short: "From:", all: "All together", none: "Not from a PDF", items: (v) => (v.n === 1 ? "1 item" : "{n} items") },
     pnNone: "No revision notes from study PDFs yet. Open a study PDF and choose Revision note; it is saved here, one note per PDF run.",
     pnHint: "Revision notes made from your study PDFs. Pick one PDF or read them all together.",
     pnPages: "pages {pages}",
@@ -855,6 +869,15 @@ export default {
     noGuesses: "Mark some guesses (🤔) in a test first."
   },
   pdf: {
+    steps: { label: "Steps", choose: "Choose", writing: "Writing", writingNote: "Writing", review: "Check & save" },
+    moreOptions: "More options",
+    howItWorks: "How it works",
+    pagesHeadShort: "Pages",
+    pagesAll: "All {n} pages",
+    pagesFromTo: "Pages {from}–{to}",
+    styleView: "View / edit",
+    styleHide: "Hide",
+    sum: { styleDefault: "Default style", styleSaved: "Style guide saved {date}", styleOwn: "Your style guide", patternOn: "🎯 Pattern on", patternOff: "🎯 Pattern off", checkOn: "Double-check on", checkOff: "Double-check off" },
     unsavedTitle: "Leave without saving?",
     unsavedBody: "You changed this page’s text. Leaving now loses the change.",
     unsavedLeave: "Leave",

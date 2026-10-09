@@ -404,9 +404,17 @@ function drawMake(container, rec, job) {
   } else {
     ({ body } = formView(rec, job, handlers));
   }
-  container.innerHTML = html`${head}${body}`;
+  container.innerHTML = html`${head}${stepLine(job)}${body}`;
   onAction(container, handlers);
   bindForm(container, job);
+  const mo = container.querySelector(".more-opts");
+  if (mo) {
+    mo.addEventListener("toggle", () => { (job.ui ||= {}).moreOpen = mo.open; });
+    // The summary line follows the switches inside (they change without a redraw).
+    const strategy = job.cfg.target?.topicId ? strategyFor(job.cfg.target.topicId) : null;
+    mo.querySelectorAll('input[type="checkbox"][data-cfg]').forEach((b) => b.addEventListener("change", () => { const el = mo.querySelector(".mo-sum"); if (el) el.textContent = optionsSummary(job, strategy); }));
+    mo.querySelector('textarea[data-cfg="style"]')?.addEventListener("change", () => { const el = mo.querySelector(".mo-sum"); if (el) el.textContent = optionsSummary(job, strategy); });
+  }
   if (job.phase === "review") {
     container.querySelectorAll("input[data-i]").forEach((c) => c.addEventListener("change", () => {
       const i = Number(c.dataset.i);
@@ -432,8 +440,30 @@ function bindForm(container, job) {
 
 const pills = (job, key, values, label) => html`<div class="chip-wrap">${values.map((v) => html`<button type="button" class="pill ${String(job.cfg[key]) === String(v) ? "on" : ""}" data-action="set" data-k="${key}" data-v="${v}">${label(v)}</button>`)}</div>`;
 
+/** "1 Choose → 2 Writing → 3 Check & save" at the top of the make screen (not for page reading). */
+function stepLine(job) {
+  if (job.kind === "read") return "";
+  const at = job.phase === "running" ? 2 : job.phase === "review" || job.phase === "done" ? 3 : 1;
+  return html`<ol class="steps3" aria-label="${t("pdf.steps.label")}">${["choose", job.kind === "note" ? "writingNote" : "writing", "review"].map((k, i) => html`<li class="${i + 1 === at ? "on" : i + 1 < at ? "done" : ""}" ${i + 1 === at ? html`aria-current="step"` : ""}><span class="n">${i + 1 < at ? "✓" : i + 1}</span>${t(`pdf.steps.${k}`)}</li>`)}</ol>`;
+}
+
+/** One line saying what the folded "More options" are set to. */
+function optionsSummary(job, strategy) {
+  const cfg = job.cfg;
+  const parts = [];
+  if (job.kind === "questions") parts.push(cfg.difficulty === "mixed" ? t("ai.mixed") : t(`question.difficulty.${cfg.difficulty}`));
+  parts.push(t(`pdf.langs.${cfg.lang}`));
+  if (job.kind === "questions") {
+    parts.push(cfg.style === DEFAULT_STYLE ? t("pdf.sum.styleDefault") : cfg.styleAt ? t("pdf.sum.styleSaved", { date: new Date(cfg.styleAt).toLocaleDateString(dateLocale(), { day: "numeric", month: "short" }) }) : t("pdf.sum.styleOwn"));
+  }
+  if (strategy) parts.push(cfg.usePattern ? t("pdf.sum.patternOn") : t("pdf.sum.patternOff"));
+  if (job.kind === "questions") parts.push(cfg.check ? t("pdf.sum.checkOn") : t("pdf.sum.checkOff"));
+  return parts.join(" · ");
+}
+
 function formView(rec, job, handlers) {
   const cfg = job.cfg;
+  const ui = (job.ui ||= {}); // what is folded open on this screen (not sent anywhere)
   const c = T.pageCounts(rec.pages);
   handlers.set = (el) => { const k = el.dataset.k; cfg[k] = ["n"].includes(k) ? Number(el.dataset.v) : el.dataset.v; refresh(true); };
   handlers.start = () => start(rec, job);
@@ -462,15 +492,28 @@ function formView(rec, job, handlers) {
       cfg.styleNote = "";
     }
   }).then(() => refresh(true));
+  // Pages: one line; the From / To boxes open when you tap Change (or are already open).
+  handlers["pages-open"] = () => { ui.pagesOpen = true; refresh(true); };
+  const all = Number(cfg.from) === 1 && Number(cfg.to) === rec.pages.length;
   const range = cfg.only ? html`<div class="ok-box"><p>🎯 ${t("pdf.focusOn", { pages: cfg.only.join(", "), n: cfg.focus?.length || 0 })}</p>
-      <button type="button" class="link" data-action="unfocus">${t("pdf.focusClear")}</button></div>` : html`<div class="two-col">
+      <button type="button" class="link" data-action="unfocus">${t("pdf.focusClear")}</button></div>`
+    : ui.pagesOpen ? html`<h3>${t("pdf.pagesHeadShort")}</h3><div class="two-col">
       <label class="field-label">${t("pdf.fromPage")}<input class="field" type="number" min="1" max="${rec.pages.length}" value="${cfg.from}" data-cfg="from" inputmode="numeric"></label>
       <label class="field-label">${t("pdf.toPage")}<input class="field" type="number" min="1" max="${rec.pages.length}" value="${cfg.to}" data-cfg="to" inputmode="numeric"></label></div>
-    ${c.need ? html`<p class="hint">${t("pdf.skipsScanned", { n: c.need })}</p>` : ""}`;
+    ${c.need ? html`<p class="hint">${t("pdf.skipsScanned", { n: c.need })}</p>` : ""}`
+      : html`<h3>${t("pdf.pagesHeadShort")}</h3>
+      <button type="button" class="row" data-action="pages-open"><span class="row-main"><span class="row-title">${all ? t("pdf.pagesAll", { n: rec.pages.length }) : t("pdf.pagesFromTo", { from: cfg.from, to: cfg.to })}</span>
+        ${c.need ? html`<span class="row-sub">${t("pdf.skipsScanned", { n: c.need })}</span>` : ""}</span><span class="chev-txt">${t("pdf.change")}</span></button>`;
   const langPills = html`<h3>${t("pdf.lang")}</h3>${pills(job, "lang", ["same", "en", "ml"], (v) => t(`pdf.langs.${v}`))}`;
   // Follow the topic's past-paper pattern (from its AI strategy), if it has one.
   const strategy = cfg.target?.topicId ? strategyFor(cfg.target.topicId) : null;
   const patternSwitch = (hintKey) => (strategy ? html`<label class="switch-row"><input type="checkbox" data-cfg="usePattern" ${cfg.usePattern ? "checked" : ""}><span>🎯 ${t("ai.usePattern")}<span class="row-sub">${t(hintKey, { date: strategy.at ? new Date(strategy.at).toLocaleDateString(dateLocale()) : "—" })}</span></span></label>` : html`<p class="hint">💡 ${t("ai.noPatternYet")}</p>`);
+  // Everything except the essentials folds into "More options" (same settings, same defaults).
+  const more = (inner) => html`<details class="more-opts" ${ui.moreOpen ? "open" : ""}>
+      <summary><span class="mo-title">⚙ ${t("pdf.moreOptions")}</span><span class="mo-sum">${optionsSummary(job, strategy)}</span></summary>
+      <div class="mo-body">${inner}</div></details>`;
+  const how = (keys) => html`<details class="how-it-works"><summary>ⓘ ${t("pdf.howItWorks")}</summary>${keys.map((k) => html`<p class="hint">${k}</p>`)}</details>`;
+  const startBtn = (label) => html`<div class="actions-row"><button type="button" class="btn wide" data-action="start">${label}</button></div>`;
 
   if (job.kind === "questions") {
     const pool = pyqPool(cfg.target).length;
@@ -488,36 +531,38 @@ function formView(rec, job, handlers) {
       refresh(true);
     };
     handlers["style-default"] = () => { cfg.style = DEFAULT_STYLE; cfg.styleNote = ""; refresh(true); };
+    handlers["style-edit"] = () => { ui.styleEdit = !ui.styleEdit; refresh(true); };
     const note = cfg.styleNote || (cfg.styleAt ? t("pdf.styleSaved", { date: new Date(cfg.styleAt).toLocaleDateString(dateLocale()), n: pool }) : pool ? t("pdf.styleCanLearn", { n: pool }) : t("pdf.styleNoPyq"));
+    const preview = String(cfg.style || "").split("\n").map((l) => l.trim()).filter(Boolean).slice(0, 2).join(" ");
     return { body: html`${target}${range}
       <h3>${t("pdf.howMany")}</h3>${pills(job, "n", [5, 10, 15, 20, 30], (v) => v)}
-      <h3>${t("ai.genDiff")}</h3>${pills(job, "difficulty", ["mixed", "E", "M", "D"], (v) => (v === "mixed" ? t("ai.mixed") : t(`question.difficulty.${v}`)))}
-      ${langPills}
-      <h3>${t("pdf.style")}</h3>
-      <p class="hint">${t("pdf.styleHint")}</p>
-      <textarea class="field" rows="7" data-cfg="style" aria-label="${t("pdf.style")}">${cfg.style}</textarea>
-      <p class="hint" id="styleNote">${note}</p>
-      <div class="actions-row"><button type="button" class="btn btn-quiet btn-small" data-action="learn">🔄 ${t("pdf.styleLearn")}</button>
-        <button type="button" class="btn btn-quiet btn-small" data-action="style-default">${t("pdf.styleDefault")}</button></div>
-      ${patternSwitch("pdf.patternHint")}
-      <label class="switch-row"><input type="checkbox" data-cfg="check" ${cfg.check ? "checked" : ""}><span>${t("pdf.check")}<span class="row-sub">${t("pdf.checkHint")}</span></span></label>
-      <p class="hint">${t("pdf.groundedNote")}</p>
-      <div class="actions-row"><button type="button" class="btn" data-action="start">${t("ai.generate")}</button></div>` };
+      ${more(html`<h3>${t("ai.genDiff")}</h3>${pills(job, "difficulty", ["mixed", "E", "M", "D"], (v) => (v === "mixed" ? t("ai.mixed") : t(`question.difficulty.${v}`)))}
+        ${langPills}
+        <h3>${t("pdf.style")}</h3>
+        <p class="hint">${t("pdf.styleHint")}</p>
+        ${ui.styleEdit ? html`<textarea class="field" rows="7" data-cfg="style" aria-label="${t("pdf.style")}">${cfg.style}</textarea>`
+          : html`<p class="style-preview"><span>${preview}</span></p>`}
+        <p class="hint" id="styleNote">${note}</p>
+        <div class="actions-row"><button type="button" class="btn btn-quiet btn-small" data-action="style-edit">${ui.styleEdit ? t("pdf.styleHide") : `✎ ${t("pdf.styleView")}`}</button>
+          <button type="button" class="btn btn-quiet btn-small" data-action="learn">🔄 ${t("pdf.styleLearn")}</button>
+          <button type="button" class="btn btn-quiet btn-small" data-action="style-default">${t("pdf.styleDefault")}</button></div>
+        ${patternSwitch("pdf.patternHint")}
+        <label class="switch-row"><input type="checkbox" data-cfg="check" ${cfg.check ? "checked" : ""}><span>${t("pdf.check")}<span class="row-sub">${t("pdf.checkHint")}</span></span></label>`)}
+      ${startBtn(t("ai.generate"))}
+      ${how([t("pdf.groundedNote")])}` };
   }
   if (job.kind === "cards") {
     return { body: html`${target}${range}
       <h3>${t("pdf.howManyCards")}</h3>${pills(job, "n", [10, 20, 30, 50], (v) => v)}
-      ${langPills}
-      ${patternSwitch("pdf.patternHintCards")}
-      <p class="hint">${t("pdf.groundedNote")}</p>
-      <div class="actions-row"><button type="button" class="btn" data-action="start">${t("ai.generate")}</button></div>` };
+      ${more(html`${langPills}${patternSwitch("pdf.patternHintCards")}`)}
+      ${startBtn(t("ai.generate"))}
+      ${how([t("pdf.groundedNote")])}` };
   }
   return { body: html`${target}${range}
     <h3>${t("pdf.length")}</h3>${pills(job, "detail", ["short", "detailed"], (v) => t(`pdf.detail.${v}`))}
-    ${patternSwitch("pdf.patternHintNote")}
-    ${langPills}
-    <p class="hint">${t("pdf.noteLimit", { n: jobsApi.NOTE_MAX_SECTIONS })}</p>
-    <div class="actions-row"><button type="button" class="btn" data-action="start">${t("ai.generate")}</button></div>` };
+    ${more(html`${patternSwitch("pdf.patternHintNote")}${langPills}`)}
+    ${startBtn(t("ai.generate"))}
+    ${how([t("pdf.noteLimit", { n: jobsApi.NOTE_MAX_SECTIONS })])}` };
 }
 
 async function start(rec, job) {
@@ -630,7 +675,7 @@ function reviewView(rec, job, handlers) {
       ${stoppedNote(r)}
       <textarea class="field page-text" id="noteText" rows="16" aria-label="${t("pdf.kind.note")}">${job.noteText}</textarea>
       <p class="hint">${t("ai.verify")}</p>
-      <div class="sheet-actions"><button type="button" class="btn btn-quiet" data-action="discard">${t("ai.discard")}</button>
+      <div class="sheet-actions sticky"><button type="button" class="btn btn-quiet" data-action="discard">${t("ai.discard")}</button>
         <button type="button" class="btn btn-quiet" data-action="copy">${t("question.copy")}</button>
         <button type="button" class="btn" data-action="save">${t("pdf.saveNote")}</button></div>` };
   }
@@ -671,7 +716,7 @@ function reviewView(rec, job, handlers) {
     <p class="warn-box">${t("pdf.reviewTick")}</p>
     ${stoppedNote(r)}
     ${list}
-    <div class="sheet-actions"><button type="button" class="btn btn-quiet" data-action="discard">${t("ai.discard")}</button>
+    <div class="sheet-actions sticky"><button type="button" class="btn btn-quiet" data-action="discard">${t("ai.discard")}</button>
       <button type="button" class="btn" data-action="save">${t(isCards ? "pdf.saveCards" : "pdf.saveQuestions", { n: job.keep.size })}</button></div>` };
 }
 

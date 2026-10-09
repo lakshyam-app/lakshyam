@@ -439,7 +439,7 @@ export const topicScreen = {
       const host = container.querySelector("#aiHost");
       if (mode === "ai") renderAiPanel(host, { syllabus, scope: { topicId: id }, topic, label: topic.name });
       else if (mode === "notes") renderPdfNotesPanel(host, { scope: { topicId: id }, topic });
-      else renderCardsPanel(host, { syllabus, scope: { topicId: id } });
+      else renderCardsPanel(host, { syllabus, scope: { topicId: id }, topic });
       return;
     }
     container.innerHTML = html`${head}

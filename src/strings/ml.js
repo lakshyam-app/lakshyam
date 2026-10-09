@@ -10,6 +10,7 @@ import p7 from "./ml-7.js";
 import p8 from "./ml-8.js";
 import p9 from "./ml-9.js";
 import p10 from "./ml-10.js";
+import p11 from "./ml-11.js";
 
 /** Later parts may add keys inside groups an earlier part started (e.g. "import", "start"). */
 function deepMerge(a, b) {
@@ -20,4 +21,4 @@ function deepMerge(a, b) {
   return out;
 }
 
-export default [p1, p2, p3, p4, p5, p6, p7, p8, p9, p10].reduce(deepMerge, {});
+export default [p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11].reduce(deepMerge, {});

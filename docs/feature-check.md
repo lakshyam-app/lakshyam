@@ -166,3 +166,13 @@ Today screen with Quick 10 and daily goal · exam countdown · timetable (any da
 | One-time setup with your own Google Apps Script (5-minute timer, signed wake-ups with no content; self-check of signing before turning on); test reminder; set up again; disconnect | 🔔 Reminders → Set up | ✅ (real Google delivery not testable here) |
 | Home-screen shortcuts: Quick 10, Today's session, Day review; links from notifications (#/today?go=…) | App icon long-press | ✅ |
 | Reminder keys, plan and button presses stay on the phone (not in backups, kept on restore) | — | ✅ |
+
+## Changed in 1.13 (look only; prompts, checks, defaults and saving unchanged — verified by recording every AI request and saved item before and after)
+
+| Feature | Where | Status |
+|---|---|---|
+| Make questions / cards / note from a PDF: Save to, Pages (one line, Change opens From/To), How many / Length, then ⚙ More options (difficulty, language, style guide preview with View / edit, Learn from my PYQs, Use default, 🎯 pattern, double-check) with a one-line summary; ⓘ How it works | Study PDF → Practice questions / Flashcards / Revision note | ✅ |
+| Steps 1 Choose → 2 Writing → 3 Check & save; Save button stays in view while reviewing | PDF make screens, topic 🤖 Make more sheet | ✅ |
+| AI lists: 🤖 AI-made label (ⓘ shows the note); "From: … ▾" picker instead of chips; PDF name and page on each AI question instead of its number; 📄 Source line under the answer; one ⚙ View button (show + order) | Topic / Subject → AI · Cards · Notes | ✅ |
+| 🤖 Make more: choose one of the topic's study PDFs, add a PDF, or (questions) general knowledge; Cards and Notes tabs get Make more too | Topic → AI · Cards · Notes | ✅ |
+

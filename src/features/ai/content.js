@@ -7,7 +7,7 @@
 import { html, onAction } from "../../core/dom.js";
 import { t, dateLocale } from "../../core/i18n.js";
 import { go } from "../../core/router.js";
-import { runFlow, confirmAction } from "../../core/dialogs.js";
+import { runFlow, confirmAction, chooseAction } from "../../core/dialogs.js";
 import { toast } from "../../core/toast.js";
 import { typesetMath } from "../../core/math.js";
 import { richText, noteText } from "../../domain/text.js";
@@ -21,6 +21,7 @@ import { copyQuestions } from "../question/copy.js";
 import { openStartTest } from "../test/start-sheet.js";
 import { generateQuestions } from "./ai-actions.js";
 import { viewNote, editNote, viewText } from "../notes/note-editor.js";
+import { listPdfs } from "../../pdf/pdf-store.js";
 
 const inScope = (x, scope) => (scope.topicId ? x.topicId === scope.topicId : scope.subjectId ? x.subjectId === scope.subjectId : true);
 
@@ -37,7 +38,11 @@ const fromBy = new Map(); // `${kind}:${scope}` → "all" | pdfId | "none"
 const pdfOf = (x) => (x.target?.type === "pdfnote" ? x.target.pdfId : x.sourceRef?.pdfId) || null;
 const pdfNameOf = (x) => (x.target?.type === "pdfnote" ? x.label : x.sourceRef?.pdf) || "PDF";
 
-/** Chips to show one PDF's items or all together; hidden when everything comes from one place. */
+const fromGroups = new Map(); // filter key → { groups, total } (what the "From" button offers)
+const shortPdf = (name) => String(name || "PDF").replace(/\.pdf$/i, "");
+
+/** One "From: … ▾" button to show one PDF's items or all together; hidden when everything comes from one place.
+    (Same choice as before; only the look changed: a list instead of a row of chips.) */
 function fromFilter(kind, scope, items) {
   const key = `${kind}:${scope.topicId || scope.subjectId || "all"}`;
   const groups = new Map();
@@ -45,13 +50,48 @@ function fromFilter(kind, scope, items) {
   let cur = fromBy.get(key) || "all";
   if (cur !== "all" && !groups.has(cur)) cur = "all";
   const shown = cur === "all" ? items : items.filter((x) => (pdfOf(x) || "none") === cur);
-  const chips = groups.size > 1 ? html`<div class="chip-row from-row" role="group" aria-label="${t("ai.from.label")}">
-      <button type="button" class="pill ${cur === "all" ? "on" : ""}" data-action="from" data-k="${key}" data-v="all">${t("ai.from.all")} <span class="count">${items.length}</span></button>
-      ${[...groups.values()].map((g) => html`<button type="button" class="pill ${cur === g.id ? "on" : ""}" data-action="from" data-k="${key}" data-v="${g.id}">${g.id === "none" ? "" : "📄 "}${g.name} <span class="count">${g.n}</span></button>`)}</div>` : "";
+  fromGroups.set(key, { groups, total: items.length });
+  const g = groups.get(cur);
+  const value = cur === "all" ? t("ai.from.all") : cur === "none" ? t("ai.from.none") : `📄 ${shortPdf(g.name)}`;
+  const chips = groups.size > 1 ? html`<button type="button" class="pill from-pick" data-action="from-pick" data-k="${key}">
+      <span class="fp-label">${t("ai.from.short")}</span> <span class="fp-value">${value}</span> <span class="count">${cur === "all" ? items.length : g.n}</span> ▾</button>` : "";
   return { chips, shown, cur, groups };
 }
 // Redraws the whole screen (fresh listeners), keeping the choice.
-const fromHandler = { from: (el) => { fromBy.set(el.dataset.k, el.dataset.v); store.touch(); } };
+const fromHandler = {
+  from: (el) => { fromBy.set(el.dataset.k, el.dataset.v); store.touch(); },
+  "from-pick": (el) => runFlow(async () => {
+    const k = el.dataset.k; const info = fromGroups.get(k);
+    if (!info) return;
+    const cur = fromBy.get(k) || "all";
+    const id = await chooseAction({ title: t("ai.from.label"), items: [
+      { id: "all", label: t("ai.from.all"), sub: t("ai.from.items", { n: info.total }), current: cur === "all" },
+      ...[...info.groups.values()].map((x) => ({ id: x.id, label: x.id === "none" ? t("ai.from.none") : `📄 ${shortPdf(x.name)}`, sub: t("ai.from.items", { n: x.n }), current: cur === x.id }))
+    ] });
+    if (!id) return;
+    fromBy.set(k, id);
+    store.touch();
+  })
+};
+
+/** The small "🤖 AI-made · ⓘ" line; the explanation opens on tap. */
+const aiNote = (text) => html`<details class="ai-made"><summary><span class="mini-chip">🤖 ${t("ai.madeLabel")}</span> <span class="ai-made-i" aria-label="${t("ai.aboutThis")}">ⓘ</span></summary><p class="hint">${text}</p></details>`;
+
+/** "Make more": from one of this topic's study PDFs (questions / cards / notes), or (questions only) from general knowledge.
+    Each choice opens the flow that already existed for it, unchanged. */
+async function makeFrom(topic, kind, general = null) {
+  const pdfs = await listPdfs({ type: "topic", id: topic.id });
+  const id = await chooseAction({ title: t(`ai.make.title.${kind}`), sub: nameLabel(topic), items: [
+    ...pdfs.map((r) => ({ id: `pdf:${r.id}`, label: `📄 ${shortPdf(r.name)}`, sub: t(`ai.make.fromPdf.${kind}`) })),
+    { id: "add", label: `＋ ${t("ai.make.addPdf")}`, sub: t("ai.make.addPdfSub") },
+    general ? { id: "general", label: `🤖 ${t("ai.make.general")}`, sub: t("ai.make.generalSub") } : null
+  ] });
+  // The chooser's sheet stays open: the general flow draws its own sheet in its place, and go() closes it.
+  if (!id) return;
+  if (id === "general") return general();
+  if (id === "add") return go("pdfs", { type: "topic", id: topic.id });
+  return go("pdf-make", { id: id.slice(4), kind });
+}
 
 const stateOf = (card) => store.byId("flashcardState", card.id) || { id: card.id, cardId: card.id, status: "new", reviews: 0, lastAt: null, dueAt: null };
 
@@ -73,8 +113,7 @@ export function renderAiPanel(host, { syllabus, scope, topic = null, label }) {
   const from = fromFilter("ai", scope, every);
   const questions = from.shown;
   const key = `ai:${scope.topicId || scope.subjectId || "all"}:${from.cur}`;
-  host.innerHTML = html`<p class="hint">${t("ai.separateNote")}</p>
-    ${from.chips}
+  host.innerHTML = html`<div class="list-head">${aiNote(t("ai.separateNote"))}${from.chips}</div>
     <div class="actions-row">
       ${questions.length ? html`<button type="button" class="btn" data-action="ai-practice">▶ ${t("practice.button")}</button>` : ""}
       ${topic ? html`<button type="button" class="btn btn-quiet" data-action="ai-generate">${t("ai.generateMore")}</button>` : ""}
@@ -83,12 +122,12 @@ export function renderAiPanel(host, { syllabus, scope, topic = null, label }) {
     ${questions.length ? html`<div class="row-actions pad">
       <button type="button" class="link" data-action="ai-copy">${t("listing.copy")}</button>
       <button type="button" class="link danger" data-action="ai-delete">${t("ai.deleteThese", { n: questions.length })}</button></div>` : ""}`;
-  if (questions.length) mountQuestions(host.querySelector("#aiQHost"), { key, questions, showPaper: false, examFilter: false });
+  if (questions.length) mountQuestions(host.querySelector("#aiQHost"), { key, questions, showPaper: false, examFilter: false, oneViewButton: true });
   else host.querySelector("#aiQHost").innerHTML = html`<p class="hint pad">${topic ? t("ai.noAiTopic") : t("ai.noAi")}</p>`;
   onAction(host, {
     ...fromHandler,
     "ai-practice": () => openStartTest({ scope: { type: "ai", ref: scope.topicId || scope.subjectId || syllabus.id, label: t("ai.aiLabel", { label }) }, questions: visibleQuestions(key, questions), keepOrder: false }),
-    "ai-generate": () => generateQuestions(topic),
+    "ai-generate": () => makeFrom(topic, "questions", () => generateQuestions(topic)),
     "ai-copy": () => copyQuestions(visibleQuestions(key, questions), t("ai.aiLabel", { label })),
     "ai-delete": () => runFlow(async () => {
       const ok = await confirmAction({ title: t("ai.deleteTitleQ", { n: questions.length }), body: t("ai.deleteBodyQ"), confirmLabel: t("common.delete"), danger: true });
@@ -103,7 +142,7 @@ export function renderAiPanel(host, { syllabus, scope, topic = null, label }) {
 
 const deckBy = new Map(); // scope key → { ids, index, flipped, filter, mode, shuffle }
 
-export function renderCardsPanel(host, { syllabus, scope }) {
+export function renderCardsPanel(host, { syllabus, scope, topic = null }) {
   const key = `cards:${scope.topicId || scope.subjectId || "all"}`;
   const st = deckBy.get(key) || { filter: "due", mode: "study", shuffle: false, ids: null, index: 0, flipped: false };
   deckBy.set(key, st);
@@ -130,9 +169,10 @@ export function renderCardsPanel(host, { syllabus, scope }) {
 
   function draw() {
     compute();
-    if (!every.length) { host.innerHTML = html`<p class="hint pad">${t("ai.noCards")}</p>`; return; }
+    const makeBtn = topic ? html`<button type="button" class="btn btn-quiet" data-action="fc-make">🤖 ${t("ai.make.more")}</button>` : "";
+    if (!every.length) { host.innerHTML = html`<p class="hint pad">${t("ai.noCards")}</p>${makeBtn ? html`<div class="actions-row">${makeBtn}</div>` : ""}`; return; }
     const card = deck[st.index];
-    host.innerHTML = html`${from.chips}
+    host.innerHTML = html`${from.chips || makeBtn ? html`<div class="list-head">${from.chips}${makeBtn}</div>` : ""}
       <div class="segmented two"><button type="button" class="${st.mode === "study" ? "on" : ""}" data-action="fc-mode" data-v="study">${t("ai.fcStudy")}</button>
         <button type="button" class="${st.mode === "list" ? "on" : ""}" data-action="fc-mode" data-v="list">${t("ai.fcList")}</button></div>
       <div class="chip-row">${["due", "all", "learn", "known"].map((f) => html`<button type="button" class="pill ${st.filter === f ? "on" : ""}" data-action="fc-filter" data-v="${f}">${t(`ai.fcFilter.${f}`)} <span class="count">${counts[f]}</span></button>`)}</div>
@@ -168,6 +208,7 @@ export function renderCardsPanel(host, { syllabus, scope }) {
   const save = (card, fn) => store.quietly(() => mut.saveCardState(fn(stateOf(card), Date.now())));
   onAction(host, {
     ...fromHandler,
+    "fc-make": () => makeFrom(topic, "cards"),
     "fc-mode": (el) => { st.mode = el.dataset.v; draw(); },
     "fc-filter": (el) => { st.filter = el.dataset.v; restart(); },
     "fc-shuffle": () => { st.shuffle = !st.shuffle; restart(); },
@@ -195,8 +236,8 @@ export function renderCardsPanel(host, { syllabus, scope }) {
 export function renderPdfNotesPanel(host, { scope, topic = null }) {
   const every = pdfNotesOf(scope);
   if (!every.length) {
-    host.innerHTML = html`<p class="hint pad">${t("ai.pnNone")}</p>${topic ? html`<div class="actions-row"><button type="button" class="btn btn-quiet" data-action="pn-pdfs">📄 ${t("pdf.title")}</button></div>` : ""}`;
-    onAction(host, { "pn-pdfs": () => go("pdfs", { type: "topic", id: topic.id }) });
+    host.innerHTML = html`<p class="hint pad">${t("ai.pnNone")}</p>${topic ? html`<div class="actions-row"><button type="button" class="btn btn-quiet" data-action="pn-make">🤖 ${t("ai.make.more")}</button><button type="button" class="btn btn-quiet" data-action="pn-pdfs">📄 ${t("pdf.title")}</button></div>` : ""}`;
+    onAction(host, { "pn-pdfs": () => go("pdfs", { type: "topic", id: topic.id }), "pn-make": () => makeFrom(topic, "note") });
     return;
   }
   const from = fromFilter("notes", scope, every);
@@ -216,9 +257,9 @@ export function renderPdfNotesPanel(host, { scope, topic = null }) {
   };
   // All together: grouped by PDF, newest first in each group.
   const groups = new Map(); notes.forEach((n) => { const k = n.target.pdfId || "none"; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(n); });
-  host.innerHTML = html`<p class="hint">${t("ai.pnHint")}</p>
-    ${from.chips}
-    <div class="actions-row"><button type="button" class="btn btn-quiet" data-action="pn-all">📖 ${notes.length > 1 ? t("ai.pnReadAll", { n: notes.length }) : t("notes.read")}</button></div>
+  host.innerHTML = html`<div class="list-head">${aiNote(t("ai.pnHint"))}${from.chips}</div>
+    <div class="actions-row"><button type="button" class="btn btn-quiet" data-action="pn-all">📖 ${notes.length > 1 ? t("ai.pnReadAll", { n: notes.length }) : t("notes.read")}</button>
+      ${topic ? html`<button type="button" class="btn btn-quiet" data-action="pn-make">🤖 ${t("ai.make.more")}</button>` : ""}</div>
     ${from.cur === "all" && groups.size > 1 ? [...groups.values()].map((g) => html`<h3 class="rows-head">📄 ${g[0].label || "PDF"} <span class="count">${g.length}</span></h3>${g.map(card)}`) : notes.map(card)}`;
   const noteOf = (el) => store.byId("notes", el.closest("[data-nid]").dataset.nid);
   onAction(host, {
@@ -233,7 +274,8 @@ export function renderPdfNotesPanel(host, { scope, topic = null }) {
       const prev = await mut.deleteNotes([n.id]);
       toast(t("ai.pnDeleted"), { actionLabel: t("common.undo"), onAction: () => mut.putNotes(prev), duration: 8000 });
     }),
-    "pn-all": () => readTogether(notes)
+    "pn-all": () => readTogether(notes),
+    "pn-make": () => makeFrom(topic, "note")
   });
 }
 

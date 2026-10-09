@@ -25,12 +25,23 @@ export function questionCard(q, { showPaper = true, mode = "study", revealed = n
   const deleted = q.status === "deleted_by_psc";
   const flagged = Boolean(state?.flagged);
   const diff = showDifficulty ? difficultyOf(q) : null;
+  // AI questions: where they came from (a study PDF and page) instead of their internal number.
+  const isAi = q.source === "ai";
+  const ref = isAi && q.sourceRef?.quote ? q.sourceRef : null;
+  const aiWhere = isAi ? (q.sourceRef?.pdf ? `📄 ${String(q.sourceRef.pdf).replace(/\.pdf$/i, "")}${q.sourceRef.page ? ` · ${t("question.pageShort", { n: q.sourceRef.page })}` : ""}` : `🤖 ${t("ai.madeLabel")}`) : null;
   const meta = [
     n !== null ? t("question.inTest", { n }) : null,
-    q.number ? (n !== null ? t("question.paperNumber", { n: q.number }) : t("question.number", { n: q.number })) : null,
+    isAi ? aiWhere : q.number ? (n !== null ? t("question.paperNumber", { n: q.number }) : t("question.number", { n: q.number })) : null,
     showPaper && paper ? paper.name : null,
     showPaper && paper?.postName ? paper.postName : null
   ].filter(Boolean);
+  // A PDF question's explanation ends with its source line; that part is shown on its own ("Source line").
+  let explain = q.explanation || "";
+  if (ref && explain.endsWith(`“${ref.quote}”`)) {
+    const at = explain.lastIndexOf("📄 ", explain.length - ref.quote.length - 2);
+    if (at === 0) explain = "";
+    else if (at > 0 && explain[at - 1] === "\n") explain = explain.slice(0, at).trim();
+  }
   // In self-test the answer shows only after you pick an option or tap "Show answer".
   const hidden = mode === "selftest" && revealed === null;
   const picked = mode === "selftest" && typeof revealed === "number" ? revealed : null;
@@ -70,8 +81,10 @@ export function questionCard(q, { showPaper = true, mode = "study", revealed = n
     ${review && review.graded && q.answerIndex !== review.correct ? html`<p class="qcard-note quiet">${t("review.keyChanged")}</p>` : ""}
     ${!review && !deleted && q.answerIndex === null && !hidden ? html`<p class="qcard-note quiet">${t("question.noAnswer")}</p>` : ""}
     ${hidden ? html`<button type="button" class="link" data-action="q-reveal">${t("question.showAnswer")}</button>` : ""}
-    ${q.explanation && !hidden ? html`<details class="explain"><summary>${t("question.explanation")}</summary>
-      <div class="qtext ai-answer plain">${smartText(q.explanation)}</div></details>` : ""}
+    ${explain && !hidden ? html`<details class="explain"><summary>${t("question.explanation")}</summary>
+      <div class="qtext ai-answer plain">${smartText(explain)}</div></details>` : ""}
+    ${ref && !hidden ? html`<details class="explain source-line"><summary>📄 ${t("question.sourceLine")}</summary>
+      <p class="quote">${ref.quote}</p>${ref.pdf ? html`<p class="hint">${String(ref.pdf).replace(/\.pdf$/i, "")}${ref.page ? ` · ${t("question.pageShort", { n: ref.page })}` : ""}</p>` : ""}</details>` : ""}
     ${can("ai") && store.setting("aiOnCards", true) !== false && !hidden && mode !== "edit" ? aiRow(q, review) : ""}
   </article>`;
 }

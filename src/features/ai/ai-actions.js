@@ -67,6 +67,9 @@ export async function aiHelp(q, { selected, mode: preset = null } = {}) {
 
 /* ---------- practice questions for a topic ---------- */
 
+/** "1 Choose → 2 Writing → 3 Check & save" (same as the study-PDF screens). */
+const steps3 = (at) => html`<ol class="steps3">${["choose", "writing", "review"].map((k, i) => html`<li class="${i + 1 === at ? "on" : i + 1 < at ? "done" : ""}"><span class="n">${i + 1 < at ? "✓" : i + 1}</span>${t(`pdf.steps.${k}`)}</li>`)}</ol>`;
+
 export async function generateQuestions(topic, seedQs = null) {
   if (!topic || !(await ensureAi())) return;
   const subject = store.subject(topic.subjectId);
@@ -74,7 +77,7 @@ export async function generateQuestions(topic, seedQs = null) {
   const strategy = strategyFor(topic.id);
   const s = { n: 8, lang: subject?.name === "Malayalam" ? "ml" : "en", difficulty: "mixed", usePattern: Boolean(strategy) };
   const pills = (key, values, label) => html`<div class="chip-wrap">${values.map((v) => html`<button type="button" class="pill ${s[key] === v ? "on" : ""}" data-action="set" data-k="${key}" data-v="${v}">${label(v)}</button>`)}</div>`;
-  const draw = () => openSheet(html`<h2>${t("ai.genTitle")}</h2>
+  const draw = () => openSheet(html`<h2>${t("ai.genTitle")}</h2>${steps3(1)}
     <p class="hint">${nameLabel(subject)} · ${nameLabel(topic)}${seedQs?.length === 1 ? ` · ${t("ai.genSimilar")}` : ""}</p>
     <h3>${t("ai.genCount")}</h3>${pills("n", [5, 8, 10, 15], (v) => v)}
     <h3>${t("ai.genLang")}</h3>${pills("lang", ["en", "ml"], (v) => t(`ai.langs.${v}`))}
@@ -93,7 +96,7 @@ export async function generateQuestions(topic, seedQs = null) {
   draw();
 
   async function run() {
-    openSheet(html`<h2>${t("ai.genTitle")}</h2><p class="sheet-status">${t("ai.generating")}</p>`, {});
+    openSheet(html`<h2>${t("ai.genTitle")}</h2>${steps3(2)}<p class="sheet-status">${t("ai.generating")}</p>`, {});
     const examples = (seedQs?.length ? seedQs : store.questionsFor({ syllabusId: syllabus.id, topicId: topic.id }).slice(0, 5)).map((q) => ({ text: q.text, options: q.options }));
     try {
       const { text } = await ask(P.GENERATE_SYSTEM, P.generateTask({ subject: subject?.name || "", topic: topic.name, n: s.n, lang: s.lang, difficulty: s.difficulty, examples, pattern: s.usePattern && strategy ? patternFrom(strategy.text) : "" }), 4000);
@@ -110,7 +113,7 @@ export async function generateQuestions(topic, seedQs = null) {
   function review(items) {
     const keep = new Set(items.map((_, i) => i));
     const drawReview = () => {
-      openSheet(html`<h2>${t("ai.reviewTitle")}</h2>
+      openSheet(html`<h2>${t("ai.reviewTitle")}</h2>${steps3(3)}
         <p class="warn-box">${t("ai.reviewNote")}</p>
         ${items.map((x, i) => html`<article class="qcard gen ${keep.has(i) ? "" : "off"}">
           <label class="switch-row"><input type="checkbox" data-i="${i}" ${keep.has(i) ? "checked" : ""}><strong>${t("ai.genQ", { n: i + 1 })}</strong></label>
@@ -118,7 +121,7 @@ export async function generateQuestions(topic, seedQs = null) {
           <ol class="options">${x.options.map((o, j) => html`<li class="${j === x.answerIndex ? "right" : ""}"><span class="opt-letter">${letterFor(j)}</span><span class="opt-text">${richText(o)}</span>${j === x.answerIndex ? html`<span class="tick">✓</span>` : ""}</li>`)}</ol>
           ${x.explanation ? html`<p class="hint">${richText(x.explanation)}</p>` : ""}
         </article>`)}
-        <div class="sheet-actions"><button type="button" class="btn btn-quiet" data-action="close">${t("ai.discard")}</button>
+        <div class="sheet-actions sticky-in"><button type="button" class="btn btn-quiet" data-action="close">${t("ai.discard")}</button>
           <button type="button" class="btn" data-action="save">${t("ai.saveN", { n: keep.size })}</button></div>`, {
         close: () => closeSheet(),
         save: async () => {

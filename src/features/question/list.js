@@ -80,7 +80,7 @@ export function bindCardActions(host, { view, bank = null, onOption = null, onRe
  * host: element to fill. opts: { key, questions, showPaper, bank, examFilter }
  * examFilter: show the "Exams" chip (for listings that mix papers).
  */
-export function mountQuestions(host, { key, questions, showPaper = true, bank = null, examFilter = true }) {
+export function mountQuestions(host, { key, questions, showPaper = true, bank = null, examFilter = true, oneViewButton = false }) {
   const papers = examFilter ? papersIn(questions) : [];
   const exams = examsBy.get(key);
   const list = visibleQuestions(key, questions);
@@ -92,8 +92,9 @@ export function mountQuestions(host, { key, questions, showPaper = true, bank = 
 
   host.innerHTML = html`
     <div class="toolbar">
+      ${oneViewButton ? html`<button type="button" class="pill" data-action="ql-viewall">⚙ ${t(`view.${mode}`)}${layout === "single" ? ` · ${t("layout.singleShort")}` : ""} · ${t(`sort.${sort}`)} ▾</button>` : html`
       <button type="button" class="pill" data-action="ql-view">${t(`view.${mode}`)}${layout === "single" ? ` · ${t("layout.singleShort")}` : ""} ▾</button>
-      <button type="button" class="pill" data-action="ql-sort">${t(`sort.${sort}`)} ▾</button>
+      <button type="button" class="pill" data-action="ql-sort">${t(`sort.${sort}`)} ▾</button>`}
       ${papers.length > 1 ? html`<button type="button" class="pill ${exams ? "on" : ""}" data-action="ql-exams">
         ${exams ? t("exams.some", { n: exams.size, of: papers.length }) : t("exams.all", { n: papers.length })} ▾</button>` : ""}
     </div>
@@ -105,7 +106,7 @@ export function mountQuestions(host, { key, questions, showPaper = true, bank = 
   // Always draw from the saved copy, so a redrawn card shows the latest edit.
   const card = (q0) => { const q = store.question(q0.id) || q0; return questionCard(q, { showPaper, mode: viewMode(), showDifficulty: difficultyOn(), revealed: reveal.has(q.id) ? reveal.get(q.id) : null }); };
   const view = mountCards(host.querySelector(".qhost"), { key, items: list, card, layout });
-  const redraw = () => mountQuestions(host, { key, questions, showPaper, bank, examFilter });
+  const redraw = () => mountQuestions(host, { key, questions, showPaper, bank, examFilter, oneViewButton });
 
   bindCardActions(host, {
     view, bank,
@@ -115,29 +116,40 @@ export function mountQuestions(host, { key, questions, showPaper = true, bank = 
     },
     onReveal: (q) => { reveal.set(q.id, true); view.refresh(q.id); }
   });
+  const viewItems = () => [
+    { id: "study", label: t("view.study"), sub: t("view.studyHint"), current: mode === "study" },
+    { id: "selftest", label: t("view.selftest"), sub: t("view.selftestHint"), current: mode === "selftest" },
+    { id: "edit", label: t("view.edit"), sub: t("view.editHint"), current: mode === "edit" },
+    { id: "scroll", label: t("layout.scroll"), sub: t("layout.scrollHint"), current: layout === "scroll" },
+    { id: "single", label: t("layout.single"), sub: t("layout.singleHint"), current: layout === "single" }
+  ];
+  const sortItems = () => ["none", "diff-asc", "diff-desc"].map((s) => ({ id: s, label: t(`sort.${s}`), current: s === sort }));
+  const applyView = async (id) => {
+    if (id === "scroll" || id === "single") {
+      await store.quietly(() => store.setSetting("listLayout", id));
+    } else {
+      editMode = id === "edit";
+      reveal.clear();
+      if (id !== "edit") await store.quietly(() => store.setSetting("questionView", id));
+    }
+  };
   onAction(host, {
     "ql-view": () => runFlow(async () => {
-      const id = await chooseAction({ title: t("view.title"), items: [
-        { id: "study", label: t("view.study"), sub: t("view.studyHint"), current: mode === "study" },
-        { id: "selftest", label: t("view.selftest"), sub: t("view.selftestHint"), current: mode === "selftest" },
-        { id: "edit", label: t("view.edit"), sub: t("view.editHint"), current: mode === "edit" },
-        { id: "scroll", label: t("layout.scroll"), sub: t("layout.scrollHint"), current: layout === "scroll" },
-        { id: "single", label: t("layout.single"), sub: t("layout.singleHint"), current: layout === "single" }
-      ] });
+      const id = await chooseAction({ title: t("view.title"), items: viewItems() });
       if (!id) return;
-      if (id === "scroll" || id === "single") {
-        await store.quietly(() => store.setSetting("listLayout", id));
-      } else {
-        editMode = id === "edit";
-        reveal.clear();
-        if (id !== "edit") await store.quietly(() => store.setSetting("questionView", id));
-      }
+      await applyView(id);
+      redraw();
+    }),
+    // One button for both (AI lists): how to show the questions, then their order.
+    "ql-viewall": () => runFlow(async () => {
+      const id = await chooseAction({ title: t("view.title"), items: [{ heading: t("view.showHead") }, ...viewItems(), { heading: t("sort.title") }, ...sortItems().map((x) => ({ ...x, id: `sort:${x.id}` }))] });
+      if (!id) return;
+      if (id.startsWith("sort:")) { sortBy.set(key, id.slice(5)); forgetPlace(key); } else await applyView(id);
       redraw();
     }),
     "ql-edit-done": () => { editMode = false; redraw(); },
     "ql-sort": () => runFlow(async () => {
-      const id = await chooseAction({ title: t("sort.title"), items: ["none", "diff-asc", "diff-desc"]
-        .map((s) => ({ id: s, label: t(`sort.${s}`), current: s === sort })) });
+      const id = await chooseAction({ title: t("sort.title"), items: sortItems() });
       if (!id) return;
       sortBy.set(key, id);
       forgetPlace(key);
