@@ -132,50 +132,52 @@ function vapidJwt(aud, exp) {
   return input + "." + b64u(es256(bytesOf(input)));
 }
 
+// Plain BigInt() values: the Apps Script editor does not accept 0n-style numbers.
+const B0 = BigInt(0), B1 = BigInt(1), B2 = BigInt(2), B3 = BigInt(3), B4 = BigInt(4), B8 = BigInt(8), B255 = BigInt(255);
 const P = BigInt("0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff");
 const N = BigInt("0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551");
 const GX = BigInt("0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296");
 const GY = BigInt("0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5");
 
-function mod(a, m) { const r = a % m; return r < 0n ? r + m : r; }
+function mod(a, m) { const r = a % m; return r < B0 ? r + m : r; }
 function inv(a, m) { // modular inverse (extended Euclid)
-  let lo = 1n, hi = 0n, low = mod(a, m), high = m;
-  while (low > 1n) { const q = high / low; const nm = hi - lo * q; const nw = high - low * q; hi = lo; high = low; lo = nm; low = nw; }
+  let lo = B1, hi = B0, low = mod(a, m), high = m;
+  while (low > B1) { const q = high / low; const nm = hi - lo * q; const nw = high - low * q; hi = lo; high = low; lo = nm; low = nw; }
   return mod(lo, m);
 }
 // Jacobian coordinates [X, Y, Z]; curve a = -3.
 function dbl(p) {
-  if (p[1] === 0n || p[2] === 0n) return [0n, 1n, 0n];
+  if (p[1] === B0 || p[2] === B0) return [B0, B1, B0];
   const X = p[0], Y = p[1], Z = p[2];
   const d = mod(Y * Y, P), z2 = mod(Z * Z, P);
-  const s = mod(4n * X * d, P);
-  const m = mod(3n * (X - z2) * (X + z2), P);
-  const x3 = mod(m * m - 2n * s, P);
-  const y3 = mod(m * (s - x3) - 8n * d * d, P);
-  const z3 = mod(2n * Y * Z, P);
+  const s = mod(B4 * X * d, P);
+  const m = mod(B3 * (X - z2) * (X + z2), P);
+  const x3 = mod(m * m - B2 * s, P);
+  const y3 = mod(m * (s - x3) - B8 * d * d, P);
+  const z3 = mod(B2 * Y * Z, P);
   return [x3, y3, z3];
 }
 function add(p, q) {
-  if (p[2] === 0n) return q; if (q[2] === 0n) return p;
+  if (p[2] === B0) return q; if (q[2] === B0) return p;
   const z1 = mod(p[2] * p[2], P), z2 = mod(q[2] * q[2], P);
   const u1 = mod(p[0] * z2, P), u2 = mod(q[0] * z1, P);
   const s1 = mod(p[1] * z2 * q[2], P), s2 = mod(q[1] * z1 * p[2], P);
-  if (u1 === u2) return s1 === s2 ? dbl(p) : [0n, 1n, 0n];
+  if (u1 === u2) return s1 === s2 ? dbl(p) : [B0, B1, B0];
   const h = mod(u2 - u1, P), r = mod(s2 - s1, P);
   const h2 = mod(h * h, P), h3 = mod(h2 * h, P);
-  const x3 = mod(r * r - h3 - 2n * u1 * h2, P);
+  const x3 = mod(r * r - h3 - B2 * u1 * h2, P);
   const y3 = mod(r * (u1 * h2 - x3) - s1 * h3, P);
   const z3 = mod(h * p[2] * q[2], P);
   return [x3, y3, z3];
 }
 function mulG(k) {
-  let r = [0n, 1n, 0n], a = [GX, GY, 1n];
-  while (k > 0n) { if (k & 1n) r = add(r, a); a = dbl(a); k >>= 1n; }
+  let r = [B0, B1, B0], a = [GX, GY, B1];
+  while (k > B0) { if (k & B1) r = add(r, a); a = dbl(a); k >>= B1; }
   const zi = inv(r[2], P), zi2 = mod(zi * zi, P);
   return [mod(r[0] * zi2, P), mod(r[1] * zi2 * zi, P)];
 }
-function toInt(bytes) { let x = 0n; for (let i = 0; i < bytes.length; i++) x = (x << 8n) | BigInt(bytes[i] & 255); return x; }
-function toBytes(x, len) { const out = []; for (let i = len - 1; i >= 0; i--) out[i] = Number(x & 255n), x >>= 8n; return out; }
+function toInt(bytes) { let x = B0; for (let i = 0; i < bytes.length; i++) x = (x << B8) | BigInt(bytes[i] & 255); return x; }
+function toBytes(x, len) { const out = []; for (let i = len - 1; i >= 0; i--) out[i] = Number(x & B255), x >>= B8; return out; }
 function sha256(bytes) { return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, signed(bytes)).map(function (b) { return b & 255; }); }
 function hmac(key, bytes) { return Utilities.computeHmacSha256Signature(signed(bytes), signed(key)).map(function (b) { return b & 255; }); }
 function signed(bytes) { return bytes.map(function (b) { b &= 255; return b > 127 ? b - 256 : b; }); }
@@ -193,10 +195,10 @@ function es256(msg) {
   for (;;) {
     V = hmac(K, V);
     const k = toInt(V);
-    if (k > 0n && k < N) {
+    if (k > B0 && k < N) {
       const r = mod(mulG(k)[0], N);
       const s = mod(inv(k, N) * (e + r * d), N);
-      if (r !== 0n && s !== 0n) return toBytes(r, 32).concat(toBytes(s, 32));
+      if (r !== B0 && s !== B0) return toBytes(r, 32).concat(toBytes(s, 32));
     }
     K = hmac(K, V.concat([0])); V = hmac(K, V);
   }

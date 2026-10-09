@@ -100,3 +100,9 @@ test("a gone push address stops wake-ups; manifest asks only for push + timer", 
   assert.throws(() => pushScriptFor({ key: "short", vapid: k }));
   assert.throws(() => pushScriptFor({ key: KEY, vapid: { d: "a\"b", pub: "x" } }));
 });
+
+test("the script has no 0n-style numbers (the Apps Script editor rejects them)", () => {
+  const src = pushScriptFor({ key: KEY, vapid: keys() });
+  assert.equal(/\b\d+n\b/.test(src.replace(/"[^"]*"/g, "")), false);
+  assert.equal(/\?\.|\?\?/.test(src), false);
+});
