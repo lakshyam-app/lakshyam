@@ -161,7 +161,8 @@ export function counts() {
 /** Everything that goes into a backup, as plain arrays. */
 /* Settings that belong to this phone only and never leave it (not in backups or safety
    copies): the Google Drive link (account, this phone's name and folder). */
-export const PHONE_ONLY_SETTINGS = ["drive"];
+// This phone's links and reminder state: never exported, kept on a full restore.
+export const PHONE_ONLY_SETTINGS = ["drive", "reminders", "notifyPlan", "notifyShown", "notifyInbox"];
 
 export function exportRecords() {
   return Object.fromEntries(BACKUP_STORES.map((name) => [name, [...cache[name].values()]

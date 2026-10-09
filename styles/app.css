@@ -1199,3 +1199,20 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .pdf-where { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin: 4px 0 8px; background: var(--surface); }
 .pdf-where.is-cloud { background: var(--brand-soft); }
 .pdf-where p { margin: 4px 0; }
+
+/* Reminders */
+.reminders .rem-kind { display: grid; gap: 4px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.reminders .rem-kind:last-child { border-bottom: 0; }
+.reminders .rem-kind .switch-row { padding: 0; }
+.reminders .switch-row-like { margin: 0; display: grid; gap: 2px; }
+.reminders .rem-time { width: auto; min-width: 7.5em; max-width: 10em; padding: 6px 8px; justify-self: start; }
+.reminders .rem-kind > .rem-time { margin-left: 34px; }
+.reminders .rem-times { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+.reminders .rem-times .field-label { display: grid; gap: 4px; }
+.reminders .ok-line { margin: 6px 0; color: var(--brand); }
+.rem-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.rem-list li { display: grid; grid-template-columns: minmax(6.5em, auto) minmax(0, 1fr); gap: 10px; align-items: baseline; }
+.rem-when { color: var(--muted); font-size: .9em; white-space: nowrap; }
+.rem-what { overflow-wrap: anywhere; }
+.rem-what-list { margin: 4px 0 8px; padding-left: 0; list-style: none; display: grid; gap: 6px; }
+.rem-short { margin-top: 12px; }

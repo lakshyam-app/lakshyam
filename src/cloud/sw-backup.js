@@ -12,7 +12,7 @@
     "questionState", "topicState", "attempts", "sets", "topicLists", "labels",
     "notes", "filterTemplates", "flashcardState", "activity", "settings",
     "timetables", "ttLog", "diary"];
-  const PHONE_ONLY = ["drive"];
+  const PHONE_ONLY = ["drive", "reminders", "notifyPlan", "notifyShown", "notifyInbox"]; // = PHONE_ONLY_SETTINGS in data/store.js
   const DAY = 86400000;
 
   const req = (r) => new Promise((resolve, reject) => { r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error); });

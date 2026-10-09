@@ -65,6 +65,14 @@ Presets fall back to the next one if one fails, and can be paused.
   The app only removes its own copy after Drive's copy is checked byte-for-byte; your original file is never touched.
 - Clearing the browser's site data for this address deletes Lakshyam's data. Export first.
 
+### Reminders
+
+Settings → Study goals & Today → **🔔 Reminders**. Lakshyam works out the reminders on the phone (timetable blocks, mistakes due,
+exam milestones, streak, day review) and you answer from the notification: ✓ Done / Skipped on a block, 🙂 / 😕 for the day,
+the answer key of a question. A small script in your own Google account (one-time setup, steps in the app) only wakes the
+phone at the set times; it never gets what the reminders say. Quiet hours, a daily limit and pause are in the same screen.
+Long-press the app icon for Quick 10, Today's session and Day review (no setup needed).
+
 ### Settings
 
 Settings (⚙) has a search box and eight groups: Study goals & Today · Theme & language · Tests & questions ·
@@ -161,6 +169,7 @@ and [`docs/feature-check.md`](docs/feature-check.md) for where every old-app fea
 | 1.3 | Up to 20 exam countdowns, with a choice of which and how Today shows them |
 | 1.6 | Automatic Drive backup without sign-in, through your own Google Apps Script (docs/apps-script); background backup on installed app |
 | 1.5 | How to use Lakshyam: illustrated demo + PDF (English, മലയാളം) in Settings |
+| 1.12 | 🔔 Reminders: notifications with two answer buttons (block check-in ✓ Done / Skipped, day review 🙂 / 😕, answer key), morning plan, exam milestones, streak rescue, weekly report, backup; quiet hours, daily limit, pause; woken by your own Google Apps Script (only the times leave the phone). Home-screen shortcuts: Quick 10, Today's session, Day review |
 | 1.11 | Study PDFs can live in your own Google Drive to free phone space (checked copy before removal; page text stays on the phone); move one or all, keep on phone again, add back on a new phone |
 | 1.10 | 📝 Notes tab next to Cards: revision notes from study PDFs, one per PDF run; AI questions, cards and notes can be shown per study PDF or all together |
 | 1.9 | AI questions (with or without a PDF) follow the topic's past-paper pattern from its AI strategy; PDF questions still come only from the PDF |

@@ -33,9 +33,10 @@ import { testScreen } from "./features/test/test-screen.js";
 import { resultScreen } from "./features/test/results.js";
 import { notesScreen } from "./features/notes/notes.js";
 import { settingsScreen } from "./features/settings/settings.js";
+import { remindersScreen, remindersOnOpen, syncSoon, listenToWorker } from "./features/reminders/reminders.js";
 
 [todayScreen, libraryScreen, subjectScreen, subjectAllScreen, topicScreen, paperScreen, bankScreen, bankAddScreen,
-  searchScreen, aiHubScreen, pdfsScreen, pdfScreen, pdfPageScreen, pdfMakeScreen, insightsScreen, insightTopicScreen, timetableScreen, ttListScreen, ttPlansScreen, ttPlanScreen, ttScheduleScreen, ttNewScreen, ttReviewScreen, diaryScreen, progressScreen, historyScreen, testsScreen, statsSubjectScreen, statsTopicScreen, statsTopicsScreen, statsTablesScreen, testScreen, resultScreen, notesScreen, settingsScreen, examsScreen, mapScreen, guideScreen, guidePdfScreen]
+  searchScreen, aiHubScreen, pdfsScreen, pdfScreen, pdfPageScreen, pdfMakeScreen, insightsScreen, insightTopicScreen, timetableScreen, ttListScreen, ttPlansScreen, ttPlanScreen, ttScheduleScreen, ttNewScreen, ttReviewScreen, diaryScreen, progressScreen, historyScreen, testsScreen, statsSubjectScreen, statsTopicScreen, statsTopicsScreen, statsTablesScreen, testScreen, resultScreen, notesScreen, settingsScreen, remindersScreen, examsScreen, mapScreen, guideScreen, guidePdfScreen]
   .forEach(registerScreen);
 
 function renderTabbar(activeId) {
@@ -110,13 +111,17 @@ async function boot() {
     awake();
   });
   // Any data change (import, restore, syllabus switch) redraws the screen.
-  store.onChange(() => { setLocale(store.setting("appLang", "en")); applyTheme(store.setting("theme", "system")); applyTextSize(store.setting("textSize", "m")); awake(); rerender(); });
+  store.onChange(() => { setLocale(store.setting("appLang", "en")); applyTheme(store.setting("theme", "system")); applyTextSize(store.setting("textSize", "m")); awake(); rerender(); syncSoon(); });
 
   registerServiceWorker();
   requestPersistence();
   // Google Drive backup when due (quietly, only if Google's sign-in is still valid).
   setTimeout(autoDriveBackup, 4000);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) setTimeout(autoDriveBackup, 1500); });
+  // Reminders: save buttons pressed on notifications, and plan the next ones.
+  listenToWorker();
+  setTimeout(remindersOnOpen, 1200);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) setTimeout(remindersOnOpen, 800); });
 }
 
 boot();

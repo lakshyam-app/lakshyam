@@ -156,3 +156,13 @@ Today screen with Quick 10 and daily goal · exam countdown · timetable (any da
 |---|---|---|
 | Study PDF file moved to your Google Drive ("Lakshyam PDFs"): resumable upload, size + MD5 check, only then the phone copy is removed; page text stays on the phone; pictures / AI page reading fetch it for the session; keep on phone again; delete here only or Drive copy to the Bin | Study PDF → Where the PDF file is kept | ✅ |
 | Move all PDFs to Drive with space freed shown; add back PDFs that are in Drive but not on this phone (same id, links restored) | Settings → Backup & data → Study PDFs | ✅ |
+
+## Added in 1.12
+
+| Feature | Where | Status |
+|---|---|---|
+| Reminders planned on the phone from the timetable, mistakes, diary, exams and backups: block check-in, morning plan (exam milestones 60/30/14/7/3/1 days), questions in free moments, streak rescue (only if nothing studied), day review, weekly report, backup; quiet hours, daily limit (most useful first), 6-minute spacing, pause 1/3/7 days | Settings → Study goals & Today → 🔔 Reminders | ✅ |
+| Notification buttons answered without opening the app: ✓ Done / Skipped marks the block, 🙂 Good / 😕 Tough saves the day's mood (kept note and tags), Show answer shows the key; other buttons open the right place | Android notification | ✅ |
+| One-time setup with your own Google Apps Script (5-minute timer, signed wake-ups with no content; self-check of signing before turning on); test reminder; set up again; disconnect | 🔔 Reminders → Set up | ✅ (real Google delivery not testable here) |
+| Home-screen shortcuts: Quick 10, Today's session, Day review; links from notifications (#/today?go=…) | App icon long-press | ✅ |
+| Reminder keys, plan and button presses stay on the phone (not in backups, kept on restore) | — | ✅ |

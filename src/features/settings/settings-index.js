@@ -12,6 +12,7 @@ const item = (id, cat, labelKey, act = null) => ({ id, cat, act, label: () => t(
 export const SETTINGS_INDEX = [
   item("goal", "today", "settings.goal"),
   item("exam", "elsewhere", "cd.title", "exam"),
+  item("reminders", "elsewhere", "rem.title", "reminders"),
   item("countdown", "today", "exam.showSetting"),
   item("diary", "today", "diary.showSetting"),
   item("streak", "today", "settings.showStreak"),

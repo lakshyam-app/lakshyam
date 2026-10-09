@@ -11,7 +11,7 @@ import { countdownCard, tickCountdown } from "./countdown.js";
 import { sessionPlan, sessionCard, startSession } from "./session.js";
 import { driveTodayRow, driveHandlers, driveConfig } from "../settings/drive.js";
 import { timetableNow, nowHandlers, nowTick } from "../timetable/now-card.js";
-import { todayDiaryCard, diaryHandlers } from "../diary/diary.js";
+import { todayDiaryCard, diaryHandlers, openReview } from "../diary/diary.js";
 import { nameHtml, label as nameLabel } from "../../core/names.js";
 import * as tests from "../../data/tests.js";
 import { downloadBackup } from "../../data/backup.js";
@@ -21,6 +21,7 @@ import { streak, weekDots, nextSteps, daysBetween } from "../../domain/habits.js
 import { isGradable } from "../../domain/testing.js";
 import { answerRecords, pickByBasis, accuracyBy, LOW_N } from "../../domain/stats.js";
 import { openStartTest, progressText, quickTest } from "../test/start-sheet.js";
+import { oneQuestion, remindersTodayRow } from "../reminders/reminders.js";
 
 export const DEFAULT_GOAL = 30;
 export const goal = () => Math.max(1, Number(store.setting("dailyGoal", DEFAULT_GOAL)) || DEFAULT_GOAL);
@@ -150,7 +151,7 @@ function backupReminder() {
 export const todayScreen = {
   id: "today",
   tab: 1,
-  render(container) {
+  render(container, params = {}) {
     const today = localDate();
     const name = String(store.setting("userName", "") || "").trim();
     const greet = name ? t("today.greetName", { greeting: t(greetingKey()), name }) : t(greetingKey());
@@ -198,6 +199,7 @@ export const todayScreen = {
         <span class="row-sub">${cand.due.slice(0, 3).map((d) => nameLabel(store.topic(d.topicId))).filter(Boolean).join(", ")}${cand.due.length > 3 ? "…" : ""}</span></span>
         <span class="chev-txt">›</span></button>` : ""}
       <button type="button" class="btn wide" data-action="start">${t("today.startTest")}</button>
+      ${remindersTodayRow()}
       ${backupReminder()}
     </section>`;
 
@@ -222,6 +224,18 @@ export const todayScreen = {
         toast(t("settings.backupSaved"));
       }
     });
+    // From a reminder or a home-screen shortcut: #/today?go=session|quick|review|q&id=…
+    // (done once: the request is taken out of the address first).
+    if (params.go) {
+      history.replaceState(history.state, "", "#/today");
+      const first = plan.focus?.topic?.id || cand.steps[0]?.topicId;
+      setTimeout(() => {
+        if (params.go === "session") startSession(syllabus, plan);
+        else if (params.go === "quick") { if (first) quickTest(first); else openStartTest(); }
+        else if (params.go === "review") openReview(today);
+        else if (params.go === "q" && params.id) oneQuestion(params.id);
+      }, 60);
+    }
     const stopExam = tickCountdown(container);
     const stopNow = nowTick(container);
     return () => { stopExam(); stopNow(); };

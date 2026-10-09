@@ -29,6 +29,7 @@ import { header, backHandler } from "../library/library.js";
 import { driveBlock, driveHandlers, driveConfig, paintBackgroundLine } from "./drive.js";
 import { settingsBlock as pdfCloudBlock, settingsHandlers as pdfCloudHandlers } from "../pdfs/pdf-cloud.js";
 import { openGuideSheet } from "../guide/guide.js";
+import { remindersState } from "../reminders/reminders.js";
 import { SETTINGS_INDEX, CATEGORIES, CATEGORY_ICON, searchSettings } from "./settings-index.js";
 
 const when = (ms) => new Date(ms).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
@@ -143,6 +144,8 @@ const PAGES = {
       <div class="group">
         <button type="button" class="row" data-action="exam" data-set="exam"><span class="row-main"><span class="row-title">📅 ${t("cd.title")}</span>
           <span class="row-sub">${t("cd.settingsSub", { n: upcoming(allExams()).length })}</span></span><span class="chev-txt">›</span></button>
+        <button type="button" class="row" data-action="reminders" data-set="reminders"><span class="row-main"><span class="row-title">🔔 ${t("rem.title")}</span>
+          <span class="row-sub">${t("rem.rowSub", { state: t(`rem.state${{ off: "Off", on: "On", paused: "Paused", stopped: "Stopped" }[remindersState()]}`) })}</span></span><span class="chev-txt">›</span></button>
         ${sw("countdown", "showCountdown", t("exam.showSetting"))}
         ${sw("diary", "showDiary", t("diary.showSetting"))}
         ${sw("streak", "showStreak", t("settings.showStreak"))}
@@ -305,6 +308,9 @@ function catList(subs) {
     <div class="rows"><button type="button" class="row" data-action="hit" data-id="exam">
       <span class="set-icon" aria-hidden="true">📅</span>
       <span class="row-main"><span class="row-title">${t("cd.title")}</span><span class="row-sub">${t("cd.settingsSub", { n: upcoming(allExams()).length })}</span></span>
+      <span class="chev-txt">›</span></button><button type="button" class="row" data-action="hit" data-id="reminders">
+      <span class="set-icon" aria-hidden="true">🔔</span>
+      <span class="row-main"><span class="row-title">${t("rem.title")}</span><span class="row-sub">${t("rem.rowSub", { state: t(`rem.state${{ off: "Off", on: "On", paused: "Paused", stopped: "Stopped" }[remindersState()]}`) })}</span></span>
       <span class="chev-txt">›</span></button><button type="button" class="row" data-action="hit" data-id="timetable">
       <span class="set-icon" aria-hidden="true">🗓</span>
       <span class="row-main"><span class="row-title">${t("setx.timetable")}</span><span class="row-sub">${t("setx.timetableSub")}</span></span>
@@ -322,6 +328,7 @@ async function aiSummaryText() {
 
 const ACTIONS = {
   exam: () => go("exams"),
+  reminders: () => go("reminders"),
   "ai-settings": () => openAiSettings(),
   undo: () => openUndo(),
   "diff-times": () => openAutoTimes(),
@@ -352,6 +359,7 @@ function handlers(container, goalNow) {
     undo: openUndo,
     erase: confirmErase,
     exam: () => go("exams"),
+    reminders: () => go("reminders"),
     stats: () => openStatsSettings(),
     "diff-times": () => openAutoTimes(),
     "ai-settings": () => openAiSettings(),
