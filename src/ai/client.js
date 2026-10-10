@@ -46,7 +46,16 @@ export function replyText(format, data) {
     ? (data?.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n")
     : data?.choices?.[0]?.message?.content || "";
   if (Array.isArray(text)) text = text.map((x) => x.text || "").join("\n");
-  return String(text || "").trim();
+  return stripThinking(String(text || ""));
+}
+
+/** Some models (e.g. Gemma, DeepSeek R1, Qwen) put their private reasoning in the reply as
+    <thought>…</thought> or <think>…</think>. Only the answer after it is kept. */
+export function stripThinking(text) {
+  let s = String(text || "").replace(/<(thought|think|thinking)>[\s\S]*?<\/\1>/gi, "");
+  // Reasoning left open (reply cut short): drop it only when it is at the very start.
+  s = s.replace(/^\s*<(thought|think|thinking)>[\s\S]*$/i, "");
+  return s.trim();
 }
 
 /** Sorts an HTTP failure into "limit reached" (try another preset), "busy" (retry once) or other. */
