@@ -22,6 +22,7 @@ import * as pdfStore from "../../pdf/pdf-store.js";
 import { extractPdfText, openStoredPdf, renderPageJpeg } from "../../pdf/pdf-reader.js";
 import * as jobsApi from "../../pdf/pdf-jobs.js";
 import { DEFAULT_STYLE } from "../../ai/pdf-prompts.js";
+import { countsLine, modelNames, aiModelOf } from "../../domain/made-by.js";
 import { header, backHandler, chev } from "../library/library.js";
 import { pickTopic } from "../library/topic-picker.js";
 import { ensureAi, errorText } from "../ai/ai-ui.js";
@@ -336,8 +337,8 @@ function styleKey(topicId) { return `aiStyle:${topicId}`; }
 function savedStyle(tg) {
   return (tg.topicId && store.setting(styleKey(tg.topicId))) || (tg.subjectId && store.setting(`aiStyle:sub:${tg.subjectId}`)) || null;
 }
-async function saveStyle(tg, text) {
-  const value = { text, at: Date.now() };
+async function saveStyle(tg, text, by = null) {
+  const value = { text, at: Date.now(), ...(by ? { by } : {}) };
   await store.quietly(async () => {
     if (tg.topicId) await store.setSetting(styleKey(tg.topicId), value);
     if (tg.subjectId) await store.setSetting(`aiStyle:sub:${tg.subjectId}`, value);
@@ -364,7 +365,7 @@ function newJob(rec, kind) {
     cfg: {
       target, from: readable[0] || 1, to: readable[readable.length - 1] || rec.pages.length,
       n: kind === "cards" ? 20 : 10, difficulty: "mixed", lang: "same", check: true, detail: "detailed",
-      style: s?.text || DEFAULT_STYLE, styleAt: s?.at || null, styleNote: "", readCount: "all", usePattern: true,
+      style: s?.text || DEFAULT_STYLE, styleAt: s?.at || null, styleBy: s?.by || null, styleNote: "", readCount: "all", usePattern: true,
       subjectName
     }
   };
@@ -488,7 +489,7 @@ function formView(rec, job, handlers) {
     if (pick?.topicId) {
       cfg.target = pick;
       const s = savedStyle(pick);
-      if (s) { cfg.style = s.text; cfg.styleAt = s.at; }
+      if (s) { cfg.style = s.text; cfg.styleAt = s.at; cfg.styleBy = s.by || null; }
       cfg.styleNote = "";
     }
   }).then(() => refresh(true));
@@ -507,7 +508,7 @@ function formView(rec, job, handlers) {
   const langPills = html`<h3>${t("pdf.lang")}</h3>${pills(job, "lang", ["same", "en", "ml"], (v) => t(`pdf.langs.${v}`))}`;
   // Follow the topic's past-paper pattern (from its AI strategy), if it has one.
   const strategy = cfg.target?.topicId ? strategyFor(cfg.target.topicId) : null;
-  const patternSwitch = (hintKey) => (strategy ? html`<label class="switch-row"><input type="checkbox" data-cfg="usePattern" ${cfg.usePattern ? "checked" : ""}><span>🎯 ${t("ai.usePattern")}<span class="row-sub">${t(hintKey, { date: strategy.at ? new Date(strategy.at).toLocaleDateString(dateLocale()) : "—" })}</span></span></label>` : html`<p class="hint">💡 ${t("ai.noPatternYet")}</p>`);
+  const patternSwitch = (hintKey) => (strategy ? html`<label class="switch-row"><input type="checkbox" data-cfg="usePattern" ${cfg.usePattern ? "checked" : ""}><span>🎯 ${t("ai.usePattern")}<span class="row-sub">${t(hintKey, { date: `${strategy.at ? new Date(strategy.at).toLocaleDateString(dateLocale()) : "—"}${strategy.by ? ` · 🤖 ${strategy.by}` : ""}` })}</span></span></label>` : html`<p class="hint">💡 ${t("ai.noPatternYet")}</p>`);
   // Everything except the essentials folds into "More options" (same settings, same defaults).
   const more = (inner) => html`<details class="more-opts" ${ui.moreOpen ? "open" : ""}>
       <summary><span class="mo-title">⚙ ${t("pdf.moreOptions")}</span><span class="mo-sum">${optionsSummary(job, strategy)}</span></summary>
@@ -524,15 +525,17 @@ function formView(rec, job, handlers) {
       if (examples.length < 3) { note.textContent = t("pdf.styleFew"); return; }
       el.disabled = true; note.textContent = t("pdf.styleLearning");
       try {
-        const text = await jobsApi.buildStyleGuide(englishPath(cfg.target.topicId), examples);
-        cfg.style = text; cfg.styleAt = Date.now(); cfg.styleNote = t("pdf.styleBuilt");
-        await saveStyle(cfg.target, text);
+        let by = null;
+        const text = await jobsApi.buildStyleGuide(englishPath(cfg.target.topicId), examples, (m) => { by = m; });
+        cfg.style = text; cfg.styleAt = Date.now(); cfg.styleBy = by; cfg.styleNote = t("pdf.styleBuilt");
+        await saveStyle(cfg.target, text, by);
       } catch (e) { cfg.styleNote = `✗ ${errorText(e)}`; }
       refresh(true);
     };
     handlers["style-default"] = () => { cfg.style = DEFAULT_STYLE; cfg.styleNote = ""; refresh(true); };
     handlers["style-edit"] = () => { ui.styleEdit = !ui.styleEdit; refresh(true); };
-    const note = cfg.styleNote || (cfg.styleAt ? t("pdf.styleSaved", { date: new Date(cfg.styleAt).toLocaleDateString(dateLocale()), n: pool }) : pool ? t("pdf.styleCanLearn", { n: pool }) : t("pdf.styleNoPyq"));
+    const note = (cfg.styleNote || (cfg.styleAt ? t("pdf.styleSaved", { date: new Date(cfg.styleAt).toLocaleDateString(dateLocale()), n: pool }) : pool ? t("pdf.styleCanLearn", { n: pool }) : t("pdf.styleNoPyq")))
+      + (cfg.styleBy && cfg.style !== DEFAULT_STYLE ? ` · 🤖 ${cfg.styleBy}` : "");
     const preview = String(cfg.style || "").split("\n").map((l) => l.trim()).filter(Boolean).slice(0, 2).join(" ");
     return { body: html`${target}${range}
       <h3>${t("pdf.howMany")}</h3>${pills(job, "n", [5, 10, 15, 20, 30], (v) => v)}
@@ -589,7 +592,9 @@ async function start(rec, job) {
     if (!T.buildChunks(fresh.pages, from, to, cfg.only ? new Set(cfg.only) : null).length) { toast(t("pdf.noTextInRange", { from, to })); return; }
     if (job.kind === "questions") {
       cfg.style = String(cfg.style || "").trim() || DEFAULT_STYLE;
-      if (cfg.style !== DEFAULT_STYLE) await saveStyle(cfg.target, cfg.style);
+      // The model that wrote the style guide is kept only while its text is unchanged.
+      const prev = savedStyle(cfg.target);
+      if (cfg.style !== DEFAULT_STYLE) await saveStyle(cfg.target, cfg.style, prev?.text === cfg.style ? prev.by || cfg.styleBy : null);
       cfg.examples = pickRandom(pyqPool(cfg.target), 4).map((q) => ({ text: q.text, options: q.options }));
     }
   }
@@ -652,6 +657,13 @@ function stoppedNote(r) {
   return r.abortMsg ? html`<p class="warn-box pre">${t("pdf.stoppedEarlyBecause", { why: errorText(r.abortMsg).slice(0, 240) })}</p>` : "";
 }
 
+/** "🤖 Made with: … · checked by …" after making (from the models that answered). */
+function madeWithLine(r) {
+  const w = countsLine(r?.models?.write); const c = countsLine(r?.models?.check);
+  if (!w) return "";
+  return html`<p class="made-with">🤖 ${t("ai.madeWith", { list: w })}${c ? html` · ${t("ai.checkedByList", { list: c })}` : ""}</p>`;
+}
+
 function reviewView(rec, job, handlers) {
   const r = job.result; const cfg = job.cfg;
   const tg = cfg.target; const topic = store.topic(tg.topicId);
@@ -666,12 +678,12 @@ function reviewView(rec, job, handlers) {
       const head = t("pdf.noteHead", { name: rec.name });
       const text = job.noteText.trim().replace(new RegExp(`^${head.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*`), "").trim();
       if (!text || !topic) return;
-      await mut.savePdfNote({ topicId: topic.id, pdfId: rec.id, pdfName: rec.name, pages: cfg.only ? cfg.only.join(", ") : `${cfg.from}–${cfg.to}`, text });
+      await mut.savePdfNote({ topicId: topic.id, pdfId: rec.id, pdfName: rec.name, pages: cfg.only ? cfg.only.join(", ") : `${cfg.from}–${cfg.to}`, text, models: modelNames(r.models?.write) });
       jobs.delete(jobKey(rec.id, job.kind));
       toast(t("pdf.noteSavedTab", { topic: nameLabel(topic) }));
       go("topic", { id: topic.id, mode: "notes" });
     };
-    return { body: html`<p class="hint">${t("pdf.noteReview", { to: targetLabel(tg) })}${r.tot.dropped ? ` ${t("pdf.noteDropped", { n: r.tot.dropped })}` : ""}</p>
+    return { body: html`${madeWithLine(r)}<p class="hint">${t("pdf.noteReview", { to: targetLabel(tg) })}${r.tot.dropped ? ` ${t("pdf.noteDropped", { n: r.tot.dropped })}` : ""}</p>
       ${stoppedNote(r)}
       <textarea class="field page-text" id="noteText" rows="16" aria-label="${t("pdf.kind.note")}">${job.noteText}</textarea>
       <p class="hint">${t("ai.verify")}</p>
@@ -690,13 +702,13 @@ function reviewView(rec, job, handlers) {
     const syllabus = store.currentSyllabus();
     const ref = (it) => ({ pdf: rec.name, pdfId: rec.id, page: it.page, quote: it.quote });
     if (isCards) {
-      await mut.saveCards(syllabus.id, topic.subjectId, topic.id, chosen.map((it) => ({ front: it.front, back: it.back, sourceRef: { ...ref(it), ...(it.pyq ? { pyq: true } : {}) } })));
+      await mut.saveCards(syllabus.id, topic.subjectId, topic.id, chosen.map((it) => ({ front: it.front, back: it.back, sourceRef: { ...ref(it), ...(it.pyq ? { pyq: true } : {}) }, aiModel: aiModelOf(it.madeBy) })));
       toast(t("pdf.cardsSaved", { n: chosen.length }));
     } else {
       await mut.saveAiQuestions(syllabus, topic.subjectId, topic.id, chosen.map((it) => ({
         text: it.text, options: it.options, answerIndex: it.answerIndex, difficulty: it.difficulty,
         explanation: `${it.explanation ? `${it.explanation}\n\n` : ""}📄 ${t("pdf.sourceRef", { name: rec.name, page: it.page })}\n“${it.quote}”`,
-        sourceRef: ref(it)
+        sourceRef: ref(it), aiModel: aiModelOf(it.madeBy, it.checkedBy)
       })));
       toast(t("ai.savedN", { n: chosen.length }));
     }
@@ -709,10 +721,11 @@ function reviewView(rec, job, handlers) {
       : html`<div class="qtext">${richText(it.text)}</div>
       <ol class="options">${it.options.map((o, j) => html`<li class="${j === it.answerIndex ? "right" : ""}"><span class="opt-letter">${letterFor(j)}</span><span class="opt-text">${richText(o)}</span>${j === it.answerIndex ? html`<span class="tick">✓</span>` : ""}</li>`)}</ol>`}
     ${badges(it, rec)}
+    ${Object.keys(r.models?.write || {}).length > 1 && it.madeBy ? html`<p class="made-with small">🤖 ${it.madeBy}${it.checkedBy && it.checkedBy !== it.madeBy ? ` · ${t("ai.checkedByList", { list: it.checkedBy })}` : ""}</p>` : ""}
     ${source(it)}
     ${!isCards && it.explanation ? html`<p class="hint">${richText(it.explanation)}</p>` : ""}
   </article>`);
-  return { body: html`<p class="hint">${t(isCards ? "pdf.reviewCards" : "pdf.reviewQuestions", { n: items.length, to: targetLabel(tg) })}${dropped ? ` ${t("pdf.droppedN", { n: dropped, bad: r.tot.badQuote })}` : ""}</p>
+  return { body: html`${madeWithLine(r)}<p class="hint">${t(isCards ? "pdf.reviewCards" : "pdf.reviewQuestions", { n: items.length, to: targetLabel(tg) })}${dropped ? ` ${t("pdf.droppedN", { n: dropped, bad: r.tot.badQuote })}` : ""}</p>
     <p class="warn-box">${t("pdf.reviewTick")}</p>
     ${stoppedNote(r)}
     ${list}

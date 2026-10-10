@@ -176,3 +176,12 @@ Today screen with Quick 10 and daily goal · exam countdown · timetable (any da
 | AI lists: 🤖 AI-made label (ⓘ shows the note); "From: … ▾" picker instead of chips; PDF name and page on each AI question instead of its number; 📄 Source line under the answer; one ⚙ View button (show + order) | Topic / Subject → AI · Cards · Notes | ✅ |
 | 🤖 Make more: choose one of the topic's study PDFs, add a PDF, or (questions) general knowledge; Cards and Notes tabs get Make more too | Topic → AI · Cards · Notes | ✅ |
 
+## Added in 1.14
+
+| Feature | Where | Status |
+|---|---|---|
+| "🤖 Made with: model (n) · checked by model" after making questions / cards / note / general questions; per-item model when more than one model wrote | Check & save screens | ✅ |
+| Model saved with each AI question (aiModel: by, checkedBy), flashcard, PDF note (aiModels), style guide and topic strategy (by); shown in Source line, card back / list, note header, style note, pattern hint, strategy sheet | Topic → AI · Cards · Notes; PDF make screen | ✅ |
+| ⚙ View → Made with filter (offered when questions come from more than one model, incl. "Not recorded") | Topic / Subject → AI | ✅ |
+| AI requests identical to 1.13 (recorded with a mock AI before and after) | — | ✅ |
+

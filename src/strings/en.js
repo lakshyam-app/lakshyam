@@ -683,6 +683,11 @@ export default {
     keyChanged: "The correct answer was changed after this test."
   },
   ai: {
+    madeWith: "Made with: {list}",
+    checkedByList: "checked by {list}",
+    madeWithHead: "Made with",
+    madeWithAny: "Any model",
+    madeWithNone: "Not recorded (made earlier)",
     madeLabel: "AI-made",
     aboutThis: "About this",
     make: {

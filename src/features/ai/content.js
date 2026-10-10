@@ -22,6 +22,7 @@ import { openStartTest } from "../test/start-sheet.js";
 import { generateQuestions } from "./ai-actions.js";
 import { viewNote, editNote, viewText } from "../notes/note-editor.js";
 import { listPdfs } from "../../pdf/pdf-store.js";
+import { madeByOf } from "../../domain/made-by.js";
 
 const inScope = (x, scope) => (scope.topicId ? x.topicId === scope.topicId : scope.subjectId ? x.subjectId === scope.subjectId : true);
 
@@ -108,11 +109,25 @@ export const contentHandler = {
 
 /* ---------- AI questions ---------- */
 
+const madeBy = new Map(); // scope → model name | "none" (not recorded) | absent = any
+
 export function renderAiPanel(host, { syllabus, scope, topic = null, label }) {
   const every = aiQuestions(syllabus.id, scope);
   const from = fromFilter("ai", scope, every);
-  const questions = from.shown;
-  const key = `ai:${scope.topicId || scope.subjectId || "all"}:${from.cur}`;
+  // "Made with" (in ⚙ View): only questions one model wrote. Offered when more than one is present.
+  const mkey = scope.topicId || scope.subjectId || "all";
+  const byCount = new Map(); from.shown.forEach((q) => { const m = madeByOf(q) || "none"; byCount.set(m, (byCount.get(m) || 0) + 1); });
+  let mcur = madeBy.get(mkey) || "";
+  if (mcur && !byCount.has(mcur)) mcur = "";
+  const questions = mcur ? from.shown.filter((q) => (madeByOf(q) || "none") === mcur) : from.shown;
+  const key = `ai:${scope.topicId || scope.subjectId || "all"}:${from.cur}:${mcur}`;
+  const extraMenu = byCount.size > 1 ? {
+    heading: t("ai.madeWithHead"),
+    label: mcur ? `🤖 ${mcur === "none" ? t("ai.madeWithNone") : mcur}` : "",
+    items: [{ id: "", label: t("ai.madeWithAny"), sub: t("ai.from.items", { n: from.shown.length }), current: !mcur },
+      ...[...byCount.entries()].sort((a, b) => b[1] - a[1]).map(([m, n]) => ({ id: m, label: m === "none" ? t("ai.madeWithNone") : `🤖 ${m}`, sub: t("ai.from.items", { n }), current: mcur === m }))],
+    pick: (v) => { if (v) madeBy.set(mkey, v); else madeBy.delete(mkey); store.touch(); }
+  } : null;
   host.innerHTML = html`<div class="list-head">${aiNote(t("ai.separateNote"))}${from.chips}</div>
     <div class="actions-row">
       ${questions.length ? html`<button type="button" class="btn" data-action="ai-practice">▶ ${t("practice.button")}</button>` : ""}
@@ -122,7 +137,7 @@ export function renderAiPanel(host, { syllabus, scope, topic = null, label }) {
     ${questions.length ? html`<div class="row-actions pad">
       <button type="button" class="link" data-action="ai-copy">${t("listing.copy")}</button>
       <button type="button" class="link danger" data-action="ai-delete">${t("ai.deleteThese", { n: questions.length })}</button></div>` : ""}`;
-  if (questions.length) mountQuestions(host.querySelector("#aiQHost"), { key, questions, showPaper: false, examFilter: false, oneViewButton: true });
+  if (questions.length) mountQuestions(host.querySelector("#aiQHost"), { key, questions, showPaper: false, examFilter: false, oneViewButton: true, extraMenu });
   else host.querySelector("#aiQHost").innerHTML = html`<p class="hint pad">${topic ? t("ai.noAiTopic") : t("ai.noAi")}</p>`;
   onAction(host, {
     ...fromHandler,
@@ -186,7 +201,7 @@ export function renderCardsPanel(host, { syllabus, scope, topic = null }) {
             <button type="button" class="fc-card ${st.flipped ? "flipped" : ""}" data-action="fc-flip" aria-label="${t("ai.fcFlip")}">
               <span class="fc-side">${st.flipped ? t("ai.fcAnswer") : t("ai.fcQuestion")}${card.sourceRef?.pyq ? ` · ⭐ ${t("pdf.pyqArea")}` : ""}</span>
               <span class="fc-text">${richText(st.flipped ? card.back : card.front)}</span>
-              ${st.flipped && card.sourceRef?.pdf ? html`<span class="hint">📄 ${card.sourceRef.pdf}${card.sourceRef.page ? `, p.${card.sourceRef.page}` : ""}</span>` : ""}
+              ${st.flipped && (card.sourceRef?.pdf || card.aiModel?.by) ? html`<span class="hint">${card.sourceRef?.pdf ? `📄 ${card.sourceRef.pdf}${card.sourceRef.page ? `, p.${card.sourceRef.page}` : ""}` : ""}${card.sourceRef?.pdf && card.aiModel?.by ? " · " : ""}${card.aiModel?.by ? `🤖 ${card.aiModel.by}` : ""}</span>` : ""}
               ${st.flipped ? "" : html`<span class="hint">${t("ai.fcTap")}</span>`}
             </button>
             <div class="fc-buttons">${st.flipped
@@ -195,7 +210,7 @@ export function renderCardsPanel(host, { syllabus, scope, topic = null }) {
       : html`<div class="fc-list">${all.filter(pass).map((c) => {
           const s = stateOf(c);
           return html`<article class="qcard" data-cid="${c.id}">
-            <header class="qcard-meta"><span>${c.sourceRef?.pyq ? `⭐ ${t("pdf.pyqArea")} · ` : ""}${t(`ai.fcStatus.${s.status}`)}${s.dueAt && s.status === "known" ? ` · ${t("ai.fcNext", { date: new Date(s.dueAt).toLocaleDateString(dateLocale()) })}` : ""}</span></header>
+            <header class="qcard-meta"><span>${c.sourceRef?.pyq ? `⭐ ${t("pdf.pyqArea")} · ` : ""}${t(`ai.fcStatus.${s.status}`)}${s.dueAt && s.status === "known" ? ` · ${t("ai.fcNext", { date: new Date(s.dueAt).toLocaleDateString(dateLocale()) })}` : ""}${c.aiModel?.by ? ` · 🤖 ${c.aiModel.by}` : ""}</span></header>
             <div class="qtext"><strong>Q:</strong> ${richText(c.front)}</div><div class="qtext"><strong>A:</strong> ${richText(c.back)}</div>
             <div class="row-actions"><button type="button" class="link" data-action="fc-set" data-v="known">✓ ${t("ai.fcKnow")}</button>
               <button type="button" class="link" data-action="fc-set" data-v="again">↺ ${t("ai.fcAgain")}</button>
@@ -246,7 +261,7 @@ export function renderPdfNotesPanel(host, { scope, topic = null }) {
   const card = (n) => {
     const tp = store.topic(n.target.topicId);
     return html`<article class="note-card pdf-note" data-nid="${n.id}">
-      <header class="qcard-meta"><span>📄 ${n.label || "PDF"}${n.target.pages ? ` · ${t("ai.pnPages", { pages: n.target.pages })}` : ""} · ${when(n)}${!scope.topicId && tp ? ` · ${nameLabel(tp)}` : ""}</span></header>
+      <header class="qcard-meta"><span>📄 ${n.label || "PDF"}${n.target.pages ? ` · ${t("ai.pnPages", { pages: n.target.pages })}` : ""} · ${when(n)}${!scope.topicId && tp ? ` · ${nameLabel(tp)}` : ""}${n.aiModels?.length ? ` · 🤖 ${n.aiModels.join(", ")}` : ""}</span></header>
       <div class="note-body-btn" data-action="pn-read"><div class="qtext note-body ai-answer ${n.text.length > 600 || n.text.split("\n").length > 10 ? "is-long" : ""}">${noteText(n.text)}</div></div>
       <div class="row-actions">
         <button type="button" class="link" data-action="pn-read">📖 ${t("notes.read")}</button>

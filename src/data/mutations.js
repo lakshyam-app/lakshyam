@@ -128,10 +128,10 @@ export function saveNote(target, label, text) {
 /* ---------- revision notes made from a study PDF (several per topic, one record each) ---------- */
 
 /** Saves a new PDF revision note for a topic. Returns its id. */
-export async function savePdfNote({ topicId, pdfId, pdfName, pages = "", text }) {
+export async function savePdfNote({ topicId, pdfId, pdfName, pages = "", text, models = null }) {
   const rid = newId("pn");
   const id = ids.note("pdfnote", rid);
-  await store.apply({ notes: { put: [{ id, target: { type: "pdfnote", id: rid, topicId, pdfId, pages }, label: pdfName, text: String(text || "").trim(), createdAt: Date.now() }] } });
+  await store.apply({ notes: { put: [{ id, target: { type: "pdfnote", id: rid, topicId, pdfId, pages }, label: pdfName, text: String(text || "").trim(), createdAt: Date.now(), ...(models?.length ? { aiModels: models.slice(0, 6) } : {}) }] } });
   return rid;
 }
 
@@ -489,7 +489,7 @@ export async function saveAiQuestions(syllabus, subjectId, topicId, items) {
     return {
       id: newId("q"), paperId: paper.id, oldId: `ai${n}`, order: n, number: `AI-${n}`, text: x.text, options: x.options,
       answerIndex: x.answerIndex, status: "active", explanation: x.explanation || "", subjectId, topicId,
-      lang: /[ഀ-ൿ]/.test(x.text) ? "ml" : "en", difficultyHint: x.difficulty || null, source: "ai", sourceRef: x.sourceRef || null
+      lang: /[ഀ-ൿ]/.test(x.text) ? "ml" : "en", difficultyHint: x.difficulty || null, source: "ai", sourceRef: x.sourceRef || null, ...(x.aiModel ? { aiModel: x.aiModel } : {})
     };
   });
   await store.apply({ papers: { put: [copy(paper, { questionCount: n })] }, questions: { put: questions } });
@@ -501,7 +501,7 @@ export async function saveAiQuestions(syllabus, subjectId, topicId, items) {
 /** Saves reviewed flashcards (e.g. made from a study PDF) as new cards to learn. */
 export async function saveCards(syllabusId, subjectId, topicId, items, source = "ai") {
   const cards = items.map((x) => ({
-    id: newId("fc"), syllabusId, subjectId: x.subjectId || subjectId, topicId: x.topicId || topicId, front: x.front, back: x.back, sourceRef: x.sourceRef || null, source
+    id: newId("fc"), syllabusId, subjectId: x.subjectId || subjectId, topicId: x.topicId || topicId, front: x.front, back: x.back, sourceRef: x.sourceRef || null, source, ...(x.aiModel ? { aiModel: x.aiModel } : {})
   }));
   const states = cards.map((c) => ({ id: c.id, cardId: c.id, status: "new", reviews: 0, lastAt: null, dueAt: null }));
   await store.apply({ flashcards: { put: cards }, flashcardState: { put: states } });

@@ -21,6 +21,7 @@ import * as P from "../../ai/prompts.js";
 import { ensureAi, askInSheet, errorText } from "./ai-ui.js";
 import { topicFacts, questionLines } from "../../domain/topic-pattern.js";
 import { saveStrategy, strategyFor, patternFrom } from "../../data/strategy.js";
+import { modelOf } from "../../pdf/pdf-jobs.js";
 
 const lang = async () => (await presets.getConfig()).lang || "en";
 
@@ -83,7 +84,7 @@ export async function generateQuestions(topic, seedQs = null) {
     <h3>${t("ai.genLang")}</h3>${pills("lang", ["en", "ml"], (v) => t(`ai.langs.${v}`))}
     <h3>${t("ai.genDiff")}</h3>${pills("difficulty", ["mixed", "E", "M", "D"], (v) => (v === "mixed" ? t("ai.mixed") : t(`question.difficulty.${v}`)))}
     ${strategy ? html`<div class="checks"><button type="button" class="check ${s.usePattern ? "on" : ""}" data-action="pattern" aria-pressed="${String(s.usePattern)}"><span class="box">${s.usePattern ? "✓" : ""}</span>
-      <span class="row-main"><span>🎯 ${t("ai.usePattern")}</span><span class="row-sub">${t("ai.usePatternHint", { date: strategy.at ? new Date(strategy.at).toLocaleDateString(dateLocale()) : "—" })}</span></span></button></div>`
+      <span class="row-main"><span>🎯 ${t("ai.usePattern")}</span><span class="row-sub">${t("ai.usePatternHint", { date: `${strategy.at ? new Date(strategy.at).toLocaleDateString(dateLocale()) : "—"}${strategy.by ? ` · 🤖 ${strategy.by}` : ""}` })}</span></span></button></div>`
       : html`<p class="hint">💡 ${t("ai.noPatternYet")}</p>`}
     <p class="hint">${t("ai.genNote")}</p>
     <div class="sheet-actions"><button type="button" class="btn btn-quiet" data-action="cancel">${t("common.cancel")}</button>
@@ -99,10 +100,12 @@ export async function generateQuestions(topic, seedQs = null) {
     openSheet(html`<h2>${t("ai.genTitle")}</h2>${steps3(2)}<p class="sheet-status">${t("ai.generating")}</p>`, {});
     const examples = (seedQs?.length ? seedQs : store.questionsFor({ syllabusId: syllabus.id, topicId: topic.id }).slice(0, 5)).map((q) => ({ text: q.text, options: q.options }));
     try {
-      const { text } = await ask(P.GENERATE_SYSTEM, P.generateTask({ subject: subject?.name || "", topic: topic.name, n: s.n, lang: s.lang, difficulty: s.difficulty, examples, pattern: s.usePattern && strategy ? patternFrom(strategy.text) : "" }), 4000);
+      const { text, preset } = await ask(P.GENERATE_SYSTEM, P.generateTask({ subject: subject?.name || "", topic: topic.name, n: s.n, lang: s.lang, difficulty: s.difficulty, examples, pattern: s.usePattern && strategy ? patternFrom(strategy.text) : "" }), 4000);
       const items = P.cleanGenerated(parseJsonLoose(text));
       if (!items.length) throw new Error(t("ai.err.noQuestions"));
-      if (isSheetOpen()) review(items);
+      const by = modelOf(preset);
+      items.forEach((x) => { x.aiModel = by ? { by } : null; });
+      if (isSheetOpen()) review(items, by);
     } catch (e) {
       if (isSheetOpen()) openSheet(html`<h2>${t("ai.genTitle")}</h2><p class="warn-box pre">${errorText(e)}</p>
         <div class="sheet-actions"><button type="button" class="btn btn-quiet" data-action="back">${t("common.back")}</button>
@@ -110,10 +113,11 @@ export async function generateQuestions(topic, seedQs = null) {
     }
   }
 
-  function review(items) {
+  function review(items, by = null) {
     const keep = new Set(items.map((_, i) => i));
     const drawReview = () => {
       openSheet(html`<h2>${t("ai.reviewTitle")}</h2>${steps3(3)}
+        ${by ? html`<p class="made-with">🤖 ${t("ai.madeWith", { list: by })}</p>` : ""}
         <p class="warn-box">${t("ai.reviewNote")}</p>
         ${items.map((x, i) => html`<article class="qcard gen ${keep.has(i) ? "" : "off"}">
           <label class="switch-row"><input type="checkbox" data-i="${i}" ${keep.has(i) ? "checked" : ""}><strong>${t("ai.genQ", { n: i + 1 })}</strong></label>
@@ -164,7 +168,9 @@ export async function topicStrategy(topic) {
     : "not practised yet.";
   const mk = markingInfo(syllabus.marking);
   const label = `${nameLabel(subject)} · ${nameLabel(topic)}`;
+  let strategyBy = "";
   const strategyText = await askInSheet({
+    onModel: (m) => { strategyBy = m || ""; },
     title: `🤖 ${t("ai.strategyTitle")}`, sub: `${label} · ${t("ai.strategySub", { n: total, papers: f.papers })}`,
     // Malayalam takes several times more tokens than English: give it room so it isn't cut off.
     maxTokens: (await lang()) === "en" ? 4500 : 9000, system: P.tutorSystem(await lang(), P.SECTIONED),
@@ -176,7 +182,7 @@ export async function topicStrategy(topic) {
     } }]
   });
   // Kept for the question makers (AI questions, questions from a PDF) to follow this pattern.
-  if (strategyText) { await saveStrategy(topic.id, { text: strategyText, lang: await lang() }); toast(t("ai.strategyKept")); }
+  if (strategyText) { await saveStrategy(topic.id, { text: strategyText, by: strategyBy, lang: await lang() }); toast(t("ai.strategyKept")); }
 }
 
 /* ---------- shared figures for AI (guess coach) ---------- */

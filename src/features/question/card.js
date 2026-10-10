@@ -28,7 +28,9 @@ export function questionCard(q, { showPaper = true, mode = "study", revealed = n
   // AI questions: where they came from (a study PDF and page) instead of their internal number.
   const isAi = q.source === "ai";
   const ref = isAi && q.sourceRef?.quote ? q.sourceRef : null;
-  const aiWhere = isAi ? (q.sourceRef?.pdf ? `📄 ${String(q.sourceRef.pdf).replace(/\.pdf$/i, "")}${q.sourceRef.page ? ` · ${t("question.pageShort", { n: q.sourceRef.page })}` : ""}` : `🤖 ${t("ai.madeLabel")}`) : null;
+  const aiWhere = isAi ? (q.sourceRef?.pdf ? `📄 ${String(q.sourceRef.pdf).replace(/\.pdf$/i, "")}${q.sourceRef.page ? ` · ${t("question.pageShort", { n: q.sourceRef.page })}` : ""}` : `🤖 ${q.aiModel?.by || t("ai.madeLabel")}`) : null;
+  // Which model wrote (and double-checked) it, when that was recorded (1.14+).
+  const byLine = isAi && q.aiModel?.by ? `🤖 ${q.aiModel.by}${q.aiModel.checkedBy ? ` · ${t("ai.checkedByList", { list: q.aiModel.checkedBy })}` : ""}` : "";
   const meta = [
     n !== null ? t("question.inTest", { n }) : null,
     isAi ? aiWhere : q.number ? (n !== null ? t("question.paperNumber", { n: q.number }) : t("question.number", { n: q.number })) : null,
@@ -84,7 +86,7 @@ export function questionCard(q, { showPaper = true, mode = "study", revealed = n
     ${explain && !hidden ? html`<details class="explain"><summary>${t("question.explanation")}</summary>
       <div class="qtext ai-answer plain">${smartText(explain)}</div></details>` : ""}
     ${ref && !hidden ? html`<details class="explain source-line"><summary>📄 ${t("question.sourceLine")}</summary>
-      <p class="quote">${ref.quote}</p>${ref.pdf ? html`<p class="hint">${String(ref.pdf).replace(/\.pdf$/i, "")}${ref.page ? ` · ${t("question.pageShort", { n: ref.page })}` : ""}</p>` : ""}</details>` : ""}
+      <p class="quote">${ref.quote}</p>${ref.pdf ? html`<p class="hint">${String(ref.pdf).replace(/\.pdf$/i, "")}${ref.page ? ` · ${t("question.pageShort", { n: ref.page })}` : ""}</p>` : ""}${byLine ? html`<p class="hint made-by">${byLine}</p>` : ""}</details>` : ""}
     ${can("ai") && store.setting("aiOnCards", true) !== false && !hidden && mode !== "edit" ? aiRow(q, review) : ""}
   </article>`;
 }

@@ -38,14 +38,15 @@ export async function ensureAi() {
  * opts: { title, sub, system, user, maxTokens, actions: [{ id, label, run(text) }] }
  * Returns the text (or null on error/close).
  */
-export async function askInSheet({ title, sub = "", system, user, maxTokens = 2500, actions = [], keepOpen = false }) {
+export async function askInSheet({ title, sub = "", system, user, maxTokens = 2500, actions = [], keepOpen = false, onModel = null }) {
   const head = html`<h2>${title}</h2>${sub ? html`<p class="hint">${sub}</p>` : ""}`;
   openSheet(html`${head}<p class="sheet-status">${t("ai.thinking")}</p>`, {}, { label: title });
   try {
     const { text, preset, switched } = await ask(system, user, maxTokens);
+    if (onModel) onModel(preset?.model || preset?.name || "");
     if (!isSheetOpen()) return text;
     if (switched) toast(t("ai.switched", { name: preset.name }));
-    showAnswer({ head, text, actions, presetName: preset.name, keepOpen });
+    showAnswer({ head, text, actions, presetName: preset.name, keepOpen, model: preset.model || "" });
     return text;
   } catch (e) {
     if (isSheetOpen()) {
@@ -59,10 +60,10 @@ export async function askInSheet({ title, sub = "", system, user, maxTokens = 25
   }
 }
 
-export function showAnswer({ head, text, actions, presetName, keepOpen }) {
+export function showAnswer({ head, text, actions, presetName, keepOpen, model = "" }) {
   openSheet(html`${head}
     <div class="ai-answer">${aiText(text)}</div>
-    <p class="hint">${t("ai.byPreset", { name: presetName })} · ${t("ai.verify")}</p>
+    <p class="hint">${t("ai.byPreset", { name: presetName })}${model && model !== presetName ? ` (${model})` : ""} · ${t("ai.verify")}</p>
     <div class="ai-actions">
       <button type="button" class="btn btn-quiet btn-small" data-action="copy">${t("question.copy")}</button>
       ${actions.map((a) => html`<button type="button" class="btn btn-quiet btn-small" data-action="act" data-id="${a.id}">${a.label}</button>`)}

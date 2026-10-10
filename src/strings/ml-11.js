@@ -13,6 +13,11 @@ export default {
   },
   ai: {
     madeLabel: "AI ഉണ്ടാക്കിയത്",
+    madeWith: "ഉണ്ടാക്കിയത്: {list}",
+    checkedByList: "പരിശോധിച്ചത് {list}",
+    madeWithHead: "ഉണ്ടാക്കിയ മോഡൽ",
+    madeWithAny: "ഏത് മോഡലും",
+    madeWithNone: "രേഖപ്പെടുത്തിയിട്ടില്ല (മുമ്പ് ഉണ്ടാക്കിയത്)",
     aboutThis: "ഇതിനെക്കുറിച്ച്",
     from: { short: "എവിടെ നിന്ന്:", items: "{n} എണ്ണം" },
     make: {

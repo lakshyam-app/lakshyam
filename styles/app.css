@@ -1255,3 +1255,6 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .menu-head { margin: 12px 0 2px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
 .menu-head:first-child { margin-top: 0; }
 .qcard .source-line .quote { margin: 6px 0 2px; padding-left: 10px; border-left: 3px solid var(--brand-soft); font-style: italic; }
+.made-with { margin: 2px 0 8px; font-size: 0.85rem; color: var(--muted); overflow-wrap: anywhere; }
+.made-with.small { margin: 4px 0 0; font-size: 0.8rem; }
+.qcard .made-by { margin-top: 2px; overflow-wrap: anywhere; }

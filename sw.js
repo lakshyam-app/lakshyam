@@ -4,7 +4,7 @@
      (Other apps on the same site keep their caches.)
    - A new version waits until the user taps "Refresh" in the app. */
 
-const VERSION = "1.13.1";
+const VERSION = "1.14.0";
 // Background backup through your own Google script (see src/cloud/sw-backup.js).
 importScripts("./src/cloud/sw-backup.js");
 // Reminders: shows the reminder the app planned when your reminder script wakes it (see src/cloud/sw-notify.js).
@@ -84,6 +84,7 @@ const SHELL_FILES = [
   "./src/domain/focus.js",
   "./src/domain/habits.js",
   "./src/domain/insights.js",
+  "./src/domain/made-by.js",
   "./src/domain/reminders.js",
   "./src/domain/review.js",
   "./src/domain/scoring.js",
