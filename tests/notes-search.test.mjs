@@ -2,7 +2,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { passagesOf, queryOf, rank, snippet, words } from "../src/domain/note-search.js";
-import { speakable, questionSpeech, pcmToWav } from "../src/features/question/speak.js";
+import { speakable, questionSpeech } from "../src/features/question/speak.js";
 
 const sources = [
   { kind: "pdf", ref: "p1", name: "rivers.pdf", pages: [
@@ -37,12 +37,10 @@ test("snippet marks the matched words and is escaped", () => {
   assert.match(s, /<mark>Periyar<\/mark> &lt;b&gt;is&lt;\/b&gt; the <mark>longest<\/mark>/);
 });
 
-test("read aloud: plain words, options with letters, a playable WAV", () => {
+test("read aloud: plain words, options with letters", () => {
   assert.equal(speakable("**Speed** = $\\frac{d}{t}$"), "Speed = d by t");
   const sp = questionSpeech({ text: "Longest river?", options: ["Periyar", "Pamba"], lang: "en" });
   assert.equal(sp.text, "Longest river?\nOption A. Periyar.\nOption B. Pamba.");
   assert.equal(sp.lang, "en-IN");
   assert.equal(questionSpeech({ text: "ഏറ്റവും നീളം കൂടിയ നദി?", options: ["പെരിയാർ"] }).lang, "ml-IN");
-  const wav = pcmToWav(new Uint8Array(480), 24000);
-  assert.equal(wav.size, 44 + 480); assert.equal(wav.type, "audio/wav");
 });

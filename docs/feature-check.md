@@ -227,11 +227,17 @@ Today screen with Quick 10 and daily goal · exam countdown · timetable (any da
 | 📖 PDF viewer: the study PDF's real pages, scrolling down; pages drawn near the screen only (long PDFs stay light); page box; − / + zoom (and pinch); a PDF kept in Google Drive opens after a sign-in tap, for this session only; nothing is changed | Study PDF → Read the PDF; page text screen → See this page; AI question Source line; PDF revision note → Open PDF; Smart insights "In your notes" | ✅ |
 | 🔎 In my notes from any question: a word search (no AI) over the subject's study PDFs, PDF revision notes and your own notes; best passages first, matched words marked, "has the answer" when the right answer is there; tap → the PDF page or the note; optional "Ask AI which one answers it" (sends only those passages) | Question cards (also with AI buttons off) | ✅ |
 | Search also finds words in your notes and study PDFs | 🔍 Search | ✅ |
-| 🔊 Read aloud a question and its options: the phone's voice (free, offline; Malayalam needs the phone's Malayalam voice) or the natural Gemini voice with your Gemini key (falls back to the phone voice); speed; show/hide the button | Question cards and tests; Settings → Look → Read aloud | ✅ (real Gemini voice not testable here) |
+| 🔊 Read aloud a question and its options with the phone's own voice (free, offline; Malayalam needs the phone's Malayalam voice); speed; show/hide the button. (1.18 also had an optional Gemini natural voice; removed in 1.19.1 at your request) | Question cards and tests; Settings → Look → Read aloud | ✅ |
 
 ## Changed in 1.19
 
 | Feature | Where | Status |
 |---|---|---|
 | One 🤖 button at the top of the app (next to 🔍) shows the preset in use and the AI language (EN / മല / EN+മല); tap to change either for every AI action at once, or open All AI settings. The per-screen 🤖 switches are gone. Follows changes made in Settings → AI and auto-switch. Hidden when no AI preset is set up, and during tests | Top bar | ✅ |
+
+## Changed in 1.19.1
+
+| Feature | Where | Status |
+|---|---|---|
+| Read aloud uses only the phone's own voice: the Gemini natural-voice option is removed (nothing is sent to Google when reading; a Gemini choice saved by 1.18 is ignored); the app no longer allows playing downloaded audio (CSP back to before 1.18) | Question cards, tests, Settings → Look → Read aloud | ✅ |
 

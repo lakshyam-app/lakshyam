@@ -11,7 +11,7 @@ import { go } from "../../core/router.js";
 import { THEMES, TEXT_SIZES } from "../../core/theme.js";
 import { AWAKE_MODES, awakeSupported } from "../../core/wake.js";
 import { openSheet, updateSheet, closeSheet, setSheetDismissible } from "../../core/sheet.js";
-import { speakSettings, speakQuestion, TTS_VOICES, TTS_MODELS } from "../question/speak.js";
+import { speakSettings, speakQuestion } from "../question/speak.js";
 import * as store from "../../data/store.js";
 import { downloadBackup } from "../../data/backup.js";
 import { takeSnapshot, listSnapshots, restoreSnapshot } from "../../data/snapshots.js";
@@ -46,23 +46,19 @@ const sw = (id, key, label, hint = "") => html`<label class="switch-row" data-se
 
 /* ---------- blocks ---------- */
 
-/** 🔊 Read aloud: the phone's voice (free, offline) or Gemini's natural voice (your Gemini key). */
+/** 🔊 Read aloud with the phone's own voice (free, offline; nothing leaves the phone). */
 function readAloudBlock() {
   const r = speakSettings();
   return html`<div class="group" data-set="readAloud">
     <h3>🔊 ${t("speak.title")}</h3>
-    <p class="hint">${t("speak.hint")}</p>
-    ${seg([{ action: "ra-voice", v: "phone", on: r.voice !== "gemini", label: t("speak.phone") }, { action: "ra-voice", v: "gemini", on: r.voice === "gemini", label: t("speak.gemini") }])}
-    <p class="hint">${r.voice === "gemini" ? t("speak.geminiHint") : t("speak.phoneHint")}</p>
-    ${r.voice === "gemini" ? html`<h3>${t("speak.voiceName")}</h3><div class="chip-wrap">${TTS_VOICES.map((v) => html`<button type="button" class="pill ${r.gemini === v ? "on" : ""}" data-action="ra-gvoice" data-v="${v}">${v}</button>`)}</div>
-      <label class="field-label">${t("speak.model")}<input class="field" type="text" id="raModel" value="${r.model}" autocomplete="off" spellcheck="false"></label>` : ""}
+    <p class="hint">${t("speak.hint")} ${t("speak.phoneHint")}</p>
     <h3>${t("speak.speed")}</h3>
     ${seg([0.85, 1, 1.2].map((v) => ({ action: "ra-rate", v, on: Number(r.rate) === v, label: `${v}×` })))}
-    <label class="switch-row"><input type="checkbox" id="raButton" ${r.button !== false ? "checked" : ""}><span>${t("speak.button")}</span></label>
+    <label class="switch-row"><input type="checkbox" id="raButton" ${r.button ? "checked" : ""}><span>${t("speak.button")}</span></label>
     <div class="actions-row"><button type="button" class="btn btn-quiet" data-action="ra-try">🔊 ${t("speak.try")}</button></div>
   </div>`;
 }
-const setReadAloud = (patch) => store.setSetting("readAloud", { ...speakSettings(), ...patch });
+const setReadAloud = (patch) => store.setSetting("readAloud", { ...speakSettings(), ...patch }); // only rate and button are kept
 
 async function storageBlock() {
   const persisted = await isPersisted();
@@ -385,8 +381,6 @@ function handlers(container, goalNow) {
     "diff-times": () => openAutoTimes(),
     "ai-settings": () => openAiSettings(),
     "app-lang": (el) => store.setSetting("appLang", el.dataset.v),
-    "ra-voice": (el) => setReadAloud({ voice: el.dataset.v }),
-    "ra-gvoice": (el) => setReadAloud({ gemini: el.dataset.v }),
     "ra-rate": (el) => setReadAloud({ rate: Number(el.dataset.v) }),
     "ra-try": () => speakQuestion({ id: "sample", lang: locale() === "ml" ? "ml" : "en", text: t("speak.sampleQ"), options: t("speak.sampleOpts").split("|") }),
     theme: (el) => store.setSetting("theme", el.dataset.v),
@@ -464,7 +458,6 @@ export const settingsScreen = {
 
     container.querySelectorAll("[data-switch]").forEach((box) => box.addEventListener("change", () => store.setSetting(box.dataset.switch, box.checked)));
     container.querySelector("#raButton")?.addEventListener("change", (e) => store.quietly(() => setReadAloud({ button: e.target.checked })));
-    container.querySelector("#raModel")?.addEventListener("change", (e) => store.quietly(() => setReadAloud({ model: e.target.value.trim() || TTS_MODELS[0] })));
     container.querySelector("#userName")?.addEventListener("change", (e) => store.quietly(() => store.setSetting("userName", e.target.value.trim().slice(0, 40))).then(() => toast(t("settings.saved"))));
     if (section === "ai") aiBlock().then((markup) => { const el = container.querySelector("#aiBlock"); if (el) el.innerHTML = String(markup); });
     if (section === "data") paintBackgroundLine(container);
