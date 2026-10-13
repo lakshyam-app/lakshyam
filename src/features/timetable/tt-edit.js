@@ -5,7 +5,7 @@
                                 dates (up to 6 months ahead) and single changed days */
 import { html, onAction } from "../../core/dom.js";
 import { t } from "../../core/i18n.js";
-import { go } from "../../core/router.js";
+import { go, goBack } from "../../core/router.js";
 import { openSheet, closeSheet, sheetBody } from "../../core/sheet.js";
 import { runFlow, chooseAction, askText, confirmAction } from "../../core/dialogs.js";
 import { toast } from "../../core/toast.js";
@@ -20,7 +20,7 @@ const head = (title, sub, to, params) => html`<header class="screen-head"><div c
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>${t("common.back")}</span></button></div>
   <h1>${title}</h1>${sub ? html`<p class="hint">${sub}</p>` : ""}</header>`;
 const backTo = (x) => (x.status === "draft" ? ["tt-review", { tt: x.id }] : x.status === "active" ? ["timetable", {}] : ["tt-list", {}]);
-const backHandler = { back: (el) => go(el.dataset.to, JSON.parse(el.dataset.params || "{}")) };
+const backHandler = { back: (el) => goBack(el.dataset.to, JSON.parse(el.dataset.params || "{}")) };
 const save = (x) => tt.saveTimetable(x);
 
 /** Days in the timetable's range that use this plan. */

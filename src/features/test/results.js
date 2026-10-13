@@ -5,7 +5,7 @@
 import { backFrom } from "../../core/back.js";
 import { html, onAction } from "../../core/dom.js";
 import { t, formatNumber, dateLocale } from "../../core/i18n.js";
-import { go } from "../../core/router.js";
+import { go, goBack } from "../../core/router.js";
 import { runFlow, chooseAction, confirmAction } from "../../core/dialogs.js";
 import { toast } from "../../core/toast.js";
 import { markingText } from "../../domain/scoring.js";
@@ -126,7 +126,7 @@ export const resultScreen = {
         <button type="button" class="btn" data-action="retake">${t("results.retake")}</button>
         ${counts.wrong + counts.blank ? html`<button type="button" class="btn btn-quiet" data-action="wrong-again">${t("results.practiseWrong", { n: counts.wrong + counts.blank })}</button>` : ""}
       </div>
-      <div class="chip-row">${["all", "right", "wrong", "blank"].map(pill)}${counts["guess-right"] + counts["guess-wrong"] ? html`${pill("guess-right")}${pill("guess-wrong")}` : ""}</div>
+      <div class="chip-row wrap">${["all", "right", "wrong", "blank"].map(pill)}${counts["guess-right"] + counts["guess-wrong"] ? html`${pill("guess-right")}${pill("guess-wrong")}` : ""}</div>
       <div class="toolbar"><button type="button" class="pill" data-action="sort">${t(`results.sort.${sort}`)} ▾</button>
         <div class="segmented two compact" role="group" aria-label="${t("layout.title")}">${["scroll", "single"].map((l) => html`<button type="button" class="${layout === l ? "on" : ""}" data-action="layout" data-v="${l}" aria-pressed="${String(layout === l)}">${t(`layout.${l}Short2`)}</button>`)}</div></div>
       <div id="rHost"></div>`;
@@ -141,12 +141,12 @@ export const resultScreen = {
     bindCardActions(container, { view, selectedFor: (q) => { const r = recFor.get(q.id); return r ? (r.selected === null ? "none" : r.selected) : undefined; } });
 
     onAction(container, {
-      back: () => go(backTo, backParams),
+      back: () => goBack(backTo, backParams),
       layout: (el) => { if (el.dataset.v !== layout) store.setSetting("resultLayout", el.dataset.v); },
-      filter: (el) => { filterBy.set(id, el.dataset.f); forgetPlace(`result:${id}`); go("result", { id, ...keep }); },
+      filter: (el) => { filterBy.set(id, el.dataset.f); forgetPlace(`result:${id}`); go("result", { id, ...keep }, { replace: true }); },
       sort: () => runFlow(async () => {
         const s = await chooseAction({ title: t("sort.title"), items: ["test", "slow", "fast", "hard"].map((x) => ({ id: x, label: t(`results.sort.${x}`), current: x === sort })) });
-        if (s) { sortBy.set(id, s); go("result", { id, ...keep }); }
+        if (s) { sortBy.set(id, s); go("result", { id, ...keep }, { replace: true }); }
       }),
       retake: () => startAgain(a, null),
       "wrong-again": () => startAgain(a, recs.filter((x) => ["wrong", "blank"].includes(stateOf(x.r))).map((x) => x.q.id)),

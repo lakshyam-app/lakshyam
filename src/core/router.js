@@ -11,6 +11,11 @@ let container = null;
 let cleanup = null; // a screen's render() may return a function to run when it is left or redrawn
 let shown = null;   // { id, params } of the screen on show
 let before = null;  // …and of the one shown before it (another screen, not a redraw)
+/* The screens in this tab's Back history, as far as the app knows (oldest first), so a ‹ button
+   whose screen is the one you came from goes Back instead of adding the screen again (which made
+   the phone's Back go round in circles). Sheets add entries of their own and are not listed. */
+let trail = [];
+let ownMove = null; // the hash the app itself is moving to (its hashchange is not a Back)
 
 export function registerScreen(screen) {
   screens.set(screen.id, screen);
@@ -36,8 +41,37 @@ function goNow(id, params, replace = false) {
   if (location.hash === target) {
     if (fromSheet) history.back(); // drop the closed sheet's history entry
     rerender();
-  } else if (fromSheet || replace) location.replace(target);
-  else location.hash = target;
+    return;
+  }
+  ownMove = target;
+  if (fromSheet) { trail.push(target); location.replace(target); } // the sheet's entry becomes this screen
+  else if (replace) { trail[Math.max(0, trail.length - 1)] = target; location.replace(target); }
+  else { trail.push(target); location.hash = target; }
+}
+
+function parseHash(hash) {
+  const [path, query = ""] = String(hash || "").replace(/^#\//, "").split("?");
+  return { id: path, params: Object.fromEntries(new URLSearchParams(query)) };
+}
+
+/** For ‹ buttons: shows that screen. If it is the screen you came from, this goes Back to it (so the
+    phone's Back keeps working as expected); otherwise it takes this screen's place. */
+export function goBack(id, params = {}) {
+  whenBackDone(() => {
+    if (isSheetOpen()) { goNow(id, params); return; }
+    const prev = trail.length >= 2 ? parseHash(trail[trail.length - 2]) : null;
+    const same = prev && prev.id === id && Object.entries(params).every(([k, v]) => prev.params[k] === String(v));
+    if (same) history.back();
+    else goNow(id, params, true);
+  });
+}
+
+function onHashChange() {
+  const h = location.hash;
+  if (ownMove === h) ownMove = null;
+  else if (trail.length >= 2 && trail[trail.length - 2] === h) trail.pop(); // the phone's Back
+  else if (trail[trail.length - 1] !== h) trail = [h]; // somewhere the app can't follow: start again
+  render(true);
 }
 
 /** The screen shown before the current one ({ id, params }), or null. */
@@ -58,7 +92,8 @@ export function tabFor(id) {
 export function startRouter(target, changed) {
   container = target;
   onChange = changed;
-  window.addEventListener("hashchange", () => render(true));
+  window.addEventListener("hashchange", onHashChange);
+  trail = [location.hash];
   render(true);
 }
 

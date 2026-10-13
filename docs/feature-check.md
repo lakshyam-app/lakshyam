@@ -199,3 +199,16 @@ Today screen with Quick 10 and daily goal · exam countdown · timetable (any da
 | Maths in explanations and AI answers: formulas stay whole (bullets, bold, line breaks inside them no longer break them), \[ \] and \( \) understood, typeset in lists too; long formulas scroll sideways | Everywhere | ✅ |
 | Test number strip: Q1 no longer cut off on the left | Test (one at a time) | ✅ |
 | After Submit, Back (phone or ‹) goes to where the test was started (topic, subject, bank…), not Test history / Progress | Test result | ✅ |
+
+## Changed in 1.16
+
+| Feature | Where | Status |
+|---|---|---|
+| Smart insights in folding parts (Weak spots open first; each part shows a one-line summary when folded; what you open stays open); the empty "Targeted practice" part removed (its tip is in Notes check); missed count on practised weak spots; filter chips wrap | Progress → Smart insights | ✅ |
+| Notes check looks only in the topic's own PDFs and its subject's general PDFs (no more another topic's PDF); "found" needs the page to be about the question (2 of its words), a lone year or common word no longer counts | Smart insights → a topic | ✅ |
+| Insight topic: Practise this topic and Open the topic buttons, also when nothing is missed | Smart insights → a topic | ✅ |
+| PDF page opened from "In your notes": ‹ goes back to Smart insights; turning pages there is not a Back step | Smart insights → a topic → page | ✅ |
+| ‹ buttons go Back when their screen is the one you came from, so the phone's Back never goes round in circles; topic tabs (PYQ / AI / Cards / Notes), Library views, result filters and sort are not extra Back steps | Everywhere | ✅ |
+| Test: Save and leave / Discard go back to where the test was started; the empty test screen has Today / Test history buttons | Test | ✅ |
+| Result review: the paper and post on their own line under the question number (no squeezed header); all filter chips visible (wrap); no "Show 0 more" button | Test result, all question lists | ✅ |
+

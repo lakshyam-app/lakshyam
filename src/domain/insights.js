@@ -25,6 +25,8 @@ export function checkFact(q, pages) {
   const kws = keywords(q.text);
   const prepared = pages.map((p) => ({ n: p.n, s: spaceless(p.t), nums: new Set(numbersIn(p.t)) }));
   const kwHits = (p) => kws.filter((w) => p.s.includes(spaceless(w))).length;
+  // "Found" needs the page to be about the question too: 2 of its words (1 if it has only one).
+  const need = Math.min(2, kws.length);
   const nums = numbersIn(answer);
   const words = spaceless(answer.replace(/\d+/g, " "));
   // Mostly a number or a year: the number must be on a page that also mentions the question's words.
@@ -32,14 +34,18 @@ export function checkFact(q, pages) {
     const withNum = prepared.filter((p) => nums.every((x) => p.nums.has(x)));
     if (!withNum.length) return { status: "missing", page: null };
     const best = withNum.map((p) => ({ p, h: kwHits(p) })).sort((a, b) => b.h - a.h)[0];
-    return best.h >= 1 ? { status: "found", page: best.p.n } : { status: "maybe", page: best.p.n };
+    if (best.h >= Math.max(1, need)) return { status: "found", page: best.p.n };
+    return best.h >= 1 ? { status: "maybe", page: best.p.n } : { status: "missing", page: null }; // a bare year anywhere proves nothing
   }
   const a = spaceless(answer);
   if (a.length < 3) return { status: "unknown", page: null };
   const hits = prepared.filter((p) => p.s.includes(a));
   if (hits.length) {
     const best = hits.map((p) => ({ p, h: kwHits(p) })).sort((x, y) => y.h - x.h)[0];
-    return { status: best.h >= 1 || !kws.length ? "found" : "maybe", page: best.p.n };
+    if (!kws.length || best.h >= need) return { status: "found", page: best.p.n };
+    // The answer is there but the page isn't clearly about the question: only a long answer counts as "probably".
+    if (best.h >= 1 || a.length >= 12) return { status: "maybe", page: best.p.n };
+    return { status: "missing", page: null };
   }
   // Multi-word answers written differently: most of its words on one page.
   const parts = keywords(answer).length ? keywords(answer) : String(answer).toLowerCase().split(/\s+/).filter((w) => w.length >= 4);

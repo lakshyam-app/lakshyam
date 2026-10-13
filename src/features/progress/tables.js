@@ -2,7 +2,7 @@
    #/stats-tables?tab=time|difficulty|level|guess */
 import { html, onAction } from "../../core/dom.js";
 import { t, formatNumber } from "../../core/i18n.js";
-import { go } from "../../core/router.js";
+import { go, goBack } from "../../core/router.js";
 import { formatDuration } from "../../domain/testing.js";
 import { pickByBasis, isTimed, isAnswered, guessSummary, markingInfo, avgDifficulty } from "../../domain/stats.js";
 import * as store from "../../data/store.js";
@@ -196,7 +196,7 @@ export const statsTablesScreen = {
       ${toolbar(cur)}
       <section class="tables">${body}</section>`;
     onAction(container, {
-      back: () => go("progress"),
+      back: () => goBack("progress"),
       tab: (el) => go("stats-tables", { tab: el.dataset.t }),
       coach: () => guessCoach(),
       "tf-subject": () => runFlow(async () => {

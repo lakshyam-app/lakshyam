@@ -44,7 +44,14 @@ export function clearBestSlot(syllabus) {
   return b.clear ? SLOTS.find((s) => s.id === b.best.id) : null;
 }
 
-export function focusSection(syllabus, num) {
+/** One line for a folded section: your best time, if clear. */
+export function focusKey(syllabus) {
+  const b = bestTimeFor(syllabus);
+  return b.best && b.clear ? `🌅 ${slotName(b.best.id)}` : "";
+}
+
+/** inner: only the contents (Smart insights puts them in its own fold). */
+export function focusSection(syllabus, num, { inner = false } = {}) {
   const b = bestTimeFor(syllabus);
   const f = focusFor(syllabus);
   const checkOn = store.setting("focusCheck", true) !== false;
@@ -54,9 +61,7 @@ export function focusSection(syllabus, num) {
     ? (b.clear ? html`<p class="ok-box">🌅 ${t("focus.bestClear", { slot: slotName(b.best.id), d: pts(b.best.vsUsual - b.worst.vsUsual), worst: slotName(b.worst.id) })}</p>`
       : html`<p class="hint">${t("focus.bestUnclear")}</p>`)
     : html`<p class="hint">${t("focus.bestNeed", { n: SLOT_MIN_ANSWERS, tests: SLOT_MIN_TESTS })}</p>`;
-  return html`<section class="ins-block">
-    <h2 class="section-title">${num} · ${t("focus.title")}</h2>
-    <h3>${t("focus.bestTitle")}</h3>
+  const body = html`<h3>${t("focus.bestTitle")}</h3>
     <p class="hint">${t("focus.bestHint")}</p>
     ${verdict}
     ${rows.length ? html`<div class="rows">${rows.map((s) => html`<div class="row static ${b.best && b.clear && s.id === b.best.id ? "is-best" : ""}">
@@ -73,7 +78,7 @@ export function focusSection(syllabus, num) {
       ${f.enough ? html`<p class="${f.clear && f.stayed.vsUsual > f.left.vsUsual ? "warn-box" : "hint"}">${t(f.clear ? "focus.cmpClear" : "focus.cmpUnclear", { stayed: pts(f.stayed.vsUsual), left: pts(f.left.vsUsual) })}</p>`
         : html`<p class="hint">${t("focus.cmpNeed", { n: 3 })}</p>`}
       <p class="hint">${t("focus.leaveHint")}</p>`
-      : checkOn ? html`<p class="hint">${t("focus.noneYet")}</p>` : ""}
-  </section>`;
+      : checkOn ? html`<p class="hint">${t("focus.noneYet")}</p>` : ""}`;
+  return inner ? body : html`<section class="ins-block"><h2 class="section-title">${num} · ${t("focus.title")}</h2>${body}</section>`;
 }
 

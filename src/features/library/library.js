@@ -5,7 +5,7 @@
 import { openedFrom } from "../../core/back.js";
 import { html, onAction } from "../../core/dom.js";
 import { t, dateLocale } from "../../core/i18n.js";
-import { go } from "../../core/router.js";
+import { go, goBack } from "../../core/router.js";
 import { openSheet } from "../../core/sheet.js";
 import { onLongPress } from "../../core/longpress.js";
 import { runFlow, chooseAction, askText, confirmAction } from "../../core/dialogs.js";
@@ -275,7 +275,7 @@ export const libraryScreen = {
       timer = setTimeout(drawRows, 120);
     });
     onAction(container, {
-      view: (el) => go("library", { view: el.dataset.view }),
+      view: (el) => go("library", { view: el.dataset.view }, { replace: true }),
       open: (el) => go(el.dataset.to, { id: el.dataset.id }),
       chip: (el) => { topicView.chip = el.dataset.id; go("library", { view: "topics" }); },
       "new-list": () => runFlow(async () => {
@@ -320,7 +320,7 @@ export function header({ backTo, backParams, backLabel, title, sub, menu = false
   </header>`;
 }
 
-export const backHandler = { back: (el) => go(el.dataset.to, JSON.parse(el.dataset.params || "{}")) };
+export const backHandler = { back: (el) => goBack(el.dataset.to, JSON.parse(el.dataset.params || "{}")) };
 
 /* ---------- Subject ---------- */
 

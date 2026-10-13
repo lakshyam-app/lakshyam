@@ -5,7 +5,8 @@
    The counting and matching is done in code; AI only explains (optional). */
 import { html, onAction } from "../../core/dom.js";
 import { t, dateLocale } from "../../core/i18n.js";
-import { go } from "../../core/router.js";
+import { go, goBack } from "../../core/router.js";
+import { openedFrom } from "../../core/back.js";
 import { toast } from "../../core/toast.js";
 import { can } from "../../core/entitlements.js";
 import { nameHtml, label as nameLabel } from "../../core/names.js";
@@ -24,7 +25,7 @@ import { openStartTest } from "../test/start-sheet.js";
 import { askInSheet, ensureAi } from "../ai/ai-ui.js";
 import { openPrepared } from "../pdfs/pdfs.js";
 import { chev } from "../library/library.js";
-import { focusSection } from "./focus-view.js";
+import { focusSection, focusKey } from "./focus-view.js";
 
 const lang = async () => (await presets.getConfig()).lang || "en";
 
@@ -54,10 +55,12 @@ function topicFigures(syllabus, records) {
 const pct = (x) => `${Math.round(x * 100)}%`;
 /* Weak spots: which topics (all / practised / not practised yet) and top 10 or all. Kept while the app is open. */
 const weakView = { filter: "all", showAll: false };
+const openSecs = new Set(["weak"]); // which parts of Smart insights are unfolded
 const WEAK_FILTERS = ["all", "done", "todo"];
 const TOP_N = 10;
 function reasonChips(r) {
-  return html`<span class="chips-inline">${r.reasons.map((k) => html`<span class="mini-chip r-${k}">${t(`insights.reason.${k}`)}</span>`)}</span>`;
+  // "not practised" is already said in the line above
+  return html`<span class="chips-inline">${r.reasons.filter((k) => k !== "untried").map((k) => html`<span class="mini-chip r-${k}">${t(`insights.reason.${k}`)}</span>`)}</span>`;
 }
 
 /* ---------- #/insights ---------- */
@@ -73,7 +76,7 @@ export const insightsScreen = {
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>${t("tabs.progress")}</span></button></div>
       <h1>${t("insights.title")}</h1><p class="hint">${t("insights.sub")}</p></header>
       <div id="insBody"><p class="sheet-status pad">${t("pdf.loading")}</p></div>`;
-    onAction(container, { back: () => go("progress") });
+    onAction(container, { back: () => goBack("progress") });
     listPdfs().then((pdfs) => {
       const body = container.querySelector("#insBody");
       if (!body?.isConnected) return;
@@ -96,47 +99,42 @@ export const insightsScreen = {
       const noNotesRows = [...wrongByTopic.entries()].filter(([id]) => !hasNotes(id) && store.topic(id)).sort((a, b) => b[1] - a[1]).slice(0, 5);
       const ai = can("ai");
 
+      // Each part folds; the one you had open stays open while the app is open (Weak spots at first).
+      const sec = (key, num, title, keyLine, inner) => html`<details class="ins-sec ins-block" data-sec="${key}" id="${key === "weak" ? "weakSec" : `sec-${key}`}" ${openSecs.has(key) ? "open" : ""}>
+        <summary><h2 class="section-title">${num} · ${title}</h2>${keyLine ? html`<span class="ins-key">${keyLine}</span>` : ""}</summary>
+        <div class="ins-in">${inner}</div></details>`;
+      const topWeak = weak[0] ? nameLabel(store.topic(weak[0].topicId)) : "";
       body.innerHTML = html`
         ${records.length ? "" : html`<p class="warn-box">${t("insights.noTests")}</p>`}
-        <section class="ins-block" id="weakSec">
-          <h2 class="section-title">1 · ${t("insights.weakTitle")}</h2>
+        ${sec("weak", 1, t("insights.weakTitle"), topWeak ? `1. ${topWeak}` : "", html`
           <p class="hint">${t("insights.weakHint")}</p>
-          <div class="chip-row" role="group" aria-label="${t("insights.weakTitle")}">${WEAK_FILTERS.map((f) => html`<button type="button" class="pill ${weakView.filter === f ? "on" : ""}" data-action="wfilter" data-f="${f}" aria-pressed="${String(weakView.filter === f)}">${t(`insights.wf.${f}`)} <span class="count">${filterCount(f)}</span></button>`)}</div>
+          <div class="chip-row wrap" role="group" aria-label="${t("insights.weakTitle")}">${WEAK_FILTERS.map((f) => html`<button type="button" class="pill ${weakView.filter === f ? "on" : ""}" data-action="wfilter" data-f="${f}" aria-pressed="${String(weakView.filter === f)}">${t(`insights.wf.${f}`)} <span class="count">${filterCount(f)}</span></button>`)}</div>
           ${weakView.filter === "todo" ? html`<p class="hint">${t("insights.todoHint")}</p>` : ""}
           ${weakView.showAll ? html`<p class="hint">${t("insights.showingAll", { n: weak.length })} · <button type="button" class="link inline" data-action="wall">${t("insights.showTop", { n: TOP_N })}</button></p>` : ""}
           ${weak.length ? html`<div class="rows">${weak.map((r, i) => html`<button type="button" class="row" data-action="topic" data-id="${r.topicId}">
             <span class="row-main"><span class="row-title">${i + 1}. ${nameHtml(store.topic(r.topicId))}</span>
-              <span class="row-sub">${nameLabel(store.subject(store.topic(r.topicId)?.subjectId))} · ${t("insights.inPapers", { n: r.freq })} · ${r.adj === null ? t("stats.notTried") : t("insights.right", { pct: pct(r.correct / Math.max(1, r.n)), n: r.n })}${r.avgSec ? ` · ${Math.round(r.avgSec)} s` : ""}</span>
+              <span class="row-sub">${nameLabel(store.subject(store.topic(r.topicId)?.subjectId))} · ${t("insights.inPapers", { n: r.freq })} · ${r.adj === null ? t("stats.notTried") : t("insights.right", { pct: pct(r.correct / Math.max(1, r.n)), n: r.n })}${r.avgSec ? ` · ${Math.round(r.avgSec)} s` : ""}${r.adj !== null && wrongByTopic.get(r.topicId) ? ` · ${t("insights.missedN", { n: wrongByTopic.get(r.topicId) })}` : ""}</span>
               ${reasonChips(r)}</span>${chev}</button>`)}</div>
             ${weakView.showAll ? html`<div class="collapse-bar"><button type="button" class="btn btn-small" data-action="wall">▲ ${t("insights.showTop", { n: TOP_N })}</button></div>`
               : ranked.length > TOP_N ? html`<button type="button" class="link" data-action="wall">${t("insights.showAll")}</button>` : ""}
             ${ai ? html`<button type="button" class="btn btn-quiet" data-action="ai-weak">🤖 ${t("insights.aiWeak")}</button>` : ""}`
           : html`<p class="hint pad">${weakView.filter === "all" ? t("insights.noWeak") : t("insights.noneInFilter")}</p>
-            ${weakView.showAll ? "" : html`<button type="button" class="link" data-action="wall">${t("insights.showAll")}</button>`}`}
-        </section>
-        <section class="ins-block">
-          <h2 class="section-title">2 · ${t("insights.patternsTitle")}</h2>
-          ${ms.total ? html`<p class="hint">${t("insights.patternsHint", { n: ms.total })}</p>
+            ${weakView.showAll ? "" : html`<button type="button" class="link" data-action="wall">${t("insights.showAll")}</button>`}`}`)}
+        ${sec("patterns", 2, t("insights.patternsTitle"), ms.total ? t("insights.missedN", { n: ms.total }) : "", ms.total ? html`<p class="hint">${t("insights.patternsHint", { n: ms.total })}</p>
             <div class="facts">
               ${[["statement", ms.statement], ["notQ", ms.notQ], ["numbers", ms.numbers], ["guessed", ms.guessed], ["quick", ms.quick], ["blank", ms.blank]].filter(([, n]) => n)
                 .map(([k, n]) => html`<div class="fact"><span class="fact-n">${n}</span><span class="fact-l">${t(`insights.ms.${k}`)}</span></div>`)}</div>
             ${ai ? html`<button type="button" class="btn btn-quiet" data-action="ai-patterns">🤖 ${t("insights.aiPatterns")}</button>` : ""}`
-          : html`<p class="hint pad">${t("insights.noWrong")}</p>`}
-        </section>
-        <section class="ins-block">
-          <h2 class="section-title">3 · ${t("insights.notesTitle")}</h2>
-          <p class="hint">${t("insights.notesHint")}</p>
+          : html`<p class="hint pad">${t("insights.noWrong")}</p>`)}
+        ${sec("notes", 3, t("insights.notesTitle"), notesRows.length ? t("common.topics", { n: notesRows.length }) : "", html`
+          <p class="hint">${t("insights.notesHint")} ${t("insights.practiceHint")}</p>
           ${notesRows.length ? html`<div class="rows">${notesRows.map(([id, n]) => html`<button type="button" class="row" data-action="topic" data-id="${id}">
             <span class="row-main"><span class="row-title">${nameHtml(store.topic(id))}</span><span class="row-sub">${t("insights.missedN", { n })} · 📄</span></span>${chev}</button>`)}</div>`
           : html`<p class="hint pad">${pdfs.length ? t("insights.noNotesMatch") : t("insights.noPdfs")}</p>`}
           ${noNotesRows.length ? html`<p class="hint">${t("insights.noNotesFor")}</p><div class="rows">${noNotesRows.map(([id, n]) => html`<button type="button" class="row" data-action="topic" data-id="${id}">
-            <span class="row-main"><span class="row-title">${nameHtml(store.topic(id))}</span><span class="row-sub">${t("insights.missedN", { n })} · ${t("insights.reason.nonotes")}</span></span>${chev}</button>`)}</div>` : ""}
-        </section>
-        ${focusSection(syllabus, 4)}
-        <section class="ins-block">
-          <h2 class="section-title">5 · ${t("insights.practiceTitle")}</h2>
-          <p class="hint">${t("insights.practiceHint")}</p>
-        </section>`;
+            <span class="row-main"><span class="row-title">${nameHtml(store.topic(id))}</span><span class="row-sub">${t("insights.missedN", { n })} · ${t("insights.reason.nonotes")}</span></span>${chev}</button>`)}</div>` : ""}`)}
+        ${sec("focus", 4, t("focus.title"), focusKey(syllabus), focusSection(syllabus, 4, { inner: true }))}`;
+      body.querySelectorAll("details.ins-sec").forEach((d) => d.addEventListener("toggle", () => { if (d.open) openSecs.add(d.dataset.sec); else openSecs.delete(d.dataset.sec); }));
 
       if (weakView.scrollBack) { weakView.scrollBack = false; body.querySelector("#weakSec")?.scrollIntoView({ block: "start" }); }
       onAction(body, {
@@ -180,16 +178,18 @@ export const insightTopicScreen = {
     const syllabus = store.currentSyllabus();
     if (!topic || !syllabus) return go("insights");
     const missed = stillWrongQuestions(syllabus.id).filter((q) => q.topicId === id);
+    const topicQs = store.questionsFor({ syllabusId: syllabus.id, topicId: id });
     container.innerHTML = html`<header class="screen-head"><div class="head-bar"><button type="button" class="back" data-action="back">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>${t("insights.title")}</span></button></div>
       <h1>${nameHtml(topic)}</h1><p class="hint">${nameLabel(store.subject(topic.subjectId))} · ${t("insights.missedN", { n: missed.length })}</p></header>
       <div id="itBody"><p class="sheet-status pad">${t("pdf.loading")}</p></div>`;
-    onAction(container, { back: () => go("insights") });
+    onAction(container, { back: () => goBack("insights") });
     listPdfs().then((all) => {
       const body = container.querySelector("#itBody");
       if (!body?.isConnected) return;
-      const pdfs = all.filter((p) => (p.owner?.type === "topic" && p.owner.id === id) || (p.owner?.type === "subject" && p.owner.id === topic.subjectId)
-        || (p.owner?.type === "topic" && store.topic(p.owner.id)?.subjectId === topic.subjectId));
+      // Only this topic's own PDFs and its subject's general ones: another topic's PDF (e.g. Land Reforms for a
+      // question on protecting women and children) would "find" common words that have nothing to do with it.
+      const pdfs = all.filter((p) => (p.owner?.type === "topic" && p.owner.id === id) || (p.owner?.type === "subject" && p.owner.id === topic.subjectId));
       // Each missed question: checked against every PDF; the best result wins.
       const rank = { found: 3, maybe: 2, missing: 1, unknown: 0 };
       const rows = missed.map((q) => {
@@ -227,11 +227,13 @@ export const insightTopicScreen = {
           <div class="fact"><span class="fact-n">${by("missing").length}</span><span class="fact-l">${t("insights.notInNotes")}</span></div>
           ${by("unknown").length ? html`<div class="fact"><span class="fact-n">${by("unknown").length}</span><span class="fact-l">${t("insights.cantTell")}</span></div>` : ""}</div>
           <p class="hint">${t("insights.checkedIn", { names: pdfs.map((p) => p.name).join(", ") })}</p>` : ""}
-        ${missed.length ? html`<div class="actions-col">
-          <button type="button" class="btn" data-action="retry">▶ ${t("insights.retry", { n: missed.length })}</button>
-          ${newCards.length ? html`<button type="button" class="btn btn-quiet" data-action="cards">🃏 ${t("insights.toCards", { n: newCards.length })}</button>` : ""}
-          ${focusPdf && can("ai") ? html`<button type="button" class="btn btn-quiet" data-action="focus">🎯 ${t("insights.focus", { n: focusRows.length, name: focusPdf.name })}</button>` : ""}
-        </div>` : ""}
+        <div class="actions-col">
+          ${missed.length ? html`<button type="button" class="btn" data-action="retry">▶ ${t("insights.retry", { n: missed.length })}</button>` : ""}
+          ${topicQs.length ? html`<button type="button" class="btn ${missed.length ? "btn-quiet" : ""}" data-action="practise-all">▶ ${t("insights.practiseTopic", { n: topicQs.length })}</button>` : ""}
+          ${missed.length && newCards.length ? html`<button type="button" class="btn btn-quiet" data-action="cards">🃏 ${t("insights.toCards", { n: newCards.length })}</button>` : ""}
+          ${missed.length && focusPdf && can("ai") ? html`<button type="button" class="btn btn-quiet" data-action="focus">🎯 ${t("insights.focus", { n: focusRows.length, name: focusPdf.name })}</button>` : ""}
+          <button type="button" class="btn btn-quiet" data-action="open-topic">${t("insights.openTopic")} ›</button>
+        </div>
         ${section("missing", by("missing"))}
         ${section("found", by("found"))}
         ${section("maybe", by("maybe"))}
@@ -239,8 +241,10 @@ export const insightTopicScreen = {
         ${section("nopdf", by("nopdf"))}`;
 
       onAction(body, {
-        page: (el) => go("pdf-page", { id: el.dataset.pdf, n: el.dataset.n }),
+        page: (el) => go("pdf-page", { id: el.dataset.pdf, n: el.dataset.n, ...openedFrom("insight-topic", { id }) }),
         "add-pdf": () => go("pdfs", { type: "topic", id }),
+        "practise-all": () => openStartTest({ scope: { type: "topic", ref: id, label: topic.name }, questions: topicQs, keepOrder: false }),
+        "open-topic": () => go("topic", { id }),
         retry: () => openStartTest({ scope: { type: "topic", ref: id, label: `${topic.name} — ${t("insights.missedLabel")}` }, questions: missed, keepOrder: false }),
         cards: async () => {
           await mut.saveCards(syllabus.id, topic.subjectId, id, newCards.map((q) => ({ front: q.text, back: ans(q), sourceRef: { questionId: q.id, paperId: q.paperId } })), "pyq");

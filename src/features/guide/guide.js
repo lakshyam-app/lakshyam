@@ -2,7 +2,7 @@
    മലയാളം, "Try it" opens the real screen), and the same guide as a PDF to view or download. */
 import { html, raw, onAction } from "../../core/dom.js";
 import { t, locale } from "../../core/i18n.js";
-import { go } from "../../core/router.js";
+import { go, goBack } from "../../core/router.js";
 import { openSheet, closeSheet } from "../../core/sheet.js";
 import { toast } from "../../core/toast.js";
 import { STEPS, UI, GUIDE_LANGS, stepHtml } from "./content.js";
@@ -89,7 +89,7 @@ export const guideScreen = {
     document.addEventListener("keydown", onKey);
 
     onAction(container, {
-      back: () => go("settings"),
+      back: () => goBack("settings"),
       lang: (el) => { place.lang = el.dataset.l; go("guide", { lang: el.dataset.l, i: current() }); },
       dot: (el) => show(Number(el.dataset.i)),
       prev: () => (current() === 0 ? go("settings") : show(current() - 1)),
@@ -140,7 +140,7 @@ export const guidePdfScreen = {
         if (alive) host.innerHTML = String(html`<p class="warn-box">${t("guide.pdfFailed")}</p>`);
       }
     })();
-    onAction(container, { back: () => go("guide", { lang }), dl: () => downloadPdf(lang) });
+    onAction(container, { back: () => goBack("guide", { lang }), dl: () => downloadPdf(lang) });
     return () => { alive = false; };
   }
 };

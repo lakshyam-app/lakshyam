@@ -1141,6 +1141,8 @@ export default {
     applied: (v) => `Saved. ${v.n} question${v.n === 1 ? "" : "s"} re-marked.`
   },
   insights: {
+    practiseTopic: (v) => (v.n === 1 ? "Practise this topic (1 question)" : "Practise this topic ({n} questions)"),
+    openTopic: "Open the topic",
     title: "Smart insights",
     sub: "Your tests + past papers + your study PDFs, put together",
     button: "Smart insights",

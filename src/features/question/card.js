@@ -36,13 +36,13 @@ export function questionCard(q, { showPaper = true, mode = "study", revealed = n
   // that text — an edit later drops the label), its Related facts, and your chat about it.
   const ai = state?.ai || {};
   const explBy = ai.explainBy?.model && ai.explainBy.sig === textSig(q.explanation) ? ai.explainBy.model : "";
+  // Numbers on the header line (next to the buttons); the paper and its post on their own full-width line below.
   const meta = [
     listNo !== null ? `#${listNo}` : null,
     n !== null ? t("question.inTest", { n }) : null,
-    isAi ? aiWhere : q.number ? (n !== null ? t("question.paperNumber", { n: q.number }) : t("question.number", { n: q.number })) : null,
-    showPaper && paper ? paper.name : null,
-    showPaper && paper?.postName ? paper.postName : null
+    isAi ? aiWhere : q.number ? (n !== null ? t("question.paperNumber", { n: q.number }) : t("question.number", { n: q.number })) : null
   ].filter(Boolean);
+  const paperLine = [showPaper && paper && !isAi ? paper.name : null, showPaper && !isAi && paper?.postName ? paper.postName : null].filter(Boolean).join(" · ");
   // A PDF question's explanation ends with its source line; that part is shown on its own ("Source line").
   let explain = q.explanation || "";
   if (ref && explain.endsWith(`“${ref.quote}”`)) {
@@ -81,6 +81,7 @@ export function questionCard(q, { showPaper = true, mode = "study", revealed = n
         <button type="button" class="icon-sm" data-action="q-menu" aria-label="${t("question.more")}">${dots}</button>
       </span>` : ""}
     </header>
+    ${paperLine ? html`<p class="qcard-paper">${paperLine}</p>` : ""}
     ${review ? reviewLine(review) : ""}
     ${deleted && !review ? html`<p class="qcard-note">${t("question.deleted")}</p>` : ""}
     <div class="qtext">${richText(q.text)}</div>

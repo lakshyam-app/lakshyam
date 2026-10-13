@@ -24,6 +24,7 @@ import * as jobsApi from "../../pdf/pdf-jobs.js";
 import { DEFAULT_STYLE } from "../../ai/pdf-prompts.js";
 import { countsLine, modelNames, aiModelOf } from "../../domain/made-by.js";
 import { header, backHandler, chev } from "../library/library.js";
+import { backFrom } from "../../core/back.js";
 import { pickTopic } from "../library/topic-picker.js";
 import { ensureAi, errorText } from "../ai/ai-ui.js";
 import { strategyFor, patternFrom } from "../../data/strategy.js";
@@ -235,22 +236,28 @@ const pagePicture = new Map(); // pdfId|n → data URL (kept while the app is op
 export const pdfPageScreen = {
   id: "pdf-page",
   parent: "library",
-  render(container, { id, n }) {
+  render(container, { id, n, bt, bp }) {
     loading(container);
     pdfStore.getPdf(id).then((rec) => {
       if (!container.isConnected) return;
       if (!rec) { go("pdfs"); return; }
-      drawPage(container, rec, Math.max(1, Math.min(rec.pages.length, Number(n) || 1)));
+      drawPage(container, rec, Math.max(1, Math.min(rec.pages.length, Number(n) || 1)), { bt, bp });
     });
   }
 };
 
-function drawPage(container, rec, n) {
+/* Opened from somewhere else (Smart insights → "In your notes"): ‹ goes back there, not to the PDF. */
+const PAGE_BACK_TO = ["insight-topic"];
+
+function drawPage(container, rec, n, opened = {}) {
+  const back = backFrom(opened, PAGE_BACK_TO, "pdf");
+  const from = back.keep; // kept while turning pages
+  const backTo = back.to === "pdf" ? { to: "pdf", params: { id: rec.id }, label: rec.name } : { to: back.to, params: back.params, label: t("insights.title") };
   const p = rec.pages[n - 1] || { t: "", src: "scan" };
   const pic = pagePicture.get(`${rec.id}|${n}`);
   const needList = T.pageNumbers(rec.pages, T.needsAi);
   const nextNeed = needList.find((x) => x > n);
-  container.innerHTML = html`${header({ backTo: "pdf", backParams: { id: rec.id }, backLabel: rec.name, title: t("pdf.pageOf", { n, of: rec.pages.length }), sub: srcLabel(p.src) })}
+  container.innerHTML = html`${header({ backTo: backTo.to, backParams: backTo.params, backLabel: backTo.label, title: t("pdf.pageOf", { n, of: rec.pages.length }), sub: srcLabel(p.src) })}
     <div class="page-nav">
       <button type="button" class="btn btn-quiet btn-small" data-action="to" data-n="${n - 1}" ${n > 1 ? "" : "disabled"}>‹ ${t("pager.prev")}</button>
       <label class="page-jump"><span class="sr-only">${t("pdf.page")}</span><input type="number" class="field" id="pgNum" min="1" max="${rec.pages.length}" value="${n}" inputmode="numeric"></label>
@@ -275,10 +282,10 @@ function drawPage(container, rec, n) {
     if (dirty() && !(await confirmAction({ title: t("pdf.unsavedTitle"), body: t("pdf.unsavedBody"), confirmLabel: t("pdf.unsavedLeave"), danger: true }))) { closeSheet(); return; }
     fn(); // go() closes the dialog itself; closing it first would race its Back with the move
   };
-  container.querySelector("#pgNum").addEventListener("change", (e) => leave(() => go("pdf-page", { id: rec.id, n: Math.max(1, Math.min(rec.pages.length, Number(e.target.value) || n)) })));
+  container.querySelector("#pgNum").addEventListener("change", (e) => leave(() => go("pdf-page", { ...from, id: rec.id, n: Math.max(1, Math.min(rec.pages.length, Number(e.target.value) || n)) }, { replace: true })));
   onAction(container, {
     ...backHandler,
-    to: (el) => leave(() => go("pdf-page", { id: rec.id, n: el.dataset.n })),
+    to: (el) => leave(() => go("pdf-page", { ...from, id: rec.id, n: el.dataset.n }, { replace: true })),
     back: (el) => leave(() => backHandler.back(el)),
     save: async () => {
       const text = T.cleanText(container.querySelector("#pgText").value);
@@ -289,7 +296,7 @@ function drawPage(container, rec, n) {
     pic: async (el) => {
       const key = `${rec.id}|${n}`;
       const draft = container.querySelector("#pgText").value; // keep what you typed across the redraw
-      const redraw = () => { drawPage(container, rec, n); const ta = container.querySelector("#pgText"); if (ta) ta.value = draft; };
+      const redraw = () => { drawPage(container, rec, n, opened); const ta = container.querySelector("#pgText"); if (ta) ta.value = draft; };
       if (pagePicture.has(key)) { pagePicture.delete(key); redraw(); return; }
       el.disabled = true; el.textContent = t("pdf.loading");
       try {

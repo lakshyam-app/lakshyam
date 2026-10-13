@@ -4,7 +4,7 @@
    #/search?q=…&scope=this|all[&list=1] */
 import { html, onAction } from "../../core/dom.js";
 import { t, formatNumber } from "../../core/i18n.js";
-import { go } from "../../core/router.js";
+import { go, goBack } from "../../core/router.js";
 import { onLongPress } from "../../core/longpress.js";
 import * as store from "../../data/store.js";
 import { nameHtml, label as nameLabel } from "../../core/names.js";
@@ -56,7 +56,7 @@ export const searchScreen = {
           <button type="button" class="btn btn-quiet" data-action="bank-all">${t("search.addAllToBank")}</button></div>
         <div id="qHost"></div>`;
       onAction(container, {
-        "back-search": () => go("search", { q: state.q, scope: state.scope }),
+        "back-search": () => goBack("search", { q: state.q, scope: state.scope }),
         "bank-all": () => runFlow(() => addToBankFlow(questions.map((q) => q.id))),
         practice: () => openStartTest({ scope: { type: "search", ref: state.q, label: t("search.testLabel", { q: state.q }) }, questions: visibleQuestions(`search:${state.scope}:${state.q}`, questions), keepOrder: false })
       });

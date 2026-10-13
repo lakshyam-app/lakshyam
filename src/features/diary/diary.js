@@ -6,7 +6,7 @@
      (figures worked out by the app; AI writes the report and a short motivational line) */
 import { html, onAction } from "../../core/dom.js";
 import { t, dateLocale } from "../../core/i18n.js";
-import { go } from "../../core/router.js";
+import { go, goBack } from "../../core/router.js";
 import { openSheet, closeSheet, sheetBody } from "../../core/sheet.js";
 import { toast } from "../../core/toast.js";
 import { can } from "../../core/entitlements.js";
@@ -140,7 +140,7 @@ export const diaryScreen = {
       ${reportCard(syllabus, "month", `${prevMonth}-01`, T.addDays(first, -1), monthName(prevMonth), { key: prevMonth })}
       ${pastReports()}`;
     onAction(container, {
-      back: () => go("today"),
+      back: () => goBack("today"),
       month: (el) => go("diary", { m: el.dataset.m }),
       day: (el) => daySheet(syllabus, el.dataset.d),
       "ai-report": (el) => writeReport(syllabus, el.dataset.kind, el.dataset.from, el.dataset.to, el.dataset.key, el),

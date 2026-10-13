@@ -4,7 +4,7 @@
    Editing lives in tt-edit.js, creating (by hand, auto-build or AI) in tt-new.js. */
 import { html, onAction } from "../../core/dom.js";
 import { t, dateLocale } from "../../core/i18n.js";
-import { go } from "../../core/router.js";
+import { go, goBack } from "../../core/router.js";
 import { openSheet, closeSheet, sheetBody } from "../../core/sheet.js";
 import { runFlow, chooseAction, confirmAction } from "../../core/dialogs.js";
 import { toast } from "../../core/toast.js";
@@ -18,7 +18,7 @@ import { blocksOn, blockTitle, blockTitleEn, icon, fmt, fmtRange, fmtDuration, f
 const back = (label, to = "today", params = {}) => html`<div class="head-bar"><button type="button" class="back" data-action="back" data-to="${to}" data-params="${JSON.stringify(params)}">
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>${label}</span></button>
   <button type="button" class="icon-btn" data-action="menu" aria-label="${t("common.more")}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18.5" cy="12" r="1.4"/></svg></button></div>`;
-const backHandler = { back: (el) => go(el.dataset.to, JSON.parse(el.dataset.params || "{}")) };
+const backHandler = { back: (el) => goBack(el.dataset.to, JSON.parse(el.dataset.params || "{}")) };
 
 /* ---------- main screen ---------- */
 

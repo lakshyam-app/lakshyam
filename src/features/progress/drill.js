@@ -2,7 +2,7 @@
    #/stats-subject?id=…   #/stats-topic?id=…   #/stats-topics (all topics) */
 import { html, onAction } from "../../core/dom.js";
 import { t, formatNumber } from "../../core/i18n.js";
-import { go } from "../../core/router.js";
+import { go, goBack } from "../../core/router.js";
 import { openSheet } from "../../core/sheet.js";
 import { runFlow, chooseAction } from "../../core/dialogs.js";
 import { typesetMath } from "../../core/math.js";
@@ -19,7 +19,7 @@ import { howBlock, insightsBlock, marksBlock, accuracyRows, accRow, rowSub, insi
 const sorts = { subject: "weak", all: "weak" };
 const back = (to, label, params = {}) => html`<div class="head-bar"><button type="button" class="back" data-action="back" data-to="${to}" data-params="${JSON.stringify(params)}">
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>${label}</span></button></div>`;
-const backHandler = { back: (el) => go(el.dataset.to, JSON.parse(el.dataset.params || "{}")) };
+const backHandler = { back: (el) => goBack(el.dataset.to, JSON.parse(el.dataset.params || "{}")) };
 const pctText = (x) => (x === null || x === undefined ? "—" : `${Math.round(x * 100)}%`);
 
 function sortFlow(key, options, redraw) {

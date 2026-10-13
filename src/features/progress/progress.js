@@ -6,7 +6,7 @@
 import { openedFrom, backFrom } from "../../core/back.js";
 import { html, onAction } from "../../core/dom.js";
 import { t, formatNumber, dateLocale } from "../../core/i18n.js";
-import { go } from "../../core/router.js";
+import { go, goBack } from "../../core/router.js";
 import { openSheet, closeSheet } from "../../core/sheet.js";
 import { runFlow, chooseAction, confirmAction } from "../../core/dialogs.js";
 import { toast } from "../../core/toast.js";
@@ -323,7 +323,7 @@ export const historyScreen = {
     let timer = null;
     input?.addEventListener("input", () => { hist.term = input.value; clearTimeout(timer); timer = setTimeout(() => go("history"), 300); });
     onAction(container, {
-      back: () => go("progress"),
+      back: () => goBack("progress"),
       group: (el) => { hist.group = el.dataset.g; go("history"); },
       sort: () => runFlow(async () => {
         const s = await chooseAction({ title: t("sort.title"), items: ["recent", "az", "best", "worst"].map((x) => ({ id: x, label: t(`history.sort.${x}`), current: x === hist.sort })) });
@@ -357,6 +357,6 @@ export const testsScreen = {
         <span class="row-main"><span class="row-title">${new Date(a.submittedAt).toLocaleString(dateLocale(), { dateStyle: "medium", timeStyle: "short" })}</span>
         <span class="row-sub">${t("history.testSub", { right: a.counts.correct, wrong: a.counts.wrong, blank: a.counts.unanswered })}${a.timerMinutes ? ` · ${t("results.timed", { n: a.timerMinutes })}` : ""}${a.autoSubmitted ? ` · ${t("results.autoSubmitted")}` : ""}</span></span>
         <span class="row-count">${scoreLine(a)}</span>${chev}</button>`)}</div>`;
-    onAction(container, { back: () => go(back.to, back.params), open: (el) => go("result", { id: el.dataset.id, ...openedFrom("tests", { type, ref, ...back.keep }) }) });
+    onAction(container, { back: () => goBack(back.to, back.params), open: (el) => go("result", { id: el.dataset.id, ...openedFrom("tests", { type, ref, ...back.keep }) }) });
   }
 };

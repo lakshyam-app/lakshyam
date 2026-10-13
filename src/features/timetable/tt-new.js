@@ -4,7 +4,7 @@
    Nothing is followed until you tap "Use this timetable". */
 import { html, onAction } from "../../core/dom.js";
 import { t } from "../../core/i18n.js";
-import { go } from "../../core/router.js";
+import { go, goBack } from "../../core/router.js";
 import { confirmAction, runFlow } from "../../core/dialogs.js";
 import { toast } from "../../core/toast.js";
 import { typesetMath } from "../../core/math.js";
@@ -116,7 +116,7 @@ export const ttNewScreen = {
     container.querySelectorAll("[data-w]").forEach((el) => el.addEventListener("input", () => { const [pi, wi, k] = el.dataset.w.split(":"); form.windows[pi][wi][k] = el.value; }));
     const redraw = () => store.touch();
     onAction(container, {
-      back: () => go(tt.activeTimetable(syllabus.id) ? "timetable" : "today"),
+      back: () => goBack(tt.activeTimetable(syllabus.id) ? "timetable" : "today"),
       pattern: (el) => { form.pattern = el.dataset.v; redraw(); },
       session: (el) => { form.session = Number(el.dataset.v); redraw(); },
       gap: (el) => { form.gap = Number(el.dataset.v); redraw(); },
@@ -309,7 +309,7 @@ export const ttReviewScreen = {
         ${x.status !== "active" ? html`<button type="button" class="btn" data-action="use">✓ ${t("tt.useThis")}</button>` : ""}</div>`;
     typesetMath(container);
     onAction(container, {
-      back: () => go(tt.activeTimetable(syllabus.id) ? "timetable" : "tt-new"),
+      back: () => goBack(tt.activeTimetable(syllabus.id) ? "timetable" : "tt-new"),
       "edit-plan": (el) => go("tt-plan", { tt: id, p: el.dataset.p }),
       schedule: () => go("tt-schedule", { tt: id }),
       use: async () => {

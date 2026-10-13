@@ -9,7 +9,7 @@
      paused) is counted, and shown on the result. */
 import { html, onAction } from "../../core/dom.js";
 import { t } from "../../core/i18n.js";
-import { go, previous } from "../../core/router.js";
+import { go, goBack, previous } from "../../core/router.js";
 import { openedFrom } from "../../core/back.js";
 import { typesetMath } from "../../core/math.js";
 import { toast } from "../../core/toast.js";
@@ -72,7 +72,13 @@ export const testScreen = {
   id: "test",
   render(container) {
     const attempt = tests.activeTest();
-    if (!attempt) { container.innerHTML = html`<section class="empty"><h1>${t("test.none")}</h1></section>`; return undefined; }
+    if (!attempt) {
+      container.innerHTML = html`<section class="empty"><h1>${t("test.none")}</h1>
+        <div class="actions-row"><button type="button" class="btn" data-action="today">${t("tabs.today")}</button>
+          <button type="button" class="btn btn-quiet" data-action="history">${t("history.title")}</button></div></section>`;
+      onAction(container, { today: () => go("today"), history: () => go("history") });
+      return undefined;
+    }
     if (!live || live.id !== attempt.id) live = { id: attempt.id, run: structuredClone(attempt.run) };
     const run = live.run;
     // Where the test was started from (kept with it), so its result's Back goes there — not to Progress.
@@ -118,6 +124,8 @@ export const testScreen = {
     }
     function setActive(id) { if (id && id !== activeId) { account(); activeId = id; run.index = Math.max(0, run.questionIds.indexOf(id)); } }
     const save = () => { account(); lastSave = Date.now(); return tests.saveRun(attempt, run); };
+    // Leaving or discarding: back where the test was started (Today if that isn't known).
+    const leaveTo = () => (run.from ? goBack(run.from.screen, run.from.params) : go("today"));
 
     function drawCount() {
       countEl.textContent = t("test.answered", { n: Object.keys(run.answers).length, of: run.questionIds.length });
@@ -279,13 +287,13 @@ export const testScreen = {
           const size = await chooseAction({ title: t("test.textSize"), items: TEXT_SIZES.map((v) => ({ id: v, label: t(`setx.sizes.${v}`), current: v === cur })) });
           if (size && size !== cur) { await save(); await store.setSetting("textSize", size); }
         }
-        if (choice === "leave") { await save(); go("today"); }
+        if (choice === "leave") { await save(); leaveTo(); }
         if (choice === "discard") {
           const ok = await confirmAction({ title: t("test.discardTitle"), body: t("test.discardBody"), confirmLabel: t("test.discard"), danger: true });
           if (!ok) return;
           finished = true; clearInterval(timer); live = null;
           await tests.discardTest(attempt);
-          go("today");
+          leaveTo();
         }
       })
     });

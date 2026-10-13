@@ -6,7 +6,7 @@
    - #/ai-hub?kind=ai|cards: every topic that has AI questions or cards */
 import { html, onAction } from "../../core/dom.js";
 import { t, dateLocale } from "../../core/i18n.js";
-import { go } from "../../core/router.js";
+import { go, goBack } from "../../core/router.js";
 import { runFlow, confirmAction, chooseAction } from "../../core/dialogs.js";
 import { toast } from "../../core/toast.js";
 import { typesetMath } from "../../core/math.js";
@@ -105,7 +105,7 @@ export function contentSwitch(mode, counts, to, params) {
   return html`<div class="segmented four content-switch">${btn("pyq", t("ai.cs.pyq"), counts.pyq)}${btn("ai", t("ai.cs.ai"), counts.ai)}${btn("cards", t("ai.cs.cards"), counts.cards)}${btn("notes", t("ai.cs.notes"), counts.notes || 0)}</div>`;
 }
 export const contentHandler = {
-  content: (el) => { const p = JSON.parse(el.dataset.params); go(el.dataset.to, el.dataset.mode === "pyq" ? p : { ...p, mode: el.dataset.mode }); }
+  content: (el) => { const p = JSON.parse(el.dataset.params); go(el.dataset.to, el.dataset.mode === "pyq" ? p : { ...p, mode: el.dataset.mode }, { replace: true }); } // a tab of the same screen: not a new Back step
 };
 
 /* ---------- AI questions ---------- */
@@ -343,7 +343,7 @@ export const aiHubScreen = {
         <span class="row-count">${r.n}</span><span class="chev-txt">›</span></button>`)}</div>
       ${rows.length ? "" : html`<p class="hint pad">${isCards ? t("ai.noCards") : t("ai.noAi")}</p>`}`;
     onAction(container, {
-      back: () => go("library", { view: "banks" }),
+      back: () => goBack("library", { view: "banks" }),
       open: (el) => go("topic", { id: el.dataset.id, mode: isCards ? "cards" : "ai" })
     });
   }
