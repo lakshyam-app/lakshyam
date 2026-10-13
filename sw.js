@@ -4,7 +4,7 @@
      (Other apps on the same site keep their caches.)
    - A new version waits until the user taps "Refresh" in the app. */
 
-const VERSION = "1.16.0";
+const VERSION = "1.17.0";
 // Background backup through your own Google script (see src/cloud/sw-backup.js).
 importScripts("./src/cloud/sw-backup.js");
 // Reminders: shows the reminder the app planned when your reminder script wakes it (see src/cloud/sw-notify.js).
@@ -90,6 +90,7 @@ const SHELL_FILES = [
   "./src/domain/scoring.js",
   "./src/domain/stats.js",
   "./src/domain/study.js",
+  "./src/domain/test-analysis.js",
   "./src/domain/testing.js",
   "./src/domain/text.js",
   "./src/domain/timetable.js",
@@ -131,6 +132,7 @@ const SHELL_FILES = [
   "./src/features/settings/settings-index.js",
   "./src/features/settings/settings.js",
   "./src/features/settings/syllabi.js",
+  "./src/features/test/analysis.js",
   "./src/features/test/results.js",
   "./src/features/test/start-sheet.js",
   "./src/features/test/test-screen.js",

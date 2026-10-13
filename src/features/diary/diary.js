@@ -19,7 +19,7 @@ import * as diary from "../../data/diary.js";
 import * as presets from "../../ai/presets.js";
 import { ask } from "../../ai/client.js";
 import { tutorSystem, inLang } from "../../ai/prompts.js";
-import { ensureAi, errorText } from "../ai/ai-ui.js";
+import { ensureAi, errorText, aiSwitchSlot, fillAiSwitch } from "../ai/ai-ui.js";
 import { blockTitle, icon, fmt, fmtDate } from "../timetable/common.js";
 import { focusReportLine } from "../insights/focus-view.js";
 
@@ -146,6 +146,7 @@ export const diaryScreen = {
       "ai-report": (el) => writeReport(syllabus, el.dataset.kind, el.dataset.from, el.dataset.to, el.dataset.key, el),
       "old-report": (el) => { const r = store.byId("diary", el.dataset.id); if (r) showReport(r); }
     });
+    fillAiSwitch(container);
   }
 };
 
@@ -174,6 +175,7 @@ function reportCard(syllabus, kind, from, to, title, { partial = false, key = fr
     ${s.best && s.best.score > 0 ? html`<p class="hint">${t("diary.bestDay", { day: fmtDate(s.best.date), score: s.best.score })}</p>` : ""}
     ${saved ? reportBody(saved) : ""}
     ${!partial && !saved && !s.studied && !s.reviewed ? html`<p class="hint">${t("diary.nothingThen")}</p>` : ""}
+    ${!partial && can("ai") && (s.studied || s.reviewed || saved) ? aiSwitchSlot() : ""}
     ${!partial && can("ai") && (s.studied || s.reviewed || saved) ? html`<button type="button" class="btn ${saved ? "btn-quiet" : ""}" data-action="ai-report" data-kind="${kind}" data-from="${from}" data-to="${to}" data-key="${key}">🤖 ${saved ? t("diary.rewrite") : t(`diary.write.${kind}`)}</button>` : ""}
     ${partial ? html`<p class="hint">${t("diary.partialHint")}</p>` : ""}
   </section>`;

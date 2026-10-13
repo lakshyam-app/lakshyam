@@ -6,6 +6,7 @@ import { backFrom } from "../../core/back.js";
 import { html, onAction } from "../../core/dom.js";
 import { t, formatNumber, dateLocale } from "../../core/i18n.js";
 import { go, goBack } from "../../core/router.js";
+import { typesetMath } from "../../core/math.js";
 import { runFlow, chooseAction, confirmAction } from "../../core/dialogs.js";
 import { toast } from "../../core/toast.js";
 import { markingText } from "../../domain/scoring.js";
@@ -19,9 +20,11 @@ import { bindCardActions, listLayout, difficultyOn } from "../question/list.js";
 import { copyQuestions } from "../question/copy.js";
 import { openStartTest } from "./start-sheet.js";
 import { label as nameLabel } from "../../core/names.js";
+import { analysisBlock, analysisHandlers, autoAnalyse, ANALYSIS_EVENT } from "./analysis.js";
 
 const filterBy = new Map(); // attempt id → filter
 const sortBy = new Map();   // attempt id → sort
+const freshShown = new Set(); // results already shown once right after their test
 const RANK = { E: 1, M: 2, D: 3 };
 
 const stateOf = (r) => (!r.graded ? "ungraded" : r.selected === null ? "blank" : r.isCorrect ? "right" : "wrong");
@@ -122,6 +125,7 @@ export const resultScreen = {
         ${graded < c.total ? html`<p class="hint">${t("results.ungraded", { n: c.total - graded })}</p>` : ""}
       </section>
       ${focusHtml}
+      <div id="anHost"></div>
       <div class="actions-row">
         <button type="button" class="btn" data-action="retake">${t("results.retake")}</button>
         ${counts.wrong + counts.blank ? html`<button type="button" class="btn btn-quiet" data-action="wrong-again">${t("results.practiseWrong", { n: counts.wrong + counts.blank })}</button>` : ""}
@@ -140,7 +144,16 @@ export const resultScreen = {
     });
     bindCardActions(container, { view, selectedFor: (q) => { const r = recFor.get(q.id); return r ? (r.selected === null ? "none" : r.selected) : undefined; } });
 
+    // 🤖 AI analysis: written automatically right after the test (if on), kept with it.
+    const anHost = container.querySelector("#anHost");
+    const drawAnalysis = () => analysisBlock(store.byId("attempts", id) || a).then((markup) => { if (anHost.isConnected) { anHost.innerHTML = String(markup); typesetMath(anHost); } });
+    drawAnalysis();
+    const onAnalysis = (e) => { if (e.detail === id) drawAnalysis(); };
+    window.addEventListener(ANALYSIS_EVENT, onAnalysis);
+    if (fresh) autoAnalyse(a);
+
     onAction(container, {
+      ...analysisHandlers(id),
       back: () => goBack(backTo, backParams),
       layout: (el) => { if (el.dataset.v !== layout) store.setSetting("resultLayout", el.dataset.v); },
       filter: (el) => { filterBy.set(id, el.dataset.f); forgetPlace(`result:${id}`); go("result", { id, ...keep }, { replace: true }); },
@@ -165,8 +178,8 @@ export const resultScreen = {
         }
       })
     });
-    if (fresh) window.scrollTo(0, 0);
-    return undefined;
+    if (fresh && !freshShown.has(id)) { freshShown.add(id); window.scrollTo(0, 0); } // only when the test has just ended, not on a redraw
+    return () => window.removeEventListener(ANALYSIS_EVENT, onAnalysis);
   }
 };
 

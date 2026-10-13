@@ -48,6 +48,7 @@ export const SETTINGS_INDEX = [
   item("fallback", "ai", "ai.fallback", "ai-settings"),
   item("pause", "ai", "setx.pausePreset", "ai-settings"),
   item("aiOnCards", "ai", "ai.onCards"),
+  item("aiAutoAnalysis", "ai", "ai.autoAnalysis"),
   item("removeKeys", "ai", "ai.removeAll", "ai-settings"),
 
   item("drive", "data", "drive.title"),

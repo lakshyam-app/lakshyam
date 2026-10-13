@@ -792,6 +792,13 @@ export default {
     mnemonic: "Memory trick",
     note: "Revision note",
     similar: "Similar questions",
+    switchTitle: "Which AI writes",
+    switchSub: "Used first for every AI action (also Settings → AI). If it hits its limit, the next preset is tried.",
+    switchPreset: "Preset",
+    noPresetShort: "No AI",
+    tryAgain: "Try again",
+    autoAnalysis: "Analyse each test automatically",
+    autoAnalysisHint: "Right after a test, AI writes how it went, where marks were lost, facts to fix and next steps; kept with the test.",
     factsShort: "Facts",
     chatShort: "Ask AI",
     similarShort: "Similar",
@@ -917,6 +924,8 @@ export default {
     noGuesses: "Mark some guesses (🤔) in a test first."
   },
   pdf: {
+    makeCardsBtn: "Make cards",
+    writeNoteBtn: "Write the note",
     noteRepeats: (v) => (v.n === 1 ? "1 point that repeated an earlier one was left out." : "{n} points that repeated earlier ones were left out."),
     noteLeft: "This note covers pages {a}–{b}. Pages {c}–{d} were not included (one note takes at most {max} sections). Make another note from page {c} to cover them.",
     steps: { label: "Steps", choose: "Choose", writing: "Writing", writingNote: "Writing", review: "Check & save" },
@@ -1139,6 +1148,15 @@ export default {
     applyPast: "Apply to past tests too ({n})",
     saved: "Saved. New tests use these times.",
     applied: (v) => `Saved. ${v.n} question${v.n === 1 ? "" : "s"} re-marked.`
+  },
+  analysis: {
+    title: "AI analysis of this test",
+    writing: "Writing the analysis… you can keep reviewing.",
+    hint: "How it went, where marks were lost, the facts to fix and what to do next. Kept with this test.",
+    make: "🤖 Analyse this test",
+    again: "Write again",
+    clearTitle: "Clear this test’s AI analysis?",
+    cleared: "Analysis cleared"
   },
   insights: {
     practiseTopic: (v) => (v.n === 1 ? "Practise this topic (1 question)" : "Practise this topic ({n} questions)"),
@@ -2226,6 +2244,7 @@ export default {
       fallback: "ai switch automatically fallback",
       pause: "pause ai preset",
       aiOnCards: "ai buttons question cards explain",
+      aiAutoAnalysis: "ai analysis after each test automatic result report",
       removeKeys: "remove ai keys delete",
       backup: "backup export save file",
       restore: "restore backup import file",

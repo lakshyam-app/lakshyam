@@ -146,3 +146,17 @@ Task: analyse these questions and write a preparation guide for this topic, with
 6. **Last-day checklist**: 6-10 one-line facts to revise just before the exam, only from the questions above.
 Base parts 1-3 and 6 only on the questions given. Don't invent statistics. If an answer in the list looks wrong to you, say so briefly instead of repeating it.`;
 }
+
+/** After a test: what happened and what to do. facts: plain lines worked out in code (score, topics, past tries);
+    lines: the questions got wrong, left or guessed. */
+export function testAnalysisTask(facts, lines) {
+  return `TEST RESULT (worked out by the app; use these figures as they are):\n${facts.join("\n")}${lines.length ? `\n\nQUESTIONS GOT WRONG, LEFT BLANK OR GUESSED:\n${lines.join("\n")}` : ""}
+
+Task: write a short analysis of this test for the student, in these parts:
+## 1. How it went — 2–3 bullets: the score in plain words; compared with earlier tries if they are given.
+## 2. Where marks were lost — the patterns: which topics, which kinds of question (statement-type, 'NOT', numbers and years, matching), quick careless answers, guessing that cost marks, blanks that could have been tried.
+## 3. Facts to fix — for the wrong or blank questions, the key fact to remember (one bullet each, at most 10, the most exam-worthy first). Only facts you are sure of; skip a question if unsure.
+## 4. Next steps — 3 concrete things to do in the next two or three days.
+Be specific to this test, encouraging but honest, and brief.`;
+}
+

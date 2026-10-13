@@ -26,7 +26,7 @@ import { countsLine, modelNames, aiModelOf } from "../../domain/made-by.js";
 import { header, backHandler, chev } from "../library/library.js";
 import { backFrom } from "../../core/back.js";
 import { pickTopic } from "../library/topic-picker.js";
-import { ensureAi, errorText } from "../ai/ai-ui.js";
+import { ensureAi, errorText, aiSwitchLabel, aiSwitchButton, chooseAiSetup } from "../ai/ai-ui.js";
 import { strategyFor, patternFrom } from "../../data/strategy.js";
 import { pdfFile, inDrive, onPhone, needsSignIn, ensureSignedIn } from "../../pdf/pdf-file.js";
 import { storageBox, storageHandlers, deleteChoice, cloudErrorText } from "./pdf-cloud.js";
@@ -412,7 +412,11 @@ function drawMake(container, rec, job) {
   } else {
     ({ body } = formView(rec, job, handlers));
   }
-  container.innerHTML = html`${head}${stepLine(job)}${body}`;
+  // Before writing: which AI writes (the same switch as everywhere else; the output language is set below).
+  const withSwitch = job.phase === "form" || job.phase === "error";
+  if (withSwitch) handlers["ai-switch"] = () => runFlow(() => chooseAiSetup({ withLang: false })).then(() => refresh(true));
+  container.innerHTML = html`${head}${stepLine(job)}${withSwitch ? html`<div class="ai-switch-row">${aiSwitchButton("…")}</div>` : ""}${body}`;
+  if (withSwitch) aiSwitchLabel({ withLang: false }).then((l) => { const b = container.querySelector('[data-action="ai-switch"]'); if (b) b.textContent = `🤖 ${l} ▾`; });
   onAction(container, handlers);
   bindForm(container, job);
   const mo = container.querySelector(".more-opts");
@@ -565,13 +569,13 @@ function formView(rec, job, handlers) {
     return { body: html`${target}${range}
       <h3>${t("pdf.howManyCards")}</h3>${pills(job, "n", [10, 20, 30, 50], (v) => v)}
       ${more(html`${langPills}${patternSwitch("pdf.patternHintCards")}`)}
-      ${startBtn(t("ai.generate"))}
+      ${startBtn(t("pdf.makeCardsBtn"))}
       ${how([t("pdf.groundedNote")])}` };
   }
   return { body: html`${target}${range}
     <h3>${t("pdf.length")}</h3>${pills(job, "detail", ["short", "detailed"], (v) => t(`pdf.detail.${v}`))}
     ${more(html`${patternSwitch("pdf.patternHintNote")}${langPills}`)}
-    ${startBtn(t("ai.generate"))}
+    ${startBtn(t("pdf.writeNoteBtn"))}
     ${how([t("pdf.noteLimit", { n: jobsApi.NOTE_MAX_SECTIONS })])}` };
 }
 

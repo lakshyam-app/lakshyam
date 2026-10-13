@@ -10,6 +10,7 @@ import { can } from "../../core/entitlements.js";
 import { aiText } from "../../domain/text.js";
 import * as presets from "../../ai/presets.js";
 import { ask } from "../../ai/client.js";
+import { chooseAction, runFlow } from "../../core/dialogs.js";
 
 export function errorText(e) {
   if (e?.allPaused) return t("ai.err.allPaused");
@@ -20,6 +21,50 @@ export function errorText(e) {
   if (m === "empty") return t("ai.err.empty");
   if (m === "no-json" || m === "incomplete-json" || e instanceof SyntaxError) return t("ai.err.badJson");
   return m;
+}
+
+/* ---------- one switch for which AI writes, and in which language (near every AI action) ---------- */
+
+/** "Gemini · English": the preset tried first and the answer language. */
+export async function aiSwitchLabel({ withLang = true } = {}) {
+  const [list, cfg] = await Promise.all([presets.getPresets(), presets.getConfig()]);
+  const first = presets.tryOrder(list, cfg)[0];
+  return `${first?.name || t("ai.noPresetShort")}${withLang ? ` · ${t(`ai.langs.${cfg.lang || "en"}`)}` : ""}`;
+}
+export const aiSwitchButton = (label) => html`<button type="button" class="ai-switch" data-action="ai-switch" aria-label="${t("ai.switchTitle")}">🤖 ${label} ▾</button>`;
+
+/** Choose the preset to use first and the AI's language (the same setting as Settings → AI). True if something changed.
+    Uses the open sheet; the caller draws its own screen again afterwards. */
+export async function chooseAiSetup({ withLang = true } = {}) {
+  const [list, cfg] = await Promise.all([presets.getPresets(), presets.getConfig()]);
+  const usable = list.filter((p) => p.apiKey && p.model && p.baseUrl && !presets.isPaused(p));
+  const first = presets.tryOrder(list, cfg)[0];
+  const id = await chooseAction({ title: t("ai.switchTitle"), sub: t("ai.switchSub"), items: [
+    { heading: t("ai.switchPreset") },
+    ...usable.map((p) => ({ id: `p:${p.id}`, label: p.name, sub: p.model, current: first?.id === p.id })),
+    ...(withLang ? [{ heading: t("ai.lang") }, ...presets.LANGS.map((l) => ({ id: `l:${l}`, label: t(`ai.langs.${l}`), current: (cfg.lang || "en") === l }))] : [])
+  ] });
+  if (!id) return false;
+  if (id.startsWith("p:")) { if (first?.id === id.slice(2)) return false; await presets.saveConfig({ activeId: id.slice(2) }); return true; }
+  const l = id.slice(2);
+  if ((cfg.lang || "en") === l) return false;
+  await presets.saveConfig({ lang: l });
+  return true;
+}
+
+/** A place for the switch on a screen: aiSwitchSlot() in the markup, then fillAiSwitch(container, { onChange }). */
+export const aiSwitchSlot = () => html`<div class="ai-switch-row" data-ai-slot="1"></div>`;
+export async function fillAiSwitch(root, { withLang = true, onChange = null } = {}) {
+  const slots = [...root.querySelectorAll("[data-ai-slot]")];
+  if (!slots.length || !(await presets.hasPreset())) return;
+  const label = await aiSwitchLabel({ withLang });
+  slots.forEach((slot) => {
+    slot.innerHTML = String(aiSwitchButton(label)).replace('data-action="ai-switch"', 'data-ai-switch="1"');
+    slot.firstElementChild.addEventListener("click", async () => {
+      const changed = await runFlow(() => chooseAiSetup({ withLang }));
+      if (changed) { if (onChange) onChange(); else fillAiSwitch(root, { withLang, onChange }); }
+    });
+  });
 }
 
 /** True if AI can be used; otherwise explains how to set it up. */
@@ -35,37 +80,69 @@ export async function ensureAi() {
 
 /**
  * Shows "Thinking…", asks, then shows the answer with buttons.
- * opts: { title, sub, system, user, maxTokens, actions: [{ id, label, run(text) }] }
- * Returns the text (or null on error/close).
+ * opts: { title, sub, system, user, maxTokens, actions: [{ id, label, run(text) }], onModel(model), onAnswer(text, model) }
+ * system / user / maxTokens may be functions of the AI language, so the 🤖 switch at the top can ask again
+ * with another preset or language. onAnswer runs for every answer (also one asked again).
+ * Returns the first answer's text (or null on error).
  */
-export async function askInSheet({ title, sub = "", system, user, maxTokens = 2500, actions = [], keepOpen = false, onModel = null }) {
-  const head = html`<h2>${title}</h2>${sub ? html`<p class="hint">${sub}</p>` : ""}`;
-  const mine = openSheet(html`${head}<p class="sheet-status">${t("ai.thinking")}</p>`, {}, { label: title });
-  // Closed, or another sheet opened meanwhile: the answer isn't drawn over it.
+export async function askInSheet(opts) {
+  const { title, sub = "", maxTokens = 2500, actions = [], keepOpen = false, onModel = null, onAnswer = null } = opts;
+  let mine = null; // this flow's sheet content: another sheet opened meanwhile is never drawn over
+  let run = 0;
+  let state = { kind: "thinking" };
+  let label = await aiSwitchLabel();
   const ours = () => isSheetOpen() && mine?.isConnected;
-  try {
-    const { text, preset, switched } = await ask(system, user, maxTokens);
-    if (onModel) onModel(preset?.model || preset?.name || "");
-    if (!ours()) return text;
-    if (switched) toast(t("ai.switched", { name: preset.name }));
-    showAnswer({ head, text, actions, presetName: preset.name, keepOpen, model: preset.model || "" });
-    return text;
-  } catch (e) {
-    if (ours()) {
-      openSheet(html`${head}<p class="warn-box pre">${errorText(e)}</p>
+  const head = () => html`<h2>${title}</h2>${sub ? html`<p class="hint">${sub}</p>` : ""}<div class="ai-switch-row">${aiSwitchButton(label)}</div>`;
+  const change = async () => {
+    const changed = await chooseAiSetup();
+    if (!isSheetOpen()) return;
+    label = await aiSwitchLabel();
+    if (changed) start(); else draw();
+  };
+  const draw = () => {
+    if (state.kind === "thinking") mine = openSheet(html`${head()}<p class="sheet-status">${t("ai.thinking")}</p>`, { "ai-switch": change }, { label: title });
+    else if (state.kind === "answer") {
+      showAnswer({ head: head(), text: state.text, actions, presetName: state.preset.name, keepOpen, model: state.preset.model || "", done: state.done,
+        extra: { "ai-switch": change }, onDraw: (b) => { mine = b; } });
+    } else {
+      mine = openSheet(html`${head()}<p class="warn-box pre">${errorText(state.error)}</p>
         <p class="hint">${t("ai.checkPreset")}</p>
         <div class="sheet-actions"><button type="button" class="btn btn-quiet" data-action="settings">${t("ai.title")}</button>
+          <button type="button" class="btn btn-quiet" data-action="again">${t("ai.tryAgain")}</button>
           <button type="button" class="btn" data-action="close">${t("common.close")}</button></div>`,
-      { close: () => closeSheet(), settings: () => go("settings", { section: "ai", open: "1" }) });
+      { close: () => closeSheet(), again: () => start(), "ai-switch": change, settings: () => go("settings", { section: "ai", open: "1" }) });
     }
-    return null;
-  }
+  };
+  const start = async () => {
+    const me = ++run;
+    state = { kind: "thinking" };
+    draw();
+    const lang = (await presets.getConfig()).lang || "en";
+    const val = (x) => (typeof x === "function" ? x(lang) : x);
+    try {
+      const { text, preset, switched } = await ask(val(opts.system), val(opts.user), val(maxTokens));
+      if (me !== run) return text; // asked again meanwhile: the newer answer is the one shown
+      const model = preset?.model || preset?.name || "";
+      if (onModel) onModel(model);
+      state = { kind: "answer", text, preset, done: new Set() };
+      if (onAnswer) await onAnswer(text, model);
+      label = await aiSwitchLabel();
+      if (ours()) { if (switched) toast(t("ai.switched", { name: preset.name })); draw(); }
+      return text;
+    } catch (e) {
+      if (me !== run) return null;
+      state = { kind: "error", error: e };
+      if (ours()) draw();
+      return null;
+    }
+  };
+  return start();
 }
 
-/** done: ids of actions already carried out (shown ticked). */
-export function showAnswer({ head, text, actions, presetName, keepOpen, model = "", done = new Set() }) {
-  const again = () => showAnswer({ head, text, actions, presetName, keepOpen, model, done });
-  openSheet(html`${head}
+/** done: ids of actions already carried out (shown ticked). extra: more handlers (e.g. the 🤖 switch). */
+export function showAnswer({ head, text, actions, presetName, keepOpen, model = "", done = new Set(), extra = {}, onDraw = null }) {
+  const again = () => showAnswer({ head, text, actions, presetName, keepOpen, model, done, extra, onDraw });
+  const body = openSheet(html`${head}
     <div class="ai-answer">${aiText(text)}</div>
     <p class="hint">${t("ai.byPreset", { name: presetName })}${model && model !== presetName ? ` (${model})` : ""} · ${t("ai.verify")}</p>
     <div class="ai-actions">
@@ -73,6 +150,7 @@ export function showAnswer({ head, text, actions, presetName, keepOpen, model = 
       ${actions.map((a) => html`<button type="button" class="btn btn-quiet btn-small" data-action="act" data-id="${a.id}" ${done.has(a.id) ? "disabled" : ""}>${done.has(a.id) ? "✓ " : ""}${a.label}</button>`)}
     </div>
     <div class="sheet-actions"><button type="button" class="btn" data-action="close">${t("common.done")}</button></div>`, {
+    ...extra,
     copy: async () => { try { await navigator.clipboard.writeText(text); toast(t("common.copied")); } catch { toast(t("common.copyFailed")); } },
     act: async (el) => {
       const a = actions.find((x) => x.id === el.dataset.id);
@@ -85,5 +163,7 @@ export function showAnswer({ head, text, actions, presetName, keepOpen, model = 
     },
     close: () => closeSheet()
   });
-  typesetMath(sheetBody());
+  onDraw?.(body);
+  typesetMath(body);
+  return body;
 }

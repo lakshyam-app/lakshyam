@@ -212,3 +212,11 @@ Today screen with Quick 10 and daily goal · exam countdown · timetable (any da
 | Test: Save and leave / Discard go back to where the test was started; the empty test screen has Today / Test history buttons | Test | ✅ |
 | Result review: the paper and post on their own line under the question number (no squeezed header); all filter chips visible (wrap); no "Show 0 more" button | Test result, all question lists | ✅ |
 
+## Added in 1.17
+
+| Feature | Where | Status |
+|---|---|---|
+| 🤖 AI analysis of each test: written automatically right after the test (how it went, where marks were lost, facts to fix, next steps), kept with the test (in backups); Copy, Write again, Clear + Undo; a button on older tests; the figures are worked out in code | Test result; Settings → AI → Analyse each test automatically | ✅ |
+| 🤖 switch near AI writing: which preset is tried first and the AI's answer language (the same setting as Settings → AI); changing it in an answer sheet asks again at once | AI answer sheets (Explain, Facts, strategy, insights, memory tricks, guess coach), Ask AI chat, Make questions, study-PDF make screens, test analysis, diary reports, timetable builder; never during a test | ✅ |
+| Chat with AI under each question; Related facts; memory tricks on PDF notes (1.15) | Question cards, Notes | ✅ |
+
