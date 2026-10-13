@@ -10,7 +10,7 @@ import { go } from "../../core/router.js";
 import { runFlow, confirmAction, chooseAction } from "../../core/dialogs.js";
 import { toast } from "../../core/toast.js";
 import { typesetMath } from "../../core/math.js";
-import { richText, noteText } from "../../domain/text.js";
+import { richText, noteText, aiText } from "../../domain/text.js";
 import { shuffle } from "../../domain/testing.js";
 import { know, again, isDue } from "../../domain/cards.js";
 import * as store from "../../data/store.js";
@@ -19,7 +19,8 @@ import * as mut from "../../data/mutations.js";
 import { mountQuestions, visibleQuestions } from "../question/list.js";
 import { copyQuestions } from "../question/copy.js";
 import { openStartTest } from "../test/start-sheet.js";
-import { generateQuestions } from "./ai-actions.js";
+import { generateQuestions, noteTricks } from "./ai-actions.js";
+import { can } from "../../core/entitlements.js";
 import { viewNote, editNote, viewText } from "../notes/note-editor.js";
 import { listPdfs } from "../../pdf/pdf-store.js";
 import { madeByOf } from "../../domain/made-by.js";
@@ -263,9 +264,15 @@ export function renderPdfNotesPanel(host, { scope, topic = null }) {
     return html`<article class="note-card pdf-note" data-nid="${n.id}">
       <header class="qcard-meta"><span>📄 ${n.label || "PDF"}${n.target.pages ? ` · ${t("ai.pnPages", { pages: n.target.pages })}` : ""} · ${when(n)}${!scope.topicId && tp ? ` · ${nameLabel(tp)}` : ""}${n.aiModels?.length ? ` · 🤖 ${n.aiModels.join(", ")}` : ""}</span></header>
       <div class="note-body-btn" data-action="pn-read"><div class="qtext note-body ai-answer ${n.text.length > 600 || n.text.split("\n").length > 10 ? "is-long" : ""}">${noteText(n.text)}</div></div>
+      ${n.tricks?.text ? html`<details class="explain ai-extra note-tricks" data-k="tricks"><summary>🧠 ${t("ai.pnTricks")}</summary>
+        <div class="ai-answer">${aiText(n.tricks.text, { sections: false })}</div>
+        <div class="extra-foot"><span class="hint made-by">${[n.tricks.by ? `🤖 ${n.tricks.by}` : "", n.tricks.at ? new Date(n.tricks.at).toLocaleDateString(dateLocale()) : ""].filter(Boolean).join(" · ")}</span>
+          ${can("ai") ? html`<button type="button" class="link" data-action="pn-tricks">${t("ai.pnTricksAgain")}</button>` : ""}
+          <button type="button" class="link danger" data-action="pn-tricks-clear">${t("common.clear")}</button></div></details>` : ""}
       <div class="row-actions">
         <button type="button" class="link" data-action="pn-read">📖 ${t("notes.read")}</button>
         <button type="button" class="link" data-action="pn-edit">✎ ${t("common.edit")}</button>
+        ${!n.tricks?.text && can("ai") ? html`<button type="button" class="link" data-action="pn-tricks">🧠 ${t("ai.pnTricks")}</button>` : ""}
         ${n.target.pdfId ? html`<button type="button" class="link" data-action="pn-pdf">📄 ${t("ai.pnOpenPdf")}</button>` : ""}
         <button type="button" class="link danger" data-action="pn-del">${t("common.delete")}</button>
       </div></article>`;
@@ -289,6 +296,14 @@ export function renderPdfNotesPanel(host, { scope, topic = null }) {
       const prev = await mut.deleteNotes([n.id]);
       toast(t("ai.pnDeleted"), { actionLabel: t("common.undo"), onAction: () => mut.putNotes(prev), duration: 8000 });
     }),
+    "pn-tricks": (el) => noteTricks(noteOf(el)),
+    "pn-tricks-clear": (el) => runFlow(async () => {
+      const n = noteOf(el);
+      if (!(await confirmAction({ title: t("ai.pnTricksClearTitle"), confirmLabel: t("common.clear"), danger: true }))) return;
+      const prev = n.tricks;
+      await mut.setNoteExtras(n.id, { tricks: null });
+      toast(t("ai.pnTricksCleared"), { actionLabel: t("common.undo"), onAction: () => mut.setNoteExtras(n.id, { tricks: prev }), duration: 8000 });
+    }),
     "pn-all": () => readTogether(notes),
     "pn-make": () => makeFrom(topic, "note")
   });
@@ -297,7 +312,11 @@ export function renderPdfNotesPanel(host, { scope, topic = null }) {
 /** Every shown note in one reading view, one part per PDF. */
 function readTogether(notes) {
   const by = new Map(); notes.forEach((n) => { const k = n.target.pdfId || "none"; if (!by.has(k)) by.set(k, []); by.get(k).push(n); });
-  const text = [...by.values()].map((g) => `## ${g[0].label || "PDF"}\n${g.map((n) => n.text).join("\n\n")}`).join("\n\n");
+  // A note's memory tricks follow it, as their own part.
+  const text = [...by.values()].map((g) => {
+    const tricks = g.filter((n) => n.tricks?.text).map((n) => n.tricks.text);
+    return `## ${g[0].label || "PDF"}\n${g.map((n) => n.text).join("\n\n")}${tricks.length ? `\n\n## 🧠 ${t("ai.pnTricks")} · ${g[0].label || "PDF"}\n${tricks.join("\n\n")}` : ""}`;
+  }).join("\n\n");
   viewText(t("ai.pnTogether"), text);
 }
 

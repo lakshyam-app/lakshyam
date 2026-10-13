@@ -1,2 +1,3 @@
 # Never commit personal backups: this repository is public.
 *backup*.json
+.tmp-dm/

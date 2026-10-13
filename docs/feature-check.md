@@ -101,7 +101,7 @@ imported, in English and Malayalam.
 | Old feature | In Lakshyam | |
 |---|---|---|
 | Presets, priority, auto-fallback, test, answer language | Settings → AI; presets can now be paused | ✅ |
-| Explain / my mistake / memory trick / revision note, save | Row under each question card, card ⋯, results | ✅ |
+| Explain / my mistake / memory trick / revision note, save | Row under each question card (🤖 Explain · 📚 Facts · 💬 Ask AI · ✨ Similar), results. 1.15, at your request: the question-level memory trick moved to 🧠 Memory tricks on each PDF revision note (Still wrong ⋯ tricks stay); the question-level revision note became 📚 Related facts kept under the question | ↪ moved, nothing removed |
 | Similar questions / generate for topic | Card ⋯ / topic ⋯ (reviewed before saving, kept apart) | ✅ |
 | Weak-area study plan | Replaced by **My timetable** (AI draft you review and approve) and **Smart insights** | ↪ the timetable does the same job with dates and topics you tick |
 | Tricks for wrong answers | Still wrong ⋯ | ✅ |
@@ -185,3 +185,17 @@ Today screen with Quick 10 and daily goal · exam countdown · timetable (any da
 | ⚙ View → Made with filter (offered when questions come from more than one model, incl. "Not recorded") | Topic / Subject → AI | ✅ |
 | AI requests identical to 1.13 (recorded with a mock AI before and after) | — | ✅ |
 
+## Added in 1.15
+
+| Feature | Where | Status |
+|---|---|---|
+| Revision notes from a PDF: each section sees the end of the page before it (context only, no facts taken from it); watermark and repeated header/footer lines removed; slanted watermark text left out; ⭐ marks kept where they stand (no more moving to the top), at most about a third; lists name their body/topic; repeated points left out (count shown); "Page n" headings; a warning when a note could not cover every page; a bigger answer length | Study PDF → Revision note | ✅ |
+| Questions from general knowledge get the same independent answer double-check as PDF questions (on by default; disagreeing ones start unticked) | Topic → 🤖 Make more → General knowledge | ✅ |
+| Under each question, each kept in its own place: Explanation (with the model that wrote it, Clear + Undo), 📚 Related facts (Keep, Clear + Undo), 💬 chat with AI (kept, Continue, Clear) | Question cards (lists, results) | ✅ |
+| "Add to topic notes" removed from the explanation sheet; ⋯ menu without Star and AI help (both are on the card; AI help stays in ⋯ if card AI buttons are off) | Question card | ✅ |
+| Saved AI strategy shown as its own block on the topic page: read, make a new one, Clear + Undo | Topic page | ✅ |
+| 🧠 Memory tricks (funny rhymes, little stories) for a PDF revision note, kept with the note, shown in Read | Topic → Notes | ✅ |
+| List number (#1, #2…) next to the paper's question number | Question lists | ✅ |
+| Maths in explanations and AI answers: formulas stay whole (bullets, bold, line breaks inside them no longer break them), \[ \] and \( \) understood, typeset in lists too; long formulas scroll sideways | Everywhere | ✅ |
+| Test number strip: Q1 no longer cut off on the left | Test (one at a time) | ✅ |
+| After Submit, Back (phone or ‹) goes to where the test was started (topic, subject, bank…), not Test history / Progress | Test result | ✅ |

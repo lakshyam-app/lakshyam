@@ -1,7 +1,7 @@
 /* Reads PDFs in the browser with pdf.js (Mozilla, Apache-2.0), kept in this app's
    own vendor/pdfjs folder — no outside download. Loaded only when you first use
    Study PDFs; the service worker keeps a copy after that for offline use. */
-import { classifyPage } from "./pdf-tools.js";
+import { classifyPage, pageText } from "./pdf-tools.js";
 
 const LIB = "vendor/pdfjs/pdf.min.js";
 const WORKER = "vendor/pdfjs/pdf.worker.min.js";
@@ -38,9 +38,7 @@ export async function extractPdfText(blob, onProgress) {
     for (let i = 1; i <= doc.numPages; i++) {
       const page = await doc.getPage(i);
       const tc = await page.getTextContent();
-      let s = "";
-      for (const it of tc.items) { s += it.str; if (it.hasEOL) s += "\n"; }
-      pages.push(classifyPage(s));
+      pages.push(classifyPage(pageText(tc.items)));
       page.cleanup();
       onProgress?.(i, doc.numPages);
     }

@@ -678,12 +678,13 @@ function reviewView(rec, job, handlers) {
       const head = t("pdf.noteHead", { name: rec.name });
       const text = job.noteText.trim().replace(new RegExp(`^${head.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*`), "").trim();
       if (!text || !topic) return;
-      await mut.savePdfNote({ topicId: topic.id, pdfId: rec.id, pdfName: rec.name, pages: cfg.only ? cfg.only.join(", ") : `${cfg.from}–${cfg.to}`, text, models: modelNames(r.models?.write) });
+      await mut.savePdfNote({ topicId: topic.id, pdfId: rec.id, pdfName: rec.name, pages: cfg.only ? cfg.only.join(", ") : r.covered ? (r.covered[0] === r.covered[1] ? String(r.covered[0]) : `${r.covered[0]}–${r.covered[1]}`) : `${cfg.from}–${cfg.to}`, text, models: modelNames(r.models?.write) });
       jobs.delete(jobKey(rec.id, job.kind));
       toast(t("pdf.noteSavedTab", { topic: nameLabel(topic) }));
       go("topic", { id: topic.id, mode: "notes" });
     };
-    return { body: html`${madeWithLine(r)}<p class="hint">${t("pdf.noteReview", { to: targetLabel(tg) })}${r.tot.dropped ? ` ${t("pdf.noteDropped", { n: r.tot.dropped })}` : ""}</p>
+    return { body: html`${madeWithLine(r)}<p class="hint">${t("pdf.noteReview", { to: targetLabel(tg) })}${r.tot.dropped ? ` ${t("pdf.noteDropped", { n: r.tot.dropped })}` : ""}${r.tot.repeats ? ` ${t("pdf.noteRepeats", { n: r.tot.repeats })}` : ""}</p>
+      ${r.left ? html`<p class="warn-box">${t("pdf.noteLeft", { a: r.planned?.[0] ?? cfg.from, b: r.planned?.[1] ?? cfg.to, c: r.left[0], d: r.left[1], max: jobsApi.NOTE_MAX_SECTIONS })}</p>` : ""}
       ${stoppedNote(r)}
       <textarea class="field page-text" id="noteText" rows="16" aria-label="${t("pdf.kind.note")}">${job.noteText}</textarea>
       <p class="hint">${t("ai.verify")}</p>

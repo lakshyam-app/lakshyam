@@ -40,16 +40,18 @@ export async function ensureAi() {
  */
 export async function askInSheet({ title, sub = "", system, user, maxTokens = 2500, actions = [], keepOpen = false, onModel = null }) {
   const head = html`<h2>${title}</h2>${sub ? html`<p class="hint">${sub}</p>` : ""}`;
-  openSheet(html`${head}<p class="sheet-status">${t("ai.thinking")}</p>`, {}, { label: title });
+  const mine = openSheet(html`${head}<p class="sheet-status">${t("ai.thinking")}</p>`, {}, { label: title });
+  // Closed, or another sheet opened meanwhile: the answer isn't drawn over it.
+  const ours = () => isSheetOpen() && mine?.isConnected;
   try {
     const { text, preset, switched } = await ask(system, user, maxTokens);
     if (onModel) onModel(preset?.model || preset?.name || "");
-    if (!isSheetOpen()) return text;
+    if (!ours()) return text;
     if (switched) toast(t("ai.switched", { name: preset.name }));
     showAnswer({ head, text, actions, presetName: preset.name, keepOpen, model: preset.model || "" });
     return text;
   } catch (e) {
-    if (isSheetOpen()) {
+    if (ours()) {
       openSheet(html`${head}<p class="warn-box pre">${errorText(e)}</p>
         <p class="hint">${t("ai.checkPreset")}</p>
         <div class="sheet-actions"><button type="button" class="btn btn-quiet" data-action="settings">${t("ai.title")}</button>
@@ -60,21 +62,26 @@ export async function askInSheet({ title, sub = "", system, user, maxTokens = 25
   }
 }
 
-export function showAnswer({ head, text, actions, presetName, keepOpen, model = "" }) {
+/** done: ids of actions already carried out (shown ticked). */
+export function showAnswer({ head, text, actions, presetName, keepOpen, model = "", done = new Set() }) {
+  const again = () => showAnswer({ head, text, actions, presetName, keepOpen, model, done });
   openSheet(html`${head}
     <div class="ai-answer">${aiText(text)}</div>
     <p class="hint">${t("ai.byPreset", { name: presetName })}${model && model !== presetName ? ` (${model})` : ""} · ${t("ai.verify")}</p>
     <div class="ai-actions">
       <button type="button" class="btn btn-quiet btn-small" data-action="copy">${t("question.copy")}</button>
-      ${actions.map((a) => html`<button type="button" class="btn btn-quiet btn-small" data-action="act" data-id="${a.id}">${a.label}</button>`)}
+      ${actions.map((a) => html`<button type="button" class="btn btn-quiet btn-small" data-action="act" data-id="${a.id}" ${done.has(a.id) ? "disabled" : ""}>${done.has(a.id) ? "✓ " : ""}${a.label}</button>`)}
     </div>
     <div class="sheet-actions"><button type="button" class="btn" data-action="close">${t("common.done")}</button></div>`, {
     copy: async () => { try { await navigator.clipboard.writeText(text); toast(t("common.copied")); } catch { toast(t("common.copyFailed")); } },
     act: async (el) => {
       const a = actions.find((x) => x.id === el.dataset.id);
-      const done = await a.run(text);
-      if (done !== false) { el.disabled = true; el.textContent = `✓ ${a.label}`; }
-      if (!keepOpen && a.closes) closeSheet();
+      const ok = await a.run(text);
+      if (ok !== false) done.add(a.id);
+      if (!keepOpen && a.closes) { closeSheet(); return; }
+      // An action that asked something first (e.g. "Replace the explanation?") used this sheet: show the answer again.
+      if (!el.isConnected) { if (isSheetOpen()) again(); return; }
+      if (ok !== false) { el.disabled = true; el.textContent = `✓ ${a.label}`; }
     },
     close: () => closeSheet()
   });

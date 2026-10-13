@@ -3,14 +3,37 @@
    Everything is escaped first, so imported text can't inject markup. */
 import { escapeHtml, raw } from "../core/dom.js";
 
+/* Maths ($…$, $$…$$, \[…\], \(…\)) is set aside before formatting, so line breaks, bullets or
+   **bold** inside a formula can't split it, then put back whole (on one line) for KaTeX. */
+const MATH = /\$\$[\s\S]{1,2000}?\$\$|\\\[[\s\S]{1,2000}?\\\]|\\\([\s\S]{1,1000}?\\\)|\$(?![\s$])[^$]{1,800}?(?<!\s)\$/g;
+const M_OPEN = "\uE000"; const M_CLOSE = "\uE001";
+export function protectMath(text) {
+  const keep = [];
+  const s = String(text ?? "").replace(MATH, (m) => { keep.push(m); return `${M_OPEN}${keep.length - 1}${M_CLOSE}`; });
+  return { s, keep };
+}
+function restoreMath(html, keep) {
+  if (!keep.length) return html;
+  return html.replace(/\uE000(\d+)\uE001/g, (_, i) => `<span class="math">${escapeHtml(keep[Number(i)].replace(/\s*\n\s*/g, " "))}</span>`);
+}
+
 export function richText(value) {
-  let s = escapeHtml(value);
+  const { s: src, keep } = protectMath(value);
+  let s = escapeHtml(src);
   s = s.replace(/\*\*(.+?)\*\*/g, '<mark class="hl">$1</mark>');
   s = s.replace(/(^|[^*])\*(?!\s)(.+?)\*(?!\*)/g, "$1<em>$2</em>");
-  return raw(s);
+  return raw(restoreMath(s, keep));
 }
 
 export const letterFor = (i) => String.fromCharCode(65 + i);
+
+/** A short fingerprint of a text: tells whether a saved explanation is still the one the AI wrote. */
+export function textSig(value) {
+  const s = String(value ?? "").trim();
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  return `${(h >>> 0).toString(36)}.${s.length.toString(36)}`;
+}
 
 /* AI answers, laid out for reading on a phone. Everything is escaped first.
    - "## 1. Title", "1. **Title**" or a short "1. Title" line → a section (collapsible card)
@@ -27,7 +50,8 @@ const leadBold = (s) => {
 };
 
 export function aiText(value, { sections = true } = {}) {
-  const lines = escapeHtml(String(value ?? "").replace(/\r/g, "")).split("\n");
+  const { s: src, keep } = protectMath(String(value ?? "").replace(/\r/g, ""));
+  const lines = escapeHtml(src).split("\n");
   const out = []; // { type: "h" | "li" | "sub" | "p", html, n }
   // With "## " headings present, numbered lines are steps, never headings.
   const hashHeads = !sections || lines.some((l) => /^\s*#{1,4}\s/.test(l));
@@ -67,7 +91,7 @@ export function aiText(value, { sections = true } = {}) {
   }
   closeList();
   if (inSec) html += "</div></details>";
-  return raw(html);
+  return raw(restoreMath(html, keep));
 }
 
 /** Text that may have bullets or headings (an explanation, your own note): shown as lists and

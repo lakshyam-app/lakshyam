@@ -4,7 +4,7 @@
    (Banks live in banks.js.) */
 import { openedFrom } from "../../core/back.js";
 import { html, onAction } from "../../core/dom.js";
-import { t } from "../../core/i18n.js";
+import { t, dateLocale } from "../../core/i18n.js";
 import { go } from "../../core/router.js";
 import { openSheet } from "../../core/sheet.js";
 import { onLongPress } from "../../core/longpress.js";
@@ -21,7 +21,9 @@ import { addPaperFlow, answerKeyFlow } from "./paper-files.js";
 import { banksRows } from "./banks.js";
 import { openStartTest } from "../test/start-sheet.js";
 import { contentSwitch, contentHandler, renderAiPanel, renderCardsPanel, renderPdfNotesPanel, aiQuestions, cardsOf, pdfNotesOf } from "../ai/content.js";
-import { generateQuestions, topicStrategy } from "../ai/ai-actions.js";
+import { generateQuestions, topicStrategy, viewStrategy } from "../ai/ai-actions.js";
+import { strategyFor } from "../../data/strategy.js";
+import { plainPreview } from "../../domain/text.js";
 import { testsFor } from "../progress/progress.js";
 import { pdfMenuItem } from "../pdfs/pdfs.js";
 import { can } from "../../core/entitlements.js";
@@ -423,6 +425,7 @@ export const topicScreen = {
     const questions = store.questionsFor({ syllabusId: syllabus.id, topicId: id });
     const st = store.topicStateFor(syllabus.id, id);
     const label = labelFor(syllabus.id, id);
+    const strat = strategyFor(id); // the saved AI strategy, shown as its own block (read / new / clear)
     const done = testsFor(syllabus.id, "topic", id).sort((a, b) => b.submittedAt - a.submittedAt);
     const sub = [t("common.questions", { n: questions.length }), st?.studiedCount ? t("library.studied", { n: st.studiedCount }) : t("library.notStudied")]
       .filter(Boolean).join(" · ");
@@ -447,8 +450,11 @@ export const topicScreen = {
     <div class="actions-row">
       ${questions.length ? html`<button type="button" class="btn" data-action="practice">${playIcon} ${t("practice.button")}</button>` : ""}
       <button type="button" class="btn btn-quiet" data-action="studied">${t("studied.button")}</button>
-      ${can("ai") && questions.length >= 3 ? html`<button type="button" class="btn btn-quiet" data-action="strategy">🤖 ${t("ai.strategyButton")}</button>` : ""}
+      ${can("ai") && questions.length >= 3 && !strat ? html`<button type="button" class="btn btn-quiet" data-action="strategy">🤖 ${t("ai.strategyButton")}</button>` : ""}
     </div>
+    ${strat ? html`<button type="button" class="note-preview strat-preview" data-action="strategy-view">
+      <span class="note-label">🎯 ${t("ai.strategySaved")}${strat.at ? ` · ${new Date(strat.at).toLocaleDateString(dateLocale())}` : ""}${strat.by ? ` · 🤖 ${strat.by}` : ""} · ${t("notes.tapToRead")}</span>
+      <span class="note-text">${plainPreview(strat.text, 200)}</span></button>` : ""}
     ${noteBlock("topic", id)}
     <div id="qHost"></div>`;
     const key = `topic:${id}`;
@@ -456,6 +462,7 @@ export const topicScreen = {
       ...backHandler, ...contentHandler,
       studied: () => markStudied(syllabus.id, topic),
       strategy: () => topicStrategy(topic),
+      "strategy-view": () => viewStrategy(topic),
       practice: () => practice(key, questions, { type: "topic", ref: id, label: topic.name }),
       tests: () => (done.length === 1 ? go("result", { id: done[0].id, ...openedFrom("topic", { id }) }) : go("tests", { type: "topic", ref: id, ...openedFrom("topic", { id }) })),
       "note-edit": () => openNote("topic", id, topic.name),

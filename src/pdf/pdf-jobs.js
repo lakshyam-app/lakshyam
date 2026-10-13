@@ -144,19 +144,30 @@ export async function makeCards(pages, cfg, job, onStep = () => {}) {
 export const NOTE_MAX_SECTIONS = 15;
 
 export async function makeNote(pages, cfg, job, onStep = () => {}) {
-  const chunks = T.buildChunks(pages, cfg.from, cfg.to).slice(0, NOTE_MAX_SECTIONS);
-  const lines = []; const tot = { dropped: 0, skipped: 0 };
+  const every = T.buildChunks(pages, cfg.from, cfg.to);
+  const chunks = every.slice(0, NOTE_MAX_SECTIONS);
+  // Pages left out when the range has more sections than one note takes (shown on the review screen).
+  const left = every.slice(NOTE_MAX_SECTIONS).flatMap((c) => c.pages);
+  const lines = []; const tot = { dropped: 0, skipped: 0, repeats: 0 };
   const models = { write: {}, check: {} };
+  const kept = []; // words of every bullet kept so far, to drop repeats across sections
+  const done = []; // pages of the sections the AI answered (what the saved note covers)
   let abortMsg = null;
   for (let i = 0; i < chunks.length; i++) {
     if (job.cancel) break;
     const chunk = chunks[i];
     onStep({ section: i + 1, sections: chunks.length, pages: T.pageRange(chunk.pages) });
     try {
-      const { text, preset } = await ask(PP.NOTE_SYSTEM, PP.noteTask(cfg, chunk), cfg.lang === "ml" ? 4500 : 2600);
+      const { text, preset } = await ask(PP.NOTE_SYSTEM, PP.noteTask(cfg, chunk), cfg.lang === "ml" ? 5500 : 3200);
       tally(models.write, modelOf(preset));
+      done.push(...chunk.pages);
       const r = T.noteLines(text, chunk);
-      if (r.lines.length) lines.push(`**Pages ${T.pageRange(chunk.pages)}**`, ...r.lines, "");
+      const fresh = r.lines.filter((l) => {
+        const w = T.bulletWords(l);
+        if (T.isRepeat(w, kept)) { tot.repeats++; return false; }
+        kept.push(w); return true;
+      });
+      if (fresh.length) lines.push(`**${T.pagesLabel(chunk.pages)}**`, ...fresh, "");
       tot.dropped += r.dropped;
     } catch (e) {
       if (skippable(e)) tot.skipped++;
@@ -165,5 +176,9 @@ export async function makeNote(pages, cfg, job, onStep = () => {}) {
     if (i < chunks.length - 1) await sleep(PAUSE_MS.between);
   }
   const starred = cfg.pattern && lines.some((l) => /^- ⭐/.test(l));
-  return { text: [starred ? cfg.starLegend || "" : "", ...lines].join("\n").trim(), tot, abortMsg, sections: chunks.length, models };
+  const planned = chunks.flatMap((c) => c.pages);
+  const span = (a) => (a.length ? [a[0], a[a.length - 1]] : null);
+  // covered: pages actually answered (stopped early → fewer); planned: what one note takes; left: pages past that.
+  return { text: [starred ? cfg.starLegend || "" : "", ...lines].join("\n").trim(), tot, abortMsg, sections: chunks.length, models,
+    covered: span(done), planned: span(planned), left: span(left) };
 }

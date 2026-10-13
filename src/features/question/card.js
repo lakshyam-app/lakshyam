@@ -3,8 +3,8 @@
          "selftest"– answer hidden; tap an option (or "Show answer") to check yourself
          "edit"    – tap an option to set the correct answer (tap again to clear) */
 import { html } from "../../core/dom.js";
-import { t } from "../../core/i18n.js";
-import { richText, smartText, letterFor } from "../../domain/text.js";
+import { t, dateLocale } from "../../core/i18n.js";
+import { richText, smartText, aiText, letterFor, textSig } from "../../domain/text.js";
 import * as store from "../../data/store.js";
 import { formatDuration } from "../../domain/testing.js";
 import { can } from "../../core/entitlements.js";
@@ -17,8 +17,9 @@ export function difficultyOf(q) {
   return store.questionState(q.id)?.difficulty || q.difficultyHint || null;
 }
 
-/** review: an answer record from a finished test ({ selected, correct, isCorrect, graded, guessed, timeMs }). */
-export function questionCard(q, { showPaper = true, mode = "study", revealed = null, showDifficulty = true, review = null, n = null } = {}) {
+/** review: an answer record from a finished test ({ selected, correct, isCorrect, graded, guessed, timeMs }).
+    listNo: the card's place in the list shown (1, 2, 3…). actions: false for a read-only look (no buttons). */
+export function questionCard(q, { showPaper = true, mode = "study", revealed = null, showDifficulty = true, review = null, n = null, listNo = null, actions = true } = {}) {
   if (review) mode = "review";
   const paper = store.paper(q.paperId);
   const state = store.questionState(q.id);
@@ -31,7 +32,12 @@ export function questionCard(q, { showPaper = true, mode = "study", revealed = n
   const aiWhere = isAi ? (q.sourceRef?.pdf ? `📄 ${String(q.sourceRef.pdf).replace(/\.pdf$/i, "")}${q.sourceRef.page ? ` · ${t("question.pageShort", { n: q.sourceRef.page })}` : ""}` : `🤖 ${q.aiModel?.by || t("ai.madeLabel")}`) : null;
   // Which model wrote (and double-checked) it, when that was recorded (1.14+).
   const byLine = isAi && q.aiModel?.by ? `🤖 ${q.aiModel.by}${q.aiModel.checkedBy ? ` · ${t("ai.checkedByList", { list: q.aiModel.checkedBy })}` : ""}` : "";
+  // AI help you kept with this question (1.15+): which model wrote the saved explanation (while it is still
+  // that text — an edit later drops the label), its Related facts, and your chat about it.
+  const ai = state?.ai || {};
+  const explBy = ai.explainBy?.model && ai.explainBy.sig === textSig(q.explanation) ? ai.explainBy.model : "";
   const meta = [
+    listNo !== null ? `#${listNo}` : null,
     n !== null ? t("question.inTest", { n }) : null,
     isAi ? aiWhere : q.number ? (n !== null ? t("question.paperNumber", { n: q.number }) : t("question.number", { n: q.number })) : null,
     showPaper && paper ? paper.name : null,
@@ -68,12 +74,12 @@ export function questionCard(q, { showPaper = true, mode = "study", revealed = n
   return html`<article class="qcard ${deleted ? "is-deleted" : ""} ${mode === "edit" ? "is-editing" : ""}" data-qid="${q.id}" lang="${q.lang === "ml" ? "ml" : "en"}">
     <header class="qcard-meta">
       <span class="qcard-where">${meta.join(" · ")}</span>
-      <span class="qcard-badges">
+      ${actions ? html`<span class="qcard-badges">
         ${diff ? html`<button type="button" class="chip chip-${diff}" data-action="q-diff">${t(`question.difficulty.${diff}`)}</button>` : ""}
         <button type="button" class="icon-sm ${flagged ? "on" : ""}" data-action="q-flag" aria-pressed="${String(flagged)}"
           aria-label="${flagged ? t("question.unflag") : t("question.flag")}">${star(flagged)}</button>
         <button type="button" class="icon-sm" data-action="q-menu" aria-label="${t("question.more")}">${dots}</button>
-      </span>
+      </span>` : ""}
     </header>
     ${review ? reviewLine(review) : ""}
     ${deleted && !review ? html`<p class="qcard-note">${t("question.deleted")}</p>` : ""}
@@ -83,21 +89,41 @@ export function questionCard(q, { showPaper = true, mode = "study", revealed = n
     ${review && review.graded && q.answerIndex !== review.correct ? html`<p class="qcard-note quiet">${t("review.keyChanged")}</p>` : ""}
     ${!review && !deleted && q.answerIndex === null && !hidden ? html`<p class="qcard-note quiet">${t("question.noAnswer")}</p>` : ""}
     ${hidden ? html`<button type="button" class="link" data-action="q-reveal">${t("question.showAnswer")}</button>` : ""}
-    ${explain && !hidden ? html`<details class="explain"><summary>${t("question.explanation")}</summary>
-      <div class="qtext ai-answer plain">${smartText(explain)}</div></details>` : ""}
-    ${ref && !hidden ? html`<details class="explain source-line"><summary>📄 ${t("question.sourceLine")}</summary>
+    ${explain && !hidden ? html`<details class="explain" data-k="expl"><summary>${t("question.explanation")}</summary>
+      <div class="qtext ai-answer plain">${smartText(explain)}</div>
+      ${explBy || actions ? html`<div class="extra-foot">${explBy ? html`<span class="hint made-by">🤖 ${explBy}</span>` : ""}
+        ${actions ? html`<button type="button" class="link danger" data-action="q-clear-expl">${t("question.clearExplanation")}</button>` : ""}</div>` : ""}</details>` : ""}
+    ${ref && !hidden ? html`<details class="explain source-line" data-k="src"><summary>📄 ${t("question.sourceLine")}</summary>
       <p class="quote">${ref.quote}</p>${ref.pdf ? html`<p class="hint">${String(ref.pdf).replace(/\.pdf$/i, "")}${ref.page ? ` · ${t("question.pageShort", { n: ref.page })}` : ""}</p>` : ""}${byLine ? html`<p class="hint made-by">${byLine}</p>` : ""}</details>` : ""}
-    ${can("ai") && store.setting("aiOnCards", true) !== false && !hidden && mode !== "edit" ? aiRow(q, review) : ""}
+    ${!hidden ? aiExtras(ai, actions) : ""}
+    ${actions && can("ai") && store.setting("aiOnCards", true) !== false && !hidden && mode !== "edit" ? aiRow(review) : ""}
   </article>`;
 }
 
-/** AI help right on the card: Explain (or "Why was I wrong?" after a wrong answer), a memory trick, more. */
-function aiRow(q, review) {
+const when = (at) => (at ? new Date(at).toLocaleDateString(dateLocale(), { day: "numeric", month: "short" }) : "");
+
+/** What AI wrote for this question and you kept, each in its own place: Related facts and your chat. */
+function aiExtras(ai, actions) {
+  const facts = ai.facts?.text ? ai.facts : null;
+  const chat = Array.isArray(ai.chat) ? ai.chat : [];
+  return html`${facts ? html`<details class="explain ai-extra" data-k="facts"><summary>📚 ${t("ai.facts")}</summary>
+      <div class="ai-answer">${aiText(facts.text, { sections: false })}</div>
+      <div class="extra-foot"><span class="hint made-by">${[facts.by ? `🤖 ${facts.by}` : "", when(facts.at)].filter(Boolean).join(" · ")}</span>
+        ${actions ? html`<button type="button" class="link danger" data-action="q-clear-facts">${t("ai.clearFacts")}</button>` : ""}</div></details>` : ""}
+    ${chat.length ? html`<details class="explain ai-extra" data-k="chat"><summary>💬 ${t("ai.chatSaved", { n: chat.filter((m) => m.role === "user").length })}</summary>
+      <div class="chat-log">${chat.map((m) => html`<div class="chat-msg ${m.role === "user" ? "me" : "ai"}">${m.role === "user"
+        ? html`<p>${m.text}</p>` : html`<div class="ai-answer">${aiText(m.text, { sections: false })}</div>${m.by ? html`<p class="hint made-by">🤖 ${m.by}</p>` : ""}`}</div>`)}</div>
+      ${actions ? html`<div class="extra-foot"><button type="button" class="link" data-action="q-ai" data-mode="chat">💬 ${t("ai.chatContinue")}</button></div>` : ""}</details>` : ""}`;
+}
+
+/** AI help right on the card: Explain (or "Why was I wrong?" after a wrong answer), Related facts, Ask AI, Similar questions. */
+function aiRow(review) {
   const wrong = review && review.graded && !review.isCorrect && review.selected !== null && review.selected !== undefined;
   return html`<div class="ai-row">
     <button type="button" class="ai-chip" data-action="q-ai" data-mode="explain">🤖 ${wrong ? t("ai.explainMistakeShort") : t("ai.explainShort")}</button>
-    <button type="button" class="ai-chip" data-action="q-ai" data-mode="mnemonic">🧠 ${t("ai.mnemonicShort")}</button>
-    <button type="button" class="ai-chip quiet" data-action="q-ai" data-mode="">${t("ai.moreShort")}</button></div>`;
+    <button type="button" class="ai-chip" data-action="q-ai" data-mode="facts">📚 ${t("ai.factsShort")}</button>
+    <button type="button" class="ai-chip" data-action="q-ai" data-mode="chat">💬 ${t("ai.chatShort")}</button>
+    <button type="button" class="ai-chip quiet" data-action="q-ai" data-mode="similar">✨ ${t("ai.similarShort")}</button></div>`;
 }
 
 function reviewLine(r) {

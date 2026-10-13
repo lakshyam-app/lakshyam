@@ -64,23 +64,78 @@ export function splitLong(text, limit) {
   return out;
 }
 
+/** A page's text from pdf.js items. Slanted text that is only a small part of the page (a diagonal
+    watermark such as an e-mail address) is left out; a page that is all rotated is kept as it is. */
+export function pageText(items) {
+  const slanted = (it) => { const [a, b, c, d] = it.transform || [1, 0, 0, 1]; return Math.abs(b) > 0.1 * Math.abs(a) || Math.abs(c) > 0.1 * Math.abs(d); };
+  const chars = (list) => list.reduce((n, it) => n + String(it.str || "").length, 0);
+  const odd = items.filter(slanted);
+  const skip = odd.length && chars(odd) < 0.2 * chars(items) ? new Set(odd) : new Set();
+  let s = "";
+  for (const it of items) { if (!skip.has(it)) s += it.str; if (it.hasEOL) s += "\n"; }
+  return s;
+}
+
+/* ---------- clean-up before the AI sees a page ---------- */
+
+const PUA_BULLET = /^[\s]*[\uE000-\uF8FF•▪●◦■□➢➤✓✔]+[\s]*/;
+
+/** Lines repeated on most pages (watermarks such as an e-mail cut into pieces, headers, footers):
+    short lines found on at least half of the readable pages (and on 3 or more). */
+export function noiseLines(pages) {
+  const usable = (pages || []).filter(isUsable);
+  const need = Math.max(3, Math.ceil(usable.length * 0.5));
+  if (usable.length < 3) return new Set();
+  const count = new Map();
+  usable.forEach((p) => {
+    new Set(String(p.t).split("\n").map((l) => l.trim()).filter((l) => l && l.length <= 60)).forEach((l) => count.set(l, (count.get(l) || 0) + 1));
+  });
+  return new Set([...count.entries()].filter(([, n]) => n >= need).map(([l]) => l));
+}
+
+/** A page's text as the AI gets it: repeated noise lines removed, odd bullet symbols made "• ". */
+export function cleanPageText(t, noise = new Set()) {
+  const lines = String(t || "").split("\n").filter((l) => !noise.has(l.trim())).map((l) => (PUA_BULLET.test(l) ? l.replace(PUA_BULLET, "• ") : l));
+  return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+/** The end of the text before a section (about 600 characters, from a line start), so the AI can
+    tell what a list or section that runs over from the previous page belongs to. */
+export function tailOf(text, max = 600) {
+  const s = String(text || "").trim();
+  if (s.length <= max) return s;
+  const cut = s.slice(-max);
+  const nl = cut.indexOf("\n");
+  return (nl >= 0 && nl < max - 80 ? cut.slice(nl + 1) : cut).trim();
+}
+
 /** Groups readable pages from..to into sections the AI can handle in one go.
-    Malayalam text uses more tokens per character, so its sections are smaller. */
+    Malayalam text uses more tokens per character, so its sections are smaller.
+    Each section also carries `before`: the end of the page just before it (context only). */
 export function buildChunks(pages, from = 1, to = pages.length, only = null) {
+  const noise = noiseLines(pages);
+  const textOf = (n) => { const p = pages[n - 1]; return isUsable(p) ? cleanPageText(p.t, noise) : ""; };
   const chunks = []; let cur = null;
   const flush = () => { if (cur?.len) chunks.push(cur); cur = null; };
+  const beforeOf = (n) => { const t = n > 1 ? textOf(n - 1) : ""; return t ? { n: n - 1, t: tailOf(t) } : null; };
   for (let n = Math.max(1, from); n <= Math.min(pages.length, to); n++) {
     const p = pages[n - 1];
     if (!isUsable(p) || (only && !only.has(n))) { if (only) flush(); continue; }
-    const limit = mlRatio(p.t) > 0.3 ? 1800 : 3500;
-    if (p.t.length > limit * 1.6) {
+    const t = textOf(n);
+    if (t.replace(/\s/g, "").length < 30) continue;
+    const limit = mlRatio(t) > 0.3 ? 1800 : 3500;
+    if (t.length > limit * 1.6) {
       flush();
-      splitLong(p.t, limit).forEach((piece) => chunks.push({ pages: [n], parts: [{ n, t: piece }], len: piece.length }));
+      let prev = beforeOf(n);
+      splitLong(t, limit).forEach((piece) => {
+        chunks.push({ pages: [n], parts: [{ n, t: piece }], len: piece.length, before: prev });
+        prev = { n, t: tailOf(piece) };
+      });
       continue;
     }
-    if (cur && cur.len + p.t.length > limit) flush();
-    if (!cur) cur = { pages: [], parts: [], len: 0 };
-    cur.pages.push(n); cur.parts.push({ n, t: p.t }); cur.len += p.t.length;
+    if (cur && cur.len + t.length > limit) flush();
+    if (!cur) cur = { pages: [], parts: [], len: 0, before: beforeOf(n) };
+    cur.pages.push(n); cur.parts.push({ n, t }); cur.len += t.length;
   }
   flush();
   return chunks;
@@ -115,6 +170,10 @@ export function planChunks(chunks, N) {
 export const chunkText = (c) => c.parts.map((p) => `[Page ${p.n}]\n${p.t}`).join("\n\n");
 export const chunkSource = (c) => c.parts.map((p) => p.t).join("\n");
 export const pageRange = (pages) => (pages.length > 1 ? `${pages[0]}–${pages[pages.length - 1]}` : String(pages[0]));
+/** "Page 4" / "Pages 2–3" (section headings inside a revision note). */
+export const pagesLabel = (pages) => `${pages.length > 1 ? "Pages" : "Page"} ${pageRange(pages)}`;
+/** What came just before the section, for the AI's understanding only (never a source of facts or quotes). */
+export const contextBlock = (c) => (c?.before?.t ? `CONTEXT — the end of page ${c.before.n}, just before the passage. Use it ONLY to understand what the passage continues (for example, which heading a list at the top of the passage belongs to). Take no facts or quotes from it.\n<<<\n${c.before.t}\n>>>\n\n` : "");
 
 /* ---------- quote check (done in code, not by AI) ---------- */
 
@@ -266,6 +325,19 @@ export function verifyCards(arr, chunk) {
     items.push(it);
   });
   return { items, stats };
+}
+
+/** Words of a note bullet for spotting repeats (⭐, bold, page marks and punctuation ignored). */
+export function bulletWords(line) {
+  return new Set(normText(String(line).replace(/⭐/g, "").replace(/\[p\.[\d\s,–-]+\]/g, "").replace(/\*\*/g, "")).split(" ").filter((w) => w.length > 1));
+}
+/** Does this bullet say the same as one already kept? (≥ 75% of words shared) */
+export function isRepeat(words, kept) {
+  if (words.size < 3) return false;
+  return kept.some((k) => {
+    let inter = 0; words.forEach((w) => { if (k.has(w)) inter++; });
+    return inter / (words.size + k.size - inter) >= 0.75;
+  });
 }
 
 /** Keeps the note's bullets; drops any bullet with a number that is not in the PDF text. */

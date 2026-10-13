@@ -132,7 +132,7 @@ export const statsTopicScreen = {
 function questionHistory(qid, records) {
   const q = store.question(qid);
   const mine = records.filter((r) => r.questionId === qid).slice().reverse();
-  const body = openSheet(html`${questionCard(q, { showPaper: true })}
+  const body = openSheet(html`${questionCard(q, { showPaper: true, actions: false })}
     <h3>${t("stats.pastAnswers")}</h3>
     <ul class="issues">${mine.map((r) => html`<li><p>${dateText(r.at)} · ${r.selected === null ? t("review.blank") : `${letterFor(r.selected)} · ${r.isCorrect ? t("review.right") : t("review.wrong")}`}${r.guessed ? ` · 🤔` : ""}${r.timeMs ? ` · ${formatDuration(r.timeMs)}` : ""}</p></li>`)}</ul>`, {}, { label: t("question.preview") });
   body.querySelectorAll(".qcard-badges").forEach((el) => el.remove());

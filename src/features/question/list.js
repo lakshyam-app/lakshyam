@@ -71,7 +71,22 @@ export function bindCardActions(host, { view, bank = null, onOption = null, onRe
       toast(on ? t("question.flaggedToast") : t("question.unflaggedToast"));
     },
     "q-diff": (el) => runFlow(() => chooseDifficulty(qOf(el), quiet)),
-    "q-ai": (el) => { const q = qOf(el); aiHelp(q, { selected: selectedFor?.(q), mode: el.dataset.mode || null }); },
+    "q-ai": (el) => { const q = qOf(el); aiHelp(q, { selected: selectedFor?.(q), mode: el.dataset.mode || null, onSaved: () => view.refresh(q.id) }); },
+    // Clearing what AI wrote for a question: asks first, then Undo for a few seconds.
+    "q-clear-expl": (el) => runFlow(async () => {
+      const q = qOf(el);
+      if (!(await confirmAction({ title: t("question.clearExplanationTitle"), body: t("question.clearExplanationBody"), confirmLabel: t("common.clear"), danger: true }))) return;
+      const prev = await store.quietly(() => mut.clearExplanation(store.question(q.id)));
+      view.refresh(q.id);
+      toast(t("question.explanationCleared"), { actionLabel: t("common.undo"), duration: 8000, onAction: () => quiet(() => mut.restoreExplanation(q.id, prev), q.id) });
+    }),
+    "q-clear-facts": (el) => runFlow(async () => {
+      const q = qOf(el);
+      if (!(await confirmAction({ title: t("ai.clearFactsTitle"), confirmLabel: t("common.clear"), danger: true }))) return;
+      const prev = store.questionState(q.id)?.ai?.facts || null;
+      await quiet(() => mut.setQuestionAi(q.id, { facts: null }), q.id);
+      toast(t("ai.factsCleared"), { actionLabel: t("common.undo"), duration: 8000, onAction: () => quiet(() => mut.setQuestionAi(q.id, { facts: prev }), q.id) });
+    }),
     "q-menu": (el) => { const q = qOf(el); return runFlow(() => questionMenu(q, { bank, quiet, removeCard: (id) => view.remove(id), selected: selectedFor?.(q) })); }
   });
 }
@@ -104,7 +119,8 @@ export function mountQuestions(host, { key, questions, showPaper = true, bank = 
     <div class="qhost"></div>`;
 
   // Always draw from the saved copy, so a redrawn card shows the latest edit.
-  const card = (q0) => { const q = store.question(q0.id) || q0; return questionCard(q, { showPaper, mode: viewMode(), showDifficulty: difficultyOn(), revealed: reveal.has(q.id) ? reveal.get(q.id) : null }); };
+  // listNo: the card's place in this list (as shown: after the exam filter and sort), next to its paper number.
+  const card = (q0, i) => { const q = store.question(q0.id) || q0; return questionCard(q, { showPaper, mode: viewMode(), showDifficulty: difficultyOn(), revealed: reveal.has(q.id) ? reveal.get(q.id) : null, listNo: Number.isInteger(i) ? i + 1 : null }); };
   const view = mountCards(host.querySelector(".qhost"), { key, items: list, card, layout });
   const redraw = () => mountQuestions(host, { key, questions, showPaper, bank, examFilter, oneViewButton, extraMenu });
 
@@ -180,7 +196,6 @@ async function chooseDifficulty(q, quiet) {
 }
 
 export async function questionMenu(q, { bank, quiet, removeCard, selected }) {
-  const state = store.questionState(q.id);
   const deleted = q.status === "deleted_by_psc";
   const syl = store.currentSyllabus();
   const rev = syl ? inReview(syl.id, q.id) : null;
@@ -188,8 +203,8 @@ export async function questionMenu(q, { bank, quiet, removeCard, selected }) {
     title: q.number ? t("question.number", { n: q.number }) : t("question.question"),
     sub: [nameLabel(store.subject(q.subjectId)), nameLabel(store.topic(q.topicId))].filter(Boolean).join(" › "),
     items: [
-      can("ai") ? { id: "ai", label: Number.isInteger(selected) && selected !== q.answerIndex ? `🤖 ${t("ai.explainMistake")}` : `🤖 ${t("ai.help")}` } : null,
-      { id: "flag", label: state?.flagged ? t("question.unflag") : t("question.flag") },
+      // AI help and the star are on the card itself; AI help is listed here only when its card buttons are turned off.
+      can("ai") && store.setting("aiOnCards", true) === false ? { id: "ai", label: Number.isInteger(selected) && selected !== q.answerIndex ? `🤖 ${t("ai.explainMistake")}` : `🤖 ${t("ai.help")}` } : null,
       rev ? { id: "unreview", label: t("mreview.stop"), sub: t("mreview.stopHint") } : null,
       { id: "difficulty", label: t("question.setDifficulty") },
       { id: "answer", label: t("question.setAnswer") },
@@ -203,8 +218,7 @@ export async function questionMenu(q, { bank, quiet, removeCard, selected }) {
     ]
   });
   switch (id) {
-    case "ai": aiHelp(q, { selected }); return; // opens its own sheet once this menu has closed
-    case "flag": return quiet(() => mut.setFlag(q.id, !state?.flagged), q.id);
+    case "ai": aiHelp(q, { selected, onSaved: () => quiet(async () => {}, q.id) }); return; // opens its own sheet once this menu has closed
     case "unreview": await quiet(() => stopReviewing(q.id), q.id); toast(t("mreview.stopped")); return;
     case "difficulty": return chooseDifficulty(q, quiet);
     case "answer": {

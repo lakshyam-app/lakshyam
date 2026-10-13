@@ -14,10 +14,25 @@ export function saveStrategy(topicId, { text, by = "", lang = "en" }) {
   return store.quietly(() => store.setSetting(key(topicId), { text: String(text).slice(0, 30000), by, lang, at: Date.now() }));
 }
 
+/** Forgets the topic's saved strategy (also the copy in its note, for the question makers). Returns the old one for Undo. */
+export async function clearStrategy(topicId) {
+  const prev = store.setting(key(topicId), null);
+  await store.quietly(() => store.setSetting(key(topicId), { cleared: true, at: Date.now() }));
+  return prev;
+}
+export const restoreStrategy = (topicId, prev) => store.quietly(() => store.setSetting(key(topicId), prev || null));
+
+/** True when the topic's own note holds a strategy you added to it (that copy is yours to edit). */
+export function noteHasStrategy(topicId) {
+  const note = store.byId("notes", ids.note("topic", topicId));
+  return Boolean(note?.text && NOTE_MARK.test(note.text));
+}
+
 /** { text, at, by, from: "saved" | "note" } or null. */
 export function strategyFor(topicId) {
   const saved = store.setting(key(topicId), null);
   if (saved?.text) return { ...saved, from: "saved" };
+  if (saved?.cleared) return null; // cleared by you: the old copy in the note no longer counts
   const note = store.byId("notes", ids.note("topic", topicId));
   const m = note?.text ? NOTE_MARK.exec(note.text) : null;
   if (!m) return null;

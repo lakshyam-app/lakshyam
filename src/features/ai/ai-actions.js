@@ -1,5 +1,5 @@
 /* AI help in context:
-   - a question: Explain (or Explain my mistake), Mnemonic, Revision note, Similar questions
+   - a question: Explain (or Explain my mistake), Related facts, Ask AI (a chat kept with it), Similar questions
    - a topic: Make practice questions (reviewed before saving, kept apart from PYQs);
      Topic strategy (the pattern of its past questions and how to prepare)
    - Still wrong: Memory tricks · Guessing: Guess coach */
@@ -9,7 +9,7 @@ import { openSheet, closeSheet, isSheetOpen, sheetBody } from "../../core/sheet.
 import { chooseAction, confirmAction } from "../../core/dialogs.js";
 import { typesetMath } from "../../core/math.js";
 import { toast } from "../../core/toast.js";
-import { richText, letterFor } from "../../domain/text.js";
+import { richText, letterFor, aiText } from "../../domain/text.js";
 import { isGradable } from "../../domain/testing.js";
 import { answerRecords, pickByBasis, accuracyBy, guessSummary, markingInfo, isAnswered, isTimed, weakTopics } from "../../domain/stats.js";
 import * as store from "../../data/store.js";
@@ -20,8 +20,10 @@ import { ask, parseJsonLoose } from "../../ai/client.js";
 import * as P from "../../ai/prompts.js";
 import { ensureAi, askInSheet, errorText } from "./ai-ui.js";
 import { topicFacts, questionLines } from "../../domain/topic-pattern.js";
-import { saveStrategy, strategyFor, patternFrom } from "../../data/strategy.js";
+import { saveStrategy, strategyFor, patternFrom, clearStrategy, restoreStrategy, noteHasStrategy } from "../../data/strategy.js";
+import { can } from "../../core/entitlements.js";
 import { modelOf } from "../../pdf/pdf-jobs.js";
+import { applyAnswerCheck } from "../../pdf/pdf-tools.js";
 
 const lang = async () => (await presets.getConfig()).lang || "en";
 
@@ -32,37 +34,132 @@ export function plainQuestion(q) {
 
 /* ---------- one question ---------- */
 
-/** selected: the option picked in a test (index), "none" if left, or undefined. */
-export async function aiHelp(q, { selected, mode: preset = null } = {}) {
+/** selected: the option picked in a test (index), "none" if left, or undefined.
+    mode: "explain" | "facts" | "chat" | "similar" (older "note" = facts); none = choose.
+    onSaved: redraws the question's card after something is kept with it (else the screen is redrawn). */
+export async function aiHelp(q, { selected, mode: preset = null, onSaved = null } = {}) {
   if (!(await ensureAi())) return;
   const mistake = Number.isInteger(selected) && selected !== q.answerIndex;
   const mode = preset || await chooseAction({ title: t("ai.help"), sub: q.text.slice(0, 120), items: [
-    { id: "explain", label: mistake ? t("ai.explainMistake") : t("ai.explain") },
-    { id: "mnemonic", label: t("ai.mnemonic") },
-    { id: "note", label: t("ai.note") },
-    { id: "similar", label: t("ai.similar") }
+    { id: "explain", label: `🤖 ${mistake ? t("ai.explainMistake") : t("ai.explain")}` },
+    { id: "facts", label: `📚 ${t("ai.facts")}`, sub: t("ai.factsSub") },
+    { id: "chat", label: `💬 ${t("ai.chat")}`, sub: t("ai.chatSub") },
+    { id: "similar", label: `✨ ${t("ai.similar")}` }
   ] });
   if (!mode) return;
   if (mode === "similar") return generateQuestions(store.topic(q.topicId), [q]);
+  if (mode === "chat") return questionChat(q, { onSaved });
+  const saved = () => (onSaved ? onSaved() : store.touch());
   const pq = plainQuestion(q);
-  const topic = store.topic(q.topicId);
+  const kind = mode === "facts" || mode === "note" ? "facts" : "explain";
+  let model = "";
   await askInSheet({
-    title: t(`ai.${mode === "explain" && mistake ? "explainMistake" : mode}`), sub: q.text.slice(0, 100),
-    system: P.tutorSystem(await lang()), user: P.inLang(mode === "explain" ? P.tasks.explain(pq, selected) : P.tasks[mode](pq), await lang()),
-    actions: [
+    title: kind === "facts" ? `📚 ${t("ai.facts")}` : mistake ? t("ai.explainMistake") : t("ai.explain"), sub: q.text.slice(0, 100),
+    system: P.tutorSystem(await lang()), user: P.inLang(kind === "explain" ? P.tasks.explain(pq, selected) : P.tasks.facts(pq), await lang()),
+    onModel: (m) => { model = m || ""; },
+    // Each kind is kept in its own place under the question: an explanation never replaces the facts, or the other way round.
+    actions: kind === "facts" ? [
+      { id: "facts", label: t("ai.saveFacts"), run: async (text) => {
+        const old = store.questionState(q.id)?.ai?.facts;
+        if (old?.text && !(await confirmAction({ title: t("ai.replaceFacts"), body: old.text.slice(0, 200), confirmLabel: t("ai.replace") }))) return false;
+        await store.quietly(() => mut.setQuestionAi(q.id, { facts: { text: text.trim().slice(0, 8000), by: model, at: Date.now() } }));
+        saved();
+        toast(t("ai.savedFacts"));
+        return true;
+      } }
+    ] : [
       { id: "expl", label: t("ai.saveExplanation"), run: async (text) => {
         const fresh = store.question(q.id);
         if (fresh.explanation && !(await confirmAction({ title: t("ai.replaceExplanation"), body: fresh.explanation.slice(0, 200), confirmLabel: t("ai.replace") }))) return false;
-        await mut.updateQuestion(fresh, { text: fresh.text, options: fresh.options, explanation: text });
+        await store.quietly(() => mut.saveAiExplanation(fresh, text, model));
+        saved();
         toast(t("ai.savedExplanation"));
         return true;
-      } },
-      topic ? { id: "note", label: t("ai.addToNote", { topic: nameLabel(topic) }), run: async (text) => {
-        await mut.appendNote({ type: "topic", id: topic.id }, topic.name, `🤖 ${q.text.slice(0, 80)}\n${text}`);
-        toast(t("ai.addedToNote", { topic: nameLabel(topic) }));
-        return true;
-      } } : null
-    ].filter(Boolean)
+      } }
+    ]
+  });
+}
+
+/** 💬 A chat about one question, kept with it (shown under the question; Clear removes it). */
+export async function questionChat(q, { onSaved = null } = {}) {
+  if (!(await ensureAi())) return;
+  const saved = () => (onSaved ? onSaved() : store.touch());
+  const pq = plainQuestion(q);
+  const history = () => store.questionState(q.id)?.ai?.chat || [];
+  const keep = (chat) => store.quietly(() => mut.setQuestionAi(q.id, { chat: chat.length ? chat.slice(-40) : null }));
+  let busy = false;
+  let mine = null; // this chat's sheet content (another sheet opened since → don't draw over it)
+  const ours = () => Boolean(mine?.isConnected);
+  const draw = (status = "", draft = "") => {
+    const msgs = history();
+    mine = openSheet(html`<h2>💬 ${t("ai.chat")}</h2>
+      <p class="hint">${q.text.slice(0, 140)}</p>
+      <div class="chat-log" id="chatLog">${msgs.length ? msgs.map((m) => html`<div class="chat-msg ${m.role === "user" ? "me" : "ai"}">
+          ${m.role === "user" ? html`<p>${m.text}</p>` : html`<div class="ai-answer">${aiText(m.text, { sections: false })}</div>${m.by ? html`<p class="hint">🤖 ${m.by}</p>` : ""}`}</div>`)
+        : html`<p class="hint">${t("ai.chatEmpty")}</p>`}
+        ${status ? html`<p class="chat-status">${status}</p>` : ""}</div>
+      <p class="hint">${t("ai.verify")}</p>
+      <label class="field-label">${t("ai.chatAsk")}<textarea class="field" id="chatIn" rows="2" maxlength="2000" placeholder="${t("ai.chatPlaceholder")}">${draft}</textarea></label>
+      <div class="sheet-actions sticky-in">
+        ${msgs.length && !busy ? html`<button type="button" class="btn btn-quiet push-left" data-action="clear">🗑 ${t("ai.chatClear")}</button>` : ""}
+        <button type="button" class="btn btn-quiet" data-action="close">${t("common.done")}</button>
+        <button type="button" class="btn" data-action="send" ${busy ? "disabled" : ""}>${t("ai.chatSend")}</button></div>`, {
+      close: () => closeSheet(),
+      clear: async () => {
+        if (busy) return;
+        const ok = await confirmAction({ title: t("ai.chatClearTitle"), confirmLabel: t("ai.chatClear"), danger: true });
+        if (ok) await keep([]);
+        if (isSheetOpen()) draw(); else saved();
+      },
+      send: async () => {
+        const box = sheetBody().querySelector("#chatIn");
+        const message = box.value.trim().slice(0, 2000);
+        if (!message || busy) return;
+        busy = true;
+        const before = history();
+        const mine = { role: "user", text: message, at: Date.now() };
+        await keep([...before, mine]);
+        draw(t("ai.thinking"));
+        try {
+          const { text, preset } = await ask(P.tutorSystem(await lang()), P.inLang(P.chatTask(pq, store.question(q.id)?.explanation, before, message), await lang()), 1800);
+          await keep([...history(), { role: "ai", text: text.trim().slice(0, 6000), by: modelOf(preset), at: Date.now() }]);
+          busy = false;
+          if (ours()) draw(); else saved();
+        } catch (e) {
+          // Not answered: your message goes back in the box, so nothing you typed is lost.
+          busy = false;
+          await keep(history().filter((m) => m !== mine && !(m.role === "user" && m.at === mine.at && m.text === mine.text)));
+          if (ours()) draw(`✗ ${errorText(e)}`, message); else saved();
+        }
+      }
+    }, { label: t("ai.chat"), onClose: saved });
+    typesetMath(sheetBody());
+    const log = sheetBody().querySelector("#chatLog");
+    log?.lastElementChild?.scrollIntoView({ block: "nearest" });
+  };
+  draw();
+}
+
+/* ---------- 🧠 memory tricks for a revision note made from a study PDF ---------- */
+
+/** Tricks for the note's hard-to-remember points, kept with the note (never inside its text). */
+export async function noteTricks(note, { onSaved = null } = {}) {
+  if (!note?.text || !(await ensureAi())) return;
+  const l = await lang();
+  let model = "";
+  await askInSheet({
+    title: `🧠 ${t("ai.pnTricks")}`, sub: note.label || "",
+    system: P.tutorSystem(l), user: P.inLang(P.noteTricksTask(note.text), l),
+    maxTokens: l === "en" ? 2000 : 4500, onModel: (m) => { model = m || ""; },
+    actions: [{ id: "keep", label: t("ai.pnTricksSave"), run: async (text) => {
+      const fresh = store.byId("notes", note.id);
+      if (!fresh) return false;
+      if (fresh.tricks?.text && !(await confirmAction({ title: t("ai.pnTricksReplace"), body: fresh.tricks.text.slice(0, 200), confirmLabel: t("ai.replace") }))) return false;
+      await store.quietly(() => mut.setNoteExtras(note.id, { tricks: { text: text.trim().slice(0, 8000), by: model, at: Date.now() } }));
+      if (onSaved) onSaved(); else store.touch();
+      toast(t("ai.pnTricksSaved"));
+      return true;
+    } }]
   });
 }
 
@@ -76,7 +173,7 @@ export async function generateQuestions(topic, seedQs = null) {
   const subject = store.subject(topic.subjectId);
   const syllabus = store.currentSyllabus();
   const strategy = strategyFor(topic.id);
-  const s = { n: 8, lang: subject?.name === "Malayalam" ? "ml" : "en", difficulty: "mixed", usePattern: Boolean(strategy) };
+  const s = { n: 8, lang: subject?.name === "Malayalam" ? "ml" : "en", difficulty: "mixed", usePattern: Boolean(strategy), check: true };
   const pills = (key, values, label) => html`<div class="chip-wrap">${values.map((v) => html`<button type="button" class="pill ${s[key] === v ? "on" : ""}" data-action="set" data-k="${key}" data-v="${v}">${label(v)}</button>`)}</div>`;
   const draw = () => openSheet(html`<h2>${t("ai.genTitle")}</h2>${steps3(1)}
     <p class="hint">${nameLabel(subject)} · ${nameLabel(topic)}${seedQs?.length === 1 ? ` · ${t("ai.genSimilar")}` : ""}</p>
@@ -86,12 +183,15 @@ export async function generateQuestions(topic, seedQs = null) {
     ${strategy ? html`<div class="checks"><button type="button" class="check ${s.usePattern ? "on" : ""}" data-action="pattern" aria-pressed="${String(s.usePattern)}"><span class="box">${s.usePattern ? "✓" : ""}</span>
       <span class="row-main"><span>🎯 ${t("ai.usePattern")}</span><span class="row-sub">${t("ai.usePatternHint", { date: `${strategy.at ? new Date(strategy.at).toLocaleDateString(dateLocale()) : "—"}${strategy.by ? ` · 🤖 ${strategy.by}` : ""}` })}</span></span></button></div>`
       : html`<p class="hint">💡 ${t("ai.noPatternYet")}</p>`}
+    <div class="checks"><button type="button" class="check ${s.check ? "on" : ""}" data-action="check" aria-pressed="${String(s.check)}"><span class="box">${s.check ? "✓" : ""}</span>
+      <span class="row-main"><span>${t("pdf.check")}</span><span class="row-sub">${t("ai.genCheckHint")}</span></span></button></div>
     <p class="hint">${t("ai.genNote")}</p>
     <div class="sheet-actions"><button type="button" class="btn btn-quiet" data-action="cancel">${t("common.cancel")}</button>
       <button type="button" class="btn" data-action="go">${t("ai.generate")}</button></div>`, {
     set: (el) => { s[el.dataset.k] = el.dataset.k === "n" ? Number(el.dataset.v) : el.dataset.v; draw(); },
     cancel: () => closeSheet(),
     pattern: () => { s.usePattern = !s.usePattern; draw(); },
+    check: () => { s.check = !s.check; draw(); },
     go: () => run()
   }, { label: t("ai.genTitle") });
   draw();
@@ -104,8 +204,17 @@ export async function generateQuestions(topic, seedQs = null) {
       const items = P.cleanGenerated(parseJsonLoose(text));
       if (!items.length) throw new Error(t("ai.err.noQuestions"));
       const by = modelOf(preset);
-      items.forEach((x) => { x.aiModel = by ? { by } : null; });
-      if (isSheetOpen()) review(items, by);
+      // Second, independent pass: the answer key is checked (there is no PDF to check against).
+      let cb = null;
+      if (s.check && isSheetOpen()) {
+        try {
+          const { text: reply, preset: cp } = await ask(P.GENERAL_CHECK_SYSTEM, P.generalCheckTask(items), 400 + items.length * 40);
+          applyAnswerCheck(items, parseJsonLoose(reply));
+          cb = modelOf(cp);
+        } catch { items.forEach((x) => { x.check = "none"; }); }
+      }
+      items.forEach((x) => { x.aiModel = by ? (cb ? { by, checkedBy: cb } : { by }) : null; });
+      if (isSheetOpen()) review(items, by, cb);
     } catch (e) {
       if (isSheetOpen()) openSheet(html`<h2>${t("ai.genTitle")}</h2><p class="warn-box pre">${errorText(e)}</p>
         <div class="sheet-actions"><button type="button" class="btn btn-quiet" data-action="back">${t("common.back")}</button>
@@ -113,16 +222,21 @@ export async function generateQuestions(topic, seedQs = null) {
     }
   }
 
-  function review(items, by = null) {
-    const keep = new Set(items.map((_, i) => i));
+  function review(items, by = null, cb = null) {
+    // A question the second pass answered differently (or couldn't answer) starts unticked.
+    const keep = new Set(items.map((x, i) => (x.check === "disagree" || x.check === "unclear" ? -1 : i)).filter((i) => i >= 0));
+    const badge = (x) => (x.check === "agree" ? html`<div class="badges"><span class="badge ok">✓ ${t("pdf.checkAgree")}</span></div>`
+      : x.check === "disagree" ? html`<div class="badges"><span class="badge bad">⚠ ${t("pdf.checkDisagree", { letter: letterFor(x.checkAnswer) })}</span></div>`
+        : x.check === "unclear" ? html`<div class="badges"><span class="badge warn">⚠ ${t("ai.checkNotSure")}</span></div>` : "");
     const drawReview = () => {
       openSheet(html`<h2>${t("ai.reviewTitle")}</h2>${steps3(3)}
-        ${by ? html`<p class="made-with">🤖 ${t("ai.madeWith", { list: by })}</p>` : ""}
+        ${by ? html`<p class="made-with">🤖 ${t("ai.madeWith", { list: by })}${cb ? html` · ${t("ai.checkedByList", { list: cb })}` : ""}</p>` : ""}
         <p class="warn-box">${t("ai.reviewNote")}</p>
         ${items.map((x, i) => html`<article class="qcard gen ${keep.has(i) ? "" : "off"}">
           <label class="switch-row"><input type="checkbox" data-i="${i}" ${keep.has(i) ? "checked" : ""}><strong>${t("ai.genQ", { n: i + 1 })}</strong></label>
           <div class="qtext">${richText(x.text)}</div>
           <ol class="options">${x.options.map((o, j) => html`<li class="${j === x.answerIndex ? "right" : ""}"><span class="opt-letter">${letterFor(j)}</span><span class="opt-text">${richText(o)}</span>${j === x.answerIndex ? html`<span class="tick">✓</span>` : ""}</li>`)}</ol>
+          ${badge(x)}
           ${x.explanation ? html`<p class="hint">${richText(x.explanation)}</p>` : ""}
         </article>`)}
         <div class="sheet-actions sticky-in"><button type="button" class="btn btn-quiet" data-action="close">${t("ai.discard")}</button>
@@ -182,7 +296,33 @@ export async function topicStrategy(topic) {
     } }]
   });
   // Kept for the question makers (AI questions, questions from a PDF) to follow this pattern.
-  if (strategyText) { await saveStrategy(topic.id, { text: strategyText, by: strategyBy, lang: await lang() }); toast(t("ai.strategyKept")); }
+  if (strategyText) { await saveStrategy(topic.id, { text: strategyText, by: strategyBy, lang: await lang() }); store.touch(); toast(t("ai.strategyKept")); }
+}
+
+/** The topic's saved AI strategy: read it, make a new one, or clear it (Undo for a few seconds). */
+export function viewStrategy(topic) {
+  const st = topic ? strategyFor(topic.id) : null;
+  if (!st) return;
+  const meta = [st.at ? new Date(st.at).toLocaleDateString(dateLocale()) : "", st.by ? `🤖 ${st.by}` : "", st.from === "note" ? t("ai.strategyFromNote") : ""].filter(Boolean).join(" · ");
+  openSheet(html`<h2>🎯 ${t("ai.strategyTitle")}</h2><p class="hint">${nameLabel(topic)}${meta ? ` · ${meta}` : ""}</p>
+    <div class="ai-answer">${aiText(st.text)}</div>
+    <div class="sheet-actions sticky-in">
+      <button type="button" class="btn btn-quiet push-left" data-action="clear">🗑 ${t("ai.strategyClear")}</button>
+      ${can("ai") ? html`<button type="button" class="btn btn-quiet" data-action="new">${t("ai.strategyNew")}</button>` : ""}
+      <button type="button" class="btn" data-action="close">${t("common.done")}</button></div>`, {
+    close: () => closeSheet(),
+    new: () => topicStrategy(topic),
+    clear: async () => {
+      const body = `${t("ai.strategyClearBody")}${noteHasStrategy(topic.id) ? ` ${t("ai.strategyClearNote")}` : ""}`;
+      const ok = await confirmAction({ title: t("ai.strategyClearTitle"), body, confirmLabel: t("common.clear"), danger: true });
+      if (!ok) { if (isSheetOpen()) viewStrategy(topic); return; }
+      const prev = await clearStrategy(topic.id);
+      closeSheet();
+      store.touch();
+      toast(t("ai.strategyCleared"), { actionLabel: t("common.undo"), duration: 8000, onAction: async () => { await restoreStrategy(topic.id, prev); store.touch(); } });
+    }
+  }, { label: t("ai.strategyTitle") });
+  typesetMath(sheetBody());
 }
 
 /* ---------- shared figures for AI (guess coach) ---------- */

@@ -27,14 +27,16 @@ function loadKatex() {
   return loading;
 }
 
-/** Typesets $…$ and $$…$$ inside container. Plain text stays readable if this fails. */
+/** Typesets $…$, $$…$$, \\[…\\] and \\(…\\) inside container. Plain text stays readable if this fails. */
 export async function typesetMath(container) {
-  if (!container || !container.textContent.includes("$")) return;
+  if (!container || !/\$|\\\[|\\\(/.test(container.textContent)) return;
   try {
     await loadKatex();
     window.renderMathInElement(container, {
       delimiters: [
         { left: "$$", right: "$$", display: true },
+        { left: "\\[", right: "\\]", display: true },
+        { left: "\\(", right: "\\)", display: false },
         { left: "$", right: "$", display: false }
       ],
       throwOnError: false

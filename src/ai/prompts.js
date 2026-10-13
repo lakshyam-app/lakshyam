@@ -39,6 +39,20 @@ export function questionBlock(q, selected) {
   return `Subject: ${q.subject || "?"} | Topic: ${q.topic || "?"}\nQuestion: ${q.text}\nOptions:\n${opts}\n${correct}${chosen}`;
 }
 
+/** How a memory trick should feel: made by a person, not a dictionary. */
+export const MNEMONIC_STYLE = "Write memory tricks the way a clever classmate would: a funny rhyme, a silly sentence whose first letters spell the list, an absurd little story or picture that links the items, or a sound-alike word in Malayalam or English. Each trick must clearly point to the real facts (show which word stands for which fact). Short: 1–3 lines each. Never change or invent a fact to make a trick work.";
+
+/** A conversation about one question. history: [{ role: "user" | "ai", text }]. */
+export function chatTask(q, explanation, history, message) {
+  const past = history.slice(-12).map((m) => `${m.role === "user" ? "Student" : "Tutor"}: ${m.text}`).join("\n\n");
+  return `${questionBlock(q)}${explanation ? `\nSaved explanation: ${String(explanation).slice(0, 1500)}` : ""}\n\nYou are chatting with the student about this question to clear their doubts.${past ? `\n\nCONVERSATION SO FAR:\n${past}` : ""}\n\nStudent: ${message}\n\nReply as the tutor: answer the student's last message directly and briefly (a short paragraph or a few '- ' bullets). If they ask something you are unsure of, say so.`;
+}
+
+/** Memory tricks for a revision note (from a study PDF). */
+export function noteTricksTask(noteText) {
+  return `REVISION NOTE (the facts to remember; use ONLY these facts):\n<<<\n${String(noteText).slice(0, 16000)}\n>>>\n\nTask: ${MNEMONIC_STYLE} Pick the 4–8 points that are hardest to remember (lists, numbers, years, members, order of items) and make one trick for each. For each, write '- **<what it helps remember>**: <the trick>' and then, indented with two spaces, '- Stands for: <which word means which fact>'.`;
+}
+
 export const tasks = {
   explain: (q, selected) => {
     const mistake = Number.isInteger(selected) && selected !== q.answerIndex;
@@ -46,7 +60,9 @@ export const tasks = {
       ? "Explain why the student's choice is wrong, why the correct answer is right, and give one short tip to avoid this mistake next time."
       : "Explain why the correct answer is right and why each other option is wrong, briefly."}`;
   },
-  mnemonic: (q) => `${questionBlock(q)}\n\nTask: Give 1-2 catchy, memorable mnemonics or memory tricks (rhymes, acronyms, associations) for the key fact(s) tested here. Keep each to one or two lines.`,
+  mnemonic: (q) => `${questionBlock(q)}\n\nTask: ${MNEMONIC_STYLE} Make 1-2 for the key fact(s) tested here.`,
+  /** Facts around the question that PSC also asks: saved under the question as "Related facts". */
+  facts: (q) => `${questionBlock(q)}\n\nTask: List 5–8 closely related facts a Kerala PSC aspirant should know around this question: the key fact behind the answer, the facts behind the other options when they are real, related names, dates, places, firsts and numbers, and pairs that are often confused. Only facts you are sure of; leave out anything you're unsure about. One fact per '- ' bullet, key term in **double asterisks**.`,
   note: (q) => `${questionBlock(q)}\n\nTask: Write a compact revision note (4-6 bullet points) on the topic behind this question — the key facts a student must remember for similar questions. Only include facts you are confident about.`
 };
 
@@ -57,6 +73,14 @@ export function generateTask({ subject, topic, n, lang, difficulty, examples, pa
   const seed = examples.map((q, i) => `Example ${i + 1}:\n${q.text}\n${q.options.map((o, j) => `${L(j)}) ${o}`).join("\n")}`).join("\n\n");
   const diff = difficulty === "mixed" ? "a mix of easy, medium and difficult" : { E: "easy", M: "medium", D: "difficult" }[difficulty];
   return `Subject: ${subject}\nTopic: ${topic}\nWrite ${n} NEW multiple-choice questions on this topic in the style of the examples below (do not copy them). Language: ${lang === "ml" ? "Malayalam" : "English"}. Difficulty: ${diff}. 4 options each.\n\nReturn a JSON array where each item is: {"question_text": "...", "options": ["...","...","...","..."], "correct_answer_index": 0-3, "explanation": "1-3 sentence explanation", "difficulty": "E" | "M" | "D"}\n\n${seed ? `Style examples:\n${seed}` : "(No examples available — use typical PSC style.)"}${pattern ? `\n\nPATTERN OF THIS TOPIC'S PAST PAPERS (an earlier analysis; use it to choose WHICH sub-areas and facts to ask about and HOW to ask — spread the questions over the sub-areas in about the same proportions, use the same question styles, include favourite and likely-next facts, but don't repeat past questions word for word). It is guidance, not a source of truth: a fact must still be one you are certain of; if the analysis states something you believe is wrong, ignore that part.\n<<<\n${pattern}\n>>>` : ""}`;
+}
+
+/* Second, independent pass for questions written from general knowledge (no PDF to check against). */
+export const GENERAL_CHECK_SYSTEM = "You answer Kerala PSC multiple-choice questions independently, from your own knowledge. Answer only when you are sure; if you are not sure or the question is unclear, answer 0. Output ONLY a JSON array.";
+export function generalCheckTask(items) {
+  const qs = items.map((q, i) => `#${i + 1} ${q.text}\n${q.options.map((o, j) => `${j + 1}) ${o}`).join("\n")}`).join("\n\n");
+  const most = Math.max(...items.map((q) => q.options.length));
+  return `QUESTIONS:\n${qs}\n\nReturn a JSON array: [{"n":1,"answer":<option number 1-${most}, or 0 if not sure>}, ...]`;
 }
 
 /** Keeps only well-formed generated questions. */
@@ -73,7 +97,7 @@ export function cleanGenerated(arr) {
 /** s: { weak, untried, slow, guess, due: [strings], marking: { pos, pen } } */
 
 export function tricksTask(batch, lang) {
-  return `${batch.map((q, i) => `#${i + 1}\n${questionBlock(q)}`).join("\n\n")}\n\nFor each numbered question, return JSON array items: {"n": number, "fact": "the one key fact to remember (1 line)", "mnemonic": "a catchy memory trick (1-2 lines)"}. Only use facts you are sure of; if unsure set mnemonic to "". ${langInstruction(lang)} Output ONLY the JSON array.`;
+  return `${batch.map((q, i) => `#${i + 1}\n${questionBlock(q)}`).join("\n\n")}\n\nFor each numbered question, return JSON array items: {"n": number, "fact": "the one key fact to remember (1 line)", "mnemonic": "a memory trick (1-3 lines)"}. ${MNEMONIC_STYLE} Only use facts you are sure of; if unsure set mnemonic to "". ${langInstruction(lang)} Output ONLY the JSON array.`;
 }
 
 /** g: { n, right, wrong, net, acc, breakEven, pos, pen, byTopic: [strings], byDiff: [strings], recentWrong: [strings] } */

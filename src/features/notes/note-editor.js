@@ -6,7 +6,7 @@ import { t } from "../../core/i18n.js";
 import { askText, runFlow } from "../../core/dialogs.js";
 import { openSheet, closeSheet, sheetBody } from "../../core/sheet.js";
 import { typesetMath } from "../../core/math.js";
-import { noteText, plainPreview } from "../../domain/text.js";
+import { noteText, plainPreview, aiText } from "../../domain/text.js";
 import { toast } from "../../core/toast.js";
 import { ids } from "../../data/ids.js";
 import * as store from "../../data/store.js";
@@ -47,6 +47,8 @@ export function viewNote(type, id, label) {
   if (!note) return editNote(type, id, label);
   openSheet(html`<h2>${t("notes.myNote")}</h2>${label ? html`<p class="hint">${label}</p>` : ""}
     <div class="ai-answer note-view">${noteText(note.text)}</div>
+    ${note.tricks?.text ? html`<details class="explain ai-extra note-tricks" open><summary>🧠 ${t("ai.pnTricks")}</summary>
+      <div class="ai-answer">${aiText(note.tricks.text, { sections: false })}</div>${note.tricks.by ? html`<p class="hint made-by">🤖 ${note.tricks.by}</p>` : ""}</details>` : ""}
     <div class="sheet-actions">
       <button type="button" class="btn btn-quiet" data-action="copy">${t("question.copy")}</button>
       <button type="button" class="btn btn-quiet" data-action="edit">✎ ${t("common.edit")}</button>

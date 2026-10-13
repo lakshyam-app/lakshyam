@@ -30,8 +30,15 @@ export const setPlace = (key, value, layout = "scroll") => placeBy.set(`${key}|$
 function render(markup) {
   const holder = document.createElement("div");
   holder.innerHTML = String(markup);
-  typesetMath(holder);
   return holder;
+}
+/** Maths is typeset where the cards end up (typesetting the holder would miss them: they are moved out first). */
+const typeset = (els) => els.forEach((el) => typesetMath(el));
+/** A redrawn card keeps the parts you had open (explanation, related facts, chat…). */
+function keepOpen(from, to) {
+  const open = [...from.querySelectorAll("details[open][data-k]")].map((d) => d.dataset.k);
+  if (open.length) open.forEach((k) => to.querySelector(`details[data-k="${k}"]`)?.setAttribute("open", ""));
+  else if (from.querySelector("details[open]")) to.querySelector("details")?.setAttribute("open", "");
 }
 
 function scroll(host, { key, items, card }) {
@@ -41,7 +48,9 @@ function scroll(host, { key, items, card }) {
   let shown = 0;
   const drawMore = (n = PAGE) => {
     const next = items.slice(shown, shown + n);
-    listEl.append(...render(html`${next.map((it, j) => card(it, shown + j))}`).children);
+    const els = [...render(html`${next.map((it, j) => card(it, shown + j))}`).children];
+    listEl.append(...els);
+    typeset(els);
     shown += next.length;
     placeBy.set(key, shown);
     const left = items.length - shown;
@@ -56,8 +65,9 @@ function scroll(host, { key, items, card }) {
       const el = find(id); if (!el) return;
       const i = items.findIndex((x) => x.id === id);
       const fresh = render(card(items[i], i)).firstElementChild;
-      if (el.querySelector("details[open]")) fresh.querySelector("details")?.setAttribute("open", "");
+      keepOpen(el, fresh);
       el.replaceWith(fresh);
+      typeset([fresh]);
     },
     remove(id) { find(id)?.remove(); },
     index: () => 0,
@@ -81,8 +91,11 @@ function single(host, { key, items, card, marks, onIndex }) {
     bar.innerHTML = html`${items.map((it, i) => html`<button type="button" class="jump ${i === index ? "current" : ""} ${marks(it)}" data-jump="${i}" aria-label="${t("pager.goTo", { n: i + 1 })}">${i + 1}</button>`)}`;
     bar.querySelector(".current")?.scrollIntoView({ inline: "center", block: "nearest" });
   };
-  const draw = () => {
-    slot.replaceChildren(...render(card(items[index], index)).children);
+  const draw = (same = false) => {
+    const els = [...render(card(items[index], index)).children];
+    if (same && slot.firstElementChild && els[0]) keepOpen(slot.firstElementChild, els[0]);
+    slot.replaceChildren(...els);
+    typeset(els);
     pos.textContent = t("pager.pos", { n: index + 1, of: items.length });
     prev.disabled = index === 0;
     next.disabled = index === items.length - 1;
@@ -112,7 +125,7 @@ function single(host, { key, items, card, marks, onIndex }) {
 
   return {
     refresh(id) {
-      if (items[index]?.id === id) draw();
+      if (items[index]?.id === id) draw(true);
       drawBar();
     },
     remove(id) {

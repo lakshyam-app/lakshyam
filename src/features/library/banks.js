@@ -257,7 +257,7 @@ export const bankAddScreen = {
 /** Read-only look at a question (long-press in pickers and search). */
 export function previewQuestion(q, { actions = "" , handlers = {} } = {}) {
   if (!q) return;
-  const body = openSheet(html`${questionCard(q, { showPaper: true, mode: "study" })}
+  const body = openSheet(html`${questionCard(q, { showPaper: true, mode: "study", actions: false })}
     <p class="hint">${pathLabel(q.topicId) || nameLabel(store.subject(q.subjectId))}</p>
     ${actions}`, handlers, { label: t("question.preview") });
   body.querySelectorAll(".qcard-badges").forEach((el) => el.remove()); // no editing from a preview

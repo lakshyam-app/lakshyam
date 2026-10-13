@@ -7,6 +7,7 @@ import { FALLBACK_TOPIC } from "./taxonomy-seed.js";
 import { buildPaperRecords, applyAnswerKey, applyExplanations, normText } from "./paper-json.js";
 import { stepStudied, localDate } from "../domain/study.js";
 import { takeSnapshot } from "./snapshots.js";
+import { textSig } from "../domain/text.js";
 
 const copy = (r, patch = {}) => ({ ...r, ...patch });
 
@@ -23,6 +24,47 @@ export function setFlag(questionId, flagged) {
 export function setDifficulty(questionId, level) {
   // Any choice you make (even "no difficulty") stops automatic marking for this question.
   return store.apply({ questionState: { put: [copy(stateOf(questionId), { difficulty: level, difficultySource: "manual" })] } });
+}
+
+/** AI help kept with a question, yours (not part of the paper): which model wrote its explanation,
+    its "Related facts", and a chat about it. patch: { explainBy?, facts?, chat? } (null removes). */
+export function setQuestionAi(questionId, patch) {
+  const st = stateOf(questionId);
+  const ai = { ...(st.ai || {}) };
+  Object.entries(patch).forEach(([k, v]) => { if (v === null || v === undefined) delete ai[k]; else ai[k] = v; });
+  return store.apply({ questionState: { put: [copy(st, { ai })] } });
+}
+
+/** Saves an AI explanation and which model wrote it (sig: so an edit later shows it is no longer the AI's text). */
+export async function saveAiExplanation(question, text, by = "") {
+  const explanation = String(text || "").trim();
+  await store.apply({ questions: { put: [copy(question, { explanation })] } });
+  return setQuestionAi(question.id, { explainBy: by ? { model: by, at: Date.now(), sig: textSig(explanation) } : null });
+}
+
+/** Clears a question's explanation; returns what Undo needs (restoreExplanation). */
+export async function clearExplanation(question) {
+  const prev = { explanation: question.explanation || "", explainBy: store.questionState(question.id)?.ai?.explainBy || null };
+  await store.apply({ questions: { put: [copy(question, { explanation: "" })] } });
+  await setQuestionAi(question.id, { explainBy: null });
+  return prev;
+}
+
+/** Undo for clearExplanation. */
+export async function restoreExplanation(questionId, prev) {
+  const q = store.question(questionId);
+  if (!q || !prev) return;
+  await store.apply({ questions: { put: [copy(q, { explanation: prev.explanation })] } });
+  await setQuestionAi(questionId, { explainBy: prev.explainBy });
+}
+
+/** Memory tricks (or other extras) kept with a PDF revision note. */
+export function setNoteExtras(noteId, patch) {
+  const n = store.byId("notes", noteId);
+  if (!n) return Promise.resolve();
+  const next = { ...n };
+  Object.entries(patch).forEach(([k, v]) => { if (v === null || v === undefined) delete next[k]; else next[k] = v; });
+  return store.apply({ notes: { put: [next] } });
 }
 
 /* ---------- question content ---------- */

@@ -18,6 +18,7 @@ import { mountCards, forgetPlace } from "../question/pager.js";
 import { bindCardActions, listLayout, difficultyOn } from "../question/list.js";
 import { copyQuestions } from "../question/copy.js";
 import { openStartTest } from "./start-sheet.js";
+import { label as nameLabel } from "../../core/names.js";
 
 const filterBy = new Map(); // attempt id → filter
 const sortBy = new Map();   // attempt id → sort
@@ -30,15 +31,24 @@ export function scoreLine(a) {
   return t("results.short", { score: formatNumber(a.netScore ?? 0), max: formatNumber(maxScore(c, a.marking)) });
 }
 
-/** The Back label: the group's name, the topic's name, or "Test history". */
+/* Screens a result can go Back to: where it was opened from, or where its test was started. */
+const BACK_TO = ["tests", "topic", "history", "today", "subject", "subject-all", "bank", "library", "progress", "stats-topic", "stats-subject",
+  "insights", "insight-topic", "search", "syllabus-map", "timetable", "tt-plan", "ai-hub", "paper", "exams"];
+
+/** The Back label: the group's, topic's, subject's or bank's name, the tab, or "Test history". */
 function backLabel(to, params) {
-  if (to === "topic") return store.topic(params.id)?.name || t("history.title");
+  if (to === "topic") return nameLabel(store.topic(params.id)) || t("common.back");
+  if (to === "subject" || to === "subject-all") return nameLabel(store.subject(params.id)) || t("common.back");
+  if (to === "bank") return store.byId("sets", params.id)?.name || t("common.back");
   if (to === "tests") {
     const a = store.all("attempts").find((x) => x.scope?.type === params.type && (x.scope?.ref || x.scope?.label) === params.ref);
     return a?.scope?.label || t("history.title");
   }
   if (to === "today") return t("tabs.today");
-  return t("history.title");
+  if (to === "library") return t("tabs.library");
+  if (to === "progress") return t("tabs.progress");
+  if (to === "history") return t("history.title");
+  return t("common.back");
 }
 
 export const resultScreen = {
@@ -46,7 +56,7 @@ export const resultScreen = {
   parent: "progress",
   render(container, { id, fresh, bt, bp }) {
     // Where Back goes: the screen this result was opened from (a group of tests, a topic), else Test history.
-    const { to: backTo, params: backParams, keep } = backFrom({ bt, bp }, ["tests", "topic", "history", "today"], "history");
+    const { to: backTo, params: backParams, keep } = backFrom({ bt, bp }, BACK_TO, "history");
     const a = store.byId("attempts", id);
     if (!a || a.status === "in_progress") return go("history");
     const c = a.counts;

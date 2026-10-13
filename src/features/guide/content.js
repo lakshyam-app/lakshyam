@@ -34,7 +34,7 @@ const SCENES = {
   morning: (l) => card(`<span class="gs-k">${l === "ml" ? "ഇന്നത്തെ സെഷൻ" : "TODAY’S SESSION"}</span><b>25 ${l === "ml" ? "ചോദ്യങ്ങൾ" : "questions"} · 23 min</b><span>🔁 15 · 🎯 10</span><span class="gs-btn">▶</span>`, "accent"),
   study: (l) => `${card(`<span class="gs-k">${l === "ml" ? "ഇപ്പോൾ" : "NOW"} · 7:00–8:00</span><b>📚 ${l === "ml" ? "കേരള ചരിത്രം" : "Kerala History"}</b><span>☑ ☑ ☐</span>`)}${chip("📖 +1", "ok")}${chip("▶ Quick 10", "brand")}`,
   test: () => `<div class="gs-opts">${card("<i>A</i> Defence", "opt")}${card("<i>B</i> Commerce", "opt on")}${card("<i>C</i> <s>Home</s>", "opt off")}${card("<i>D</i> <s>Dalawa</s>", "opt off")}</div><div class="gs-row">${chip("🤔")}${chip("✕")}${chip("⏱ 18:40")}</div>`,
-  after: (l) => `${card(`<span class="gs-x">✗</span><b>${l === "ml" ? "തെറ്റി" : "Wrong"}</b><span>🤖 ${l === "ml" ? "വിശദീകരണം" : "Explain"} · 🧠 ${l === "ml" ? "ഓർമ്മസൂത്രം" : "Trick"}</span>`)}<div class="gs-days">${[1, 3, 7, 21].map((d) => `<span>${d}<small>${l === "ml" ? "ദി" : "d"}</small></span>`).join("<i>→</i>")}</div>`,
+  after: (l) => `${card(`<span class="gs-x">✗</span><b>${l === "ml" ? "തെറ്റി" : "Wrong"}</b><span>🤖 ${l === "ml" ? "വിശദീകരണം" : "Explain"} · 📚 ${l === "ml" ? "വസ്തുതകൾ" : "Facts"}</span>`)}<div class="gs-days">${[1, 3, 7, 21].map((d) => `<span>${d}<small>${l === "ml" ? "ദി" : "d"}</small></span>`).join("<i>→</i>")}</div>`,
   night: () => `<div class="gs-faces">😫 😕 😐 <b>🙂</b> 🤩</div><div class="gs-strip">${["g", "g", "y", "g", "r", "g", "g"].map((c) => `<span class="d-${c}"></span>`).join("")}</div>`,
   week: () => `<div class="gs-map">${["g", "g", "y", "n", "r", "g", "n", "y", "g", "n", "n", "g"].map((c) => `<span class="m-${c}"></span>`).join("")}</div><div class="gs-row">${chip("🗺")}${chip("🔎")}${chip("📝 Mock")}</div>`,
   final: (l) => `<div class="gs-count"><b>30</b><span>${l === "ml" ? "ദിവസം" : "days"}</span></div><div class="gs-row">${chip("📝 ×10")}${chip("🔁")}${chip("😴")}</div>`,
@@ -104,8 +104,8 @@ export const STEPS = [
     id: "after", tone: "red", scene: "after",
     title: { en: "After a test: mistakes are gold", ml: "ടെസ്റ്റിന് ശേഷം: തെറ്റുകളാണ് സ്വർണം" },
     points: {
-      en: ["Open the result and tap Wrong.", "On each one: 🤖 Explain or 🧠 Memory trick. Save the useful ones as a note.", "Don’t try to remember them all: Mistake review brings each one back after 1, 3, 7 and 21 days.", "Right at the 21-day check? It leaves the queue. You’ve learnt it."],
-      ml: ["ഫലം തുറന്ന് “തെറ്റ്” തൊടൂ.", "ഓരോന്നിലും 🤖 വിശദീകരണം അല്ലെങ്കിൽ 🧠 ഓർമ്മസൂത്രം. ഉപകാരമുള്ളവ നോട്ടായി സേവ് ചെയ്യൂ.", "എല്ലാം ഓർക്കാൻ ശ്രമിക്കേണ്ട: തെറ്റുകളുടെ റിവ്യൂ ഓരോന്നിനെയും 1, 3, 7, 21 ദിവസങ്ങൾക്ക് ശേഷം തിരികെ കൊണ്ടുവരും.", "21-ാം ദിവസം ശരിയായോ? അത് ലിസ്റ്റിൽ നിന്ന് മാറും. നിങ്ങൾ അത് പഠിച്ചു."]
+      en: ["Open the result and tap Wrong.", "On each one: 🤖 Explain, 📚 Related facts or 💬 Ask AI. Keep the useful ones under the question.", "Don’t try to remember them all: Mistake review brings each one back after 1, 3, 7 and 21 days.", "Right at the 21-day check? It leaves the queue. You’ve learnt it."],
+      ml: ["ഫലം തുറന്ന് “തെറ്റ്” തൊടൂ.", "ഓരോന്നിലും 🤖 വിശദീകരണം, 📚 ബന്ധപ്പെട്ട വസ്തുതകൾ, അല്ലെങ്കിൽ 💬 AI-യോട് ചോദിക്കൂ. ഉപകാരമുള്ളവ ചോദ്യത്തിനു താഴെ സൂക്ഷിക്കൂ.", "എല്ലാം ഓർക്കാൻ ശ്രമിക്കേണ്ട: തെറ്റുകളുടെ റിവ്യൂ ഓരോന്നിനെയും 1, 3, 7, 21 ദിവസങ്ങൾക്ക് ശേഷം തിരികെ കൊണ്ടുവരും.", "21-ാം ദിവസം ശരിയായോ? അത് ലിസ്റ്റിൽ നിന്ന് മാറും. നിങ്ങൾ അത് പഠിച്ചു."]
     },
     tip: { en: "A mistake you have reviewed a few times is far less likely to cost you a mark on exam day.", ml: "പല തവണ റിവ്യൂ ചെയ്ത തെറ്റ് പരീക്ഷാദിവസം മാർക്ക് കളയാനുള്ള സാധ്യത വളരെ കുറവാണ്." },
     go: { to: "history", label: { en: "Open test history", ml: "ടെസ്റ്റ് ചരിത്രം തുറക്കുക" } }

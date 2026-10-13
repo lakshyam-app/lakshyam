@@ -9,6 +9,8 @@ const screens = new Map();
 let onChange = () => {};
 let container = null;
 let cleanup = null; // a screen's render() may return a function to run when it is left or redrawn
+let shown = null;   // { id, params } of the screen on show
+let before = null;  // …and of the one shown before it (another screen, not a redraw)
 
 export function registerScreen(screen) {
   screens.set(screen.id, screen);
@@ -18,11 +20,13 @@ export function listTabs() {
   return [...screens.values()].filter((s) => s.tab).sort((a, b) => a.tab - b.tab);
 }
 
-export function go(id, params = {}) {
-  whenBackDone(() => goNow(id, params));
+/** replace: the new screen takes the current one's place in the phone's Back history
+    (e.g. a test's result replaces the finished test, so Back goes to where the test was started). */
+export function go(id, params = {}, { replace = false } = {}) {
+  whenBackDone(() => goNow(id, params, replace));
 }
 
-function goNow(id, params) {
+function goNow(id, params, replace = false) {
   const query = new URLSearchParams(params).toString();
   const target = `#/${id}${query ? `?${query}` : ""}`;
   // Leaving from inside a sheet: the sheet's history entry becomes the new screen,
@@ -32,9 +36,12 @@ function goNow(id, params) {
   if (location.hash === target) {
     if (fromSheet) history.back(); // drop the closed sheet's history entry
     rerender();
-  } else if (fromSheet) location.replace(target);
+  } else if (fromSheet || replace) location.replace(target);
   else location.hash = target;
 }
+
+/** The screen shown before the current one ({ id, params }), or null. */
+export const previous = () => before;
 
 export function current() {
   const [path, query = ""] = location.hash.replace(/^#\//, "").split("?");
@@ -63,6 +70,8 @@ export function rerender() {
 function render(resetScroll) {
   const { id, params } = current();
   const screen = screens.get(id);
+  if (shown && shown.id !== id) before = shown;
+  shown = { id, params };
   const scrollY = window.scrollY;
   // Each render gets a fresh element, so event listeners from the previous
   // screen can never fire on this one.

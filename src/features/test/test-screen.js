@@ -9,7 +9,8 @@
      paused) is counted, and shown on the result. */
 import { html, onAction } from "../../core/dom.js";
 import { t } from "../../core/i18n.js";
-import { go } from "../../core/router.js";
+import { go, previous } from "../../core/router.js";
+import { openedFrom } from "../../core/back.js";
 import { typesetMath } from "../../core/math.js";
 import { toast } from "../../core/toast.js";
 import { TEXT_SIZES } from "../../core/theme.js";
@@ -56,6 +57,17 @@ function testCard(q, i, run) {
   </article>`;
 }
 
+/** The screen a new test was started from: { screen, params } (a retake: where its result came from). */
+function startedFrom() {
+  const pv = previous();
+  if (!pv || pv.id === "test") return null;
+  if (pv.id === "result") {
+    if (!pv.params.bt) return null;
+    try { return { screen: pv.params.bt, params: JSON.parse(pv.params.bp || "{}") || {} }; } catch { return null; }
+  }
+  return { screen: pv.id, params: { ...pv.params } };
+}
+
 export const testScreen = {
   id: "test",
   render(container) {
@@ -63,6 +75,8 @@ export const testScreen = {
     if (!attempt) { container.innerHTML = html`<section class="empty"><h1>${t("test.none")}</h1></section>`; return undefined; }
     if (!live || live.id !== attempt.id) live = { id: attempt.id, run: structuredClone(attempt.run) };
     const run = live.run;
+    // Where the test was started from (kept with it), so its result's Back goes there — not to Progress.
+    if (!run.from) run.from = startedFrom();
     const questions = run.questionIds.map((id) => store.question(id)).filter(Boolean);
     run.questionIds = questions.map((q) => q.id); // questions deleted since the start are dropped
     const timed = run.remainingMs !== null;
@@ -190,7 +204,8 @@ export const testScreen = {
       const done = await tests.submitTest(attempt, run, { auto });
       live = null;
       if (auto) toast(t("test.timeUp"));
-      go("result", { id: done.id, fresh: "1" });
+      // The result takes the finished test's place, so the phone's Back goes where the test was started.
+      go("result", { id: done.id, fresh: "1", ...(run.from ? openedFrom(run.from.screen, run.from.params) : {}) }, { replace: true });
     }
 
     function toggleStrike(id, k) {
