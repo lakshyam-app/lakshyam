@@ -220,3 +220,12 @@ Today screen with Quick 10 and daily goal · exam countdown · timetable (any da
 | 🤖 switch near AI writing: which preset is tried first and the AI's answer language (the same setting as Settings → AI); changing it in an answer sheet asks again at once | AI answer sheets (Explain, Facts, strategy, insights, memory tricks, guess coach), Ask AI chat, Make questions, study-PDF make screens, test analysis, diary reports, timetable builder; never during a test | ✅ |
 | Chat with AI under each question; Related facts; memory tricks on PDF notes (1.15) | Question cards, Notes | ✅ |
 
+## Added in 1.18
+
+| Feature | Where | Status |
+|---|---|---|
+| 📖 PDF viewer: the study PDF's real pages, scrolling down; pages drawn near the screen only (long PDFs stay light); page box; − / + zoom (and pinch); a PDF kept in Google Drive opens after a sign-in tap, for this session only; nothing is changed | Study PDF → Read the PDF; page text screen → See this page; AI question Source line; PDF revision note → Open PDF; Smart insights "In your notes" | ✅ |
+| 🔎 In my notes from any question: a word search (no AI) over the subject's study PDFs, PDF revision notes and your own notes; best passages first, matched words marked, "has the answer" when the right answer is there; tap → the PDF page or the note; optional "Ask AI which one answers it" (sends only those passages) | Question cards (also with AI buttons off) | ✅ |
+| Search also finds words in your notes and study PDFs | 🔍 Search | ✅ |
+| 🔊 Read aloud a question and its options: the phone's voice (free, offline; Malayalam needs the phone's Malayalam voice) or the natural Gemini voice with your Gemini key (falls back to the phone voice); speed; show/hide the button | Question cards and tests; Settings → Look → Read aloud | ✅ (real Gemini voice not testable here) |
+

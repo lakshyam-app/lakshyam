@@ -195,7 +195,8 @@ function drawPdf(container, rec) {
     </div>
     ${c.readable ? "" : html`<p class="hint pad">${t("pdf.noReadable")}</p>`}
     <h3 class="rows-head">${t("pdf.pagesHead")}</h3>
-    <div class="rows"><button type="button" class="row" data-action="pages"><span class="row-main"><span class="row-title">🔍 ${t("pdf.pages")}</span><span class="row-sub">${t("pdf.pagesSub")}</span></span>${chev}</button></div>
+    <div class="rows"><button type="button" class="row" data-action="view"><span class="row-main"><span class="row-title">📖 ${t("pv.read")}</span><span class="row-sub">${t("pv.readSub")}</span></span>${chev}</button>
+      <button type="button" class="row" data-action="pages"><span class="row-main"><span class="row-title">🔍 ${t("pdf.pages")}</span><span class="row-sub">${t("pdf.pagesSub")}</span></span>${chev}</button></div>
     <h3 class="rows-head">${t("pdfc.whereHead")}</h3>
     ${storageBox(rec)}
     <p class="hint pad">${t("pdf.privacy")}</p>`;
@@ -204,6 +205,7 @@ function drawPdf(container, rec) {
     ...storageHandlers(container, rec, () => pdfStore.getPdf(rec.id).then((fresh) => { if (fresh && container.isConnected) drawPdf(container, fresh); })),
     make: (el) => go("pdf-make", { id: rec.id, kind: el.dataset.kind }),
     pages: () => go("pdf-page", { id: rec.id, n: T.pageNumbers(rec.pages, T.needsAi)[0] || 1 }),
+    view: () => go("pdf-view", { id: rec.id, n: 1 }),
     menu: () => runFlow(async () => {
       const choice = await chooseAction({ title: rec.name, items: [
         { id: "rename", label: t("pdf.rename") },
@@ -274,6 +276,7 @@ function drawPage(container, rec, n, opened = {}) {
     </div>
     ${!pic && !onPhone(rec) && inDrive(rec) ? html`<p class="hint">☁️ ${t("pdfc.pictureFromDrive")}</p>` : ""}
     ${nextNeed ? html`<button type="button" class="link" data-action="to" data-n="${nextNeed}">${t("pdf.nextNeed", { n: nextNeed })} ›</button>` : ""}
+    <button type="button" class="link" data-action="view">📖 ${t("pv.viewPage")}</button>
     ${pic ? html`<img class="page-pic" src="${pic}" alt="${t("pdf.pageOf", { n, of: rec.pages.length })}">` : ""}`;
   const out = container.querySelector("#pgOut");
   // Leaving with unsaved changes asks first.
@@ -286,6 +289,7 @@ function drawPage(container, rec, n, opened = {}) {
   onAction(container, {
     ...backHandler,
     to: (el) => leave(() => go("pdf-page", { ...from, id: rec.id, n: el.dataset.n }, { replace: true })),
+    view: () => leave(() => go("pdf-view", { id: rec.id, n })),
     back: (el) => leave(() => backHandler.back(el)),
     save: async () => {
       const text = T.cleanText(container.querySelector("#pgText").value);

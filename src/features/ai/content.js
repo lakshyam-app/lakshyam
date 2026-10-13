@@ -7,6 +7,7 @@
 import { html, onAction } from "../../core/dom.js";
 import { t, dateLocale } from "../../core/i18n.js";
 import { go, goBack } from "../../core/router.js";
+import { openedFrom } from "../../core/back.js";
 import { runFlow, confirmAction, chooseAction } from "../../core/dialogs.js";
 import { toast } from "../../core/toast.js";
 import { typesetMath } from "../../core/math.js";
@@ -288,7 +289,7 @@ export function renderPdfNotesPanel(host, { scope, topic = null }) {
     ...fromHandler,
     "pn-read": (el) => { const n = noteOf(el); viewNote("pdfnote", n.target.id, n.label || ""); },
     "pn-edit": (el) => { const n = noteOf(el); editNote("pdfnote", n.target.id, n.label || ""); },
-    "pn-pdf": (el) => go("pdf", { id: noteOf(el).target.pdfId }),
+    "pn-pdf": (el) => { const n = noteOf(el); go("pdf-view", { id: n.target.pdfId, n: parseInt(String(n.target.pages || "1"), 10) || 1, ...openedFrom(scope.topicId ? "topic" : "subject", scope.topicId ? { id: scope.topicId, mode: "notes" } : { id: scope.subjectId, mode: "notes" }) }); },
     "pn-del": (el) => runFlow(async () => {
       const n = noteOf(el);
       const ok = await confirmAction({ title: t("ai.pnDeleteTitle"), body: n.label || "", confirmLabel: t("common.delete"), danger: true });

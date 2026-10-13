@@ -4,7 +4,7 @@
      (Other apps on the same site keep their caches.)
    - A new version waits until the user taps "Refresh" in the app. */
 
-const VERSION = "1.17.0";
+const VERSION = "1.18.0";
 // Background backup through your own Google script (see src/cloud/sw-backup.js).
 importScripts("./src/cloud/sw-backup.js");
 // Reminders: shows the reminder the app planned when your reminder script wakes it (see src/cloud/sw-notify.js).
@@ -85,6 +85,7 @@ const SHELL_FILES = [
   "./src/domain/habits.js",
   "./src/domain/insights.js",
   "./src/domain/made-by.js",
+  "./src/domain/note-search.js",
   "./src/domain/reminders.js",
   "./src/domain/review.js",
   "./src/domain/scoring.js",
@@ -113,6 +114,7 @@ const SHELL_FILES = [
   "./src/features/notes/note-editor.js",
   "./src/features/notes/notes.js",
   "./src/features/pdfs/pdf-cloud.js",
+  "./src/features/pdfs/pdf-view.js",
   "./src/features/pdfs/pdfs.js",
   "./src/features/progress/data.js",
   "./src/features/progress/drill.js",
@@ -122,8 +124,10 @@ const SHELL_FILES = [
   "./src/features/question/card.js",
   "./src/features/question/copy.js",
   "./src/features/question/exam-filter.js",
+  "./src/features/question/find-notes.js",
   "./src/features/question/list.js",
   "./src/features/question/pager.js",
+  "./src/features/question/speak.js",
   "./src/features/reminders/reminders.js",
   "./src/features/search/search.js",
   "./src/features/settings/difficulty-times.js",

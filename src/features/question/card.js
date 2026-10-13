@@ -8,6 +8,7 @@ import { richText, smartText, aiText, letterFor, textSig } from "../../domain/te
 import * as store from "../../data/store.js";
 import { formatDuration } from "../../domain/testing.js";
 import { can } from "../../core/entitlements.js";
+import { speakButtonOn } from "./speak.js";
 
 const star = (on) => html`<svg viewBox="0 0 24 24" aria-hidden="true" class="${on ? "filled" : ""}"><path d="M12 3.8l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16.8l-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/></svg>`;
 const dots = html`<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="18.5" cy="12" r="1.3"/></svg>`;
@@ -76,6 +77,7 @@ export function questionCard(q, { showPaper = true, mode = "study", revealed = n
       <span class="qcard-where">${meta.join(" · ")}</span>
       ${actions ? html`<span class="qcard-badges">
         ${diff ? html`<button type="button" class="chip chip-${diff}" data-action="q-diff">${t(`question.difficulty.${diff}`)}</button>` : ""}
+        ${speakButtonOn() ? html`<button type="button" class="icon-sm speak" data-action="q-speak" data-speak-q="${q.id}" aria-pressed="false" aria-label="${t("speak.read")}">🔊</button>` : ""}
         <button type="button" class="icon-sm ${flagged ? "on" : ""}" data-action="q-flag" aria-pressed="${String(flagged)}"
           aria-label="${flagged ? t("question.unflag") : t("question.flag")}">${star(flagged)}</button>
         <button type="button" class="icon-sm" data-action="q-menu" aria-label="${t("question.more")}">${dots}</button>
@@ -95,9 +97,10 @@ export function questionCard(q, { showPaper = true, mode = "study", revealed = n
       ${explBy || actions ? html`<div class="extra-foot">${explBy ? html`<span class="hint made-by">🤖 ${explBy}</span>` : ""}
         ${actions ? html`<button type="button" class="link danger" data-action="q-clear-expl">${t("question.clearExplanation")}</button>` : ""}</div>` : ""}</details>` : ""}
     ${ref && !hidden ? html`<details class="explain source-line" data-k="src"><summary>📄 ${t("question.sourceLine")}</summary>
-      <p class="quote">${ref.quote}</p>${ref.pdf ? html`<p class="hint">${String(ref.pdf).replace(/\.pdf$/i, "")}${ref.page ? ` · ${t("question.pageShort", { n: ref.page })}` : ""}</p>` : ""}${byLine ? html`<p class="hint made-by">${byLine}</p>` : ""}</details>` : ""}
+      <p class="quote">${ref.quote}</p>${ref.pdf ? html`<p class="hint">${String(ref.pdf).replace(/\.pdf$/i, "")}${ref.page ? ` · ${t("question.pageShort", { n: ref.page })}` : ""}</p>` : ""}${byLine ? html`<p class="hint made-by">${byLine}</p>` : ""}
+      ${actions && ref.pdfId ? html`<button type="button" class="link" data-action="q-open-pdf" data-pdf="${ref.pdfId}" data-n="${ref.page || 1}">📖 ${t("pv.viewPage")}</button>` : ""}</details>` : ""}
     ${!hidden ? aiExtras(ai, actions) : ""}
-    ${actions && can("ai") && store.setting("aiOnCards", true) !== false && !hidden && mode !== "edit" ? aiRow(review) : ""}
+    ${actions && !hidden && mode !== "edit" ? aiRow(review, can("ai") && store.setting("aiOnCards", true) !== false) : ""}
   </article>`;
 }
 
@@ -118,13 +121,16 @@ function aiExtras(ai, actions) {
 }
 
 /** AI help right on the card: Explain (or "Why was I wrong?" after a wrong answer), Related facts, Ask AI, Similar questions. */
-function aiRow(review) {
+function aiRow(review, withAi) {
   const wrong = review && review.graded && !review.isCorrect && review.selected !== null && review.selected !== undefined;
+  // 🔎 needs no AI: a word search in your notes and study PDFs of the subject.
+  const find = html`<button type="button" class="ai-chip quiet" data-action="q-find">🔎 ${t("find.short")}</button>`;
+  if (!withAi) return html`<div class="ai-row">${find}</div>`;
   return html`<div class="ai-row">
     <button type="button" class="ai-chip" data-action="q-ai" data-mode="explain">🤖 ${wrong ? t("ai.explainMistakeShort") : t("ai.explainShort")}</button>
     <button type="button" class="ai-chip" data-action="q-ai" data-mode="facts">📚 ${t("ai.factsShort")}</button>
     <button type="button" class="ai-chip" data-action="q-ai" data-mode="chat">💬 ${t("ai.chatShort")}</button>
-    <button type="button" class="ai-chip quiet" data-action="q-ai" data-mode="similar">✨ ${t("ai.similarShort")}</button></div>`;
+    <button type="button" class="ai-chip quiet" data-action="q-ai" data-mode="similar">✨ ${t("ai.similarShort")}</button>${find}</div>`;
 }
 
 function reviewLine(r) {

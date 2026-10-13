@@ -13,6 +13,18 @@ import { openStartTest } from "../test/start-sheet.js";
 import { previewQuestion } from "../library/banks.js";
 import { runFlow } from "../../core/dialogs.js";
 import { chev } from "../library/library.js";
+import { openedFrom } from "../../core/back.js";
+import { listPdfs } from "../../pdf/pdf-store.js";
+import { passagesOf, queryOf, rank, snippet } from "../../domain/note-search.js";
+import { viewNote } from "../notes/note-editor.js";
+
+/** Every note and study PDF (for typed searches). */
+async function allSources() {
+  const pdfs = await listPdfs();
+  const sources = pdfs.map((p) => ({ kind: "pdf", ref: p.id, name: p.name, pages: (p.pages || []).map((pg, i) => ({ n: i + 1, t: pg?.t || "" })).filter((x) => x.t) }));
+  store.all("notes").forEach((n) => { if (n.text) sources.push({ kind: "note", ref: n.id, name: n.label || "", pages: [{ n: null, t: `${n.text}${n.tricks?.text ? `\n${n.tricks.text}` : ""}` }] }); });
+  return { sources };
+}
 
 const state = { q: "", scope: "this" };
 const SHOW = 20;
@@ -75,7 +87,7 @@ export const searchScreen = {
       const r = search(state.q, state.scope);
       if (!r) { results.innerHTML = html`<p class="hint pad">${t("search.hint")}</p>`; return; }
       const total = r.subjects.length + r.topics.length + r.papers.length + r.questions.length;
-      if (!total) { results.innerHTML = html`<p class="hint pad">${t("library.nothingFound", { q: state.q })}</p>`; return; }
+      if (!total) { results.innerHTML = html`<p class="hint pad">${t("library.nothingFound", { q: state.q })}</p><div id="noteHits"></div>`; drawNotes(state.q); return; }
       const section = (title, rows) => (rows.length ? html`<h3 class="rows-head">${title}</h3><div class="rows">${rows}</div>` : "");
       results.innerHTML = html`
         ${section(t("library.views.subjects"), r.subjects.map((s) => html`<button type="button" class="row" data-action="open" data-to="subject" data-id="${s.id}">
@@ -88,7 +100,25 @@ export const searchScreen = {
           <div class="rows" id="qRows">${r.questions.slice(0, SHOW).map((q) => html`<button type="button" class="row" data-action="preview" data-id="${q.id}" data-lp="1">
             <span class="row-main"><span class="clamp">${q.text}</span>
             <span class="row-sub">${[store.paper(q.paperId)?.name, nameLabel(store.topic(q.topicId))].filter(Boolean).join(" · ")}</span></span></button>`)}</div>
-          <button type="button" class="btn btn-quiet more" data-action="as-list">${t("search.viewAll", { n: formatNumber(r.questions.length) })}</button>` : ""}`;
+          <button type="button" class="btn btn-quiet more" data-action="as-list">${t("search.viewAll", { n: formatNumber(r.questions.length) })}</button>` : ""}
+        <div id="noteHits"></div>`;
+      drawNotes(state.q);
+    };
+    // Your notes and study PDFs are searched too (on the phone; no AI).
+    let noteHits = [];
+    let noteRun = 0;
+    const drawNotes = async (term) => {
+      const me = ++noteRun;
+      const query = queryOf({ text: term });
+      if (!query.qWords.length) return;
+      const { sources } = await allSources();
+      const hits = rank(passagesOf(sources), query, { limit: 10 });
+      const host = results.querySelector("#noteHits");
+      if (me !== noteRun || !host) return;
+      noteHits = hits;
+      host.innerHTML = hits.length ? html`<h3 class="rows-head">${t("search.inNotes", { n: hits.length })}</h3><div class="rows">${hits.map((h, i) => html`<button type="button" class="row find-hit" data-action="note-hit" data-i="${i}">
+        <span class="row-main"><span class="row-sub">${h.src.kind === "pdf" ? `📄 ${String(h.src.name).replace(/\.pdf$/i, "")} · ${t("question.pageShort", { n: h.page })}` : `📝 ${h.src.name || t("find.myNote")}`}</span>
+        <span class="find-snip">${snippet(h.text, h.hits)}</span></span>${chev}</button>`)}</div>` : "";
     };
     draw();
     const input = container.querySelector("#searchInput");
@@ -108,7 +138,12 @@ export const searchScreen = {
       scope: (el) => { state.scope = el.dataset.s; draw(); container.querySelectorAll("[data-action=scope]").forEach((b) => b.classList.toggle("on", b === el)); },
       open: (el) => go(el.dataset.to, { id: el.dataset.id }),
       preview: (el) => preview(el.dataset.id),
-      "as-list": () => go("search", { q: state.q, scope: state.scope, list: "1" })
+      "as-list": () => go("search", { q: state.q, scope: state.scope, list: "1" }),
+      "note-hit": (el) => {
+        const h = noteHits[Number(el.dataset.i)]; if (!h) return;
+        if (h.src.kind === "pdf") go("pdf-view", { id: h.src.ref, n: h.page || 1, ...openedFrom("search", { q: state.q, scope: state.scope }) });
+        else { const n = store.byId("notes", h.src.ref); if (n) viewNote(n.target.type, n.target.id, n.label || ""); }
+      }
     });
     onLongPress(results, (el) => preview(el.dataset.id));
   }

@@ -3,6 +3,8 @@
    Card changes are saved quietly and only that card is redrawn, so your place
    in a long list is kept. */
 import { html, onAction } from "../../core/dom.js";
+import { go, current } from "../../core/router.js";
+import { openedFrom } from "../../core/back.js";
 import { t } from "../../core/i18n.js";
 import { toast } from "../../core/toast.js";
 import { runFlow, chooseAction, askText, confirmAction } from "../../core/dialogs.js";
@@ -18,6 +20,8 @@ import { pickExams } from "./exam-filter.js";
 import { mountCards, forgetPlace } from "./pager.js";
 import { can } from "../../core/entitlements.js";
 import { aiHelp } from "../ai/ai-actions.js";
+import { findInNotes } from "./find-notes.js";
+import { speakQuestion } from "./speak.js";
 import { inReview, stopReviewing } from "../../data/review.js";
 
 const examsBy = new Map();   // listing key → Set of included paper IDs (none = all)
@@ -72,6 +76,10 @@ export function bindCardActions(host, { view, bank = null, onOption = null, onRe
     },
     "q-diff": (el) => runFlow(() => chooseDifficulty(qOf(el), quiet)),
     "q-ai": (el) => { const q = qOf(el); aiHelp(q, { selected: selectedFor?.(q), mode: el.dataset.mode || null, onSaved: () => view.refresh(q.id) }); },
+    "q-find": (el) => findInNotes(qOf(el)),
+    "q-speak": (el) => speakQuestion(qOf(el)),
+    // The study-PDF page an AI question came from, as the real page (‹ comes back here).
+    "q-open-pdf": (el) => { const here = current(); go("pdf-view", { id: el.dataset.pdf, n: el.dataset.n, ...openedFrom(here.id, here.params) }); },
     // Clearing what AI wrote for a question: asks first, then Undo for a few seconds.
     "q-clear-expl": (el) => runFlow(async () => {
       const q = qOf(el);

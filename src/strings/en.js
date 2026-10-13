@@ -1149,6 +1149,49 @@ export default {
     saved: "Saved. New tests use these times.",
     applied: (v) => `Saved. ${v.n} question${v.n === 1 ? "" : "s"} re-marked.`
   },
+  pv: {
+    read: "Read the PDF",
+    readSub: "Its real pages, one after another (pinch or − / + to zoom)",
+    viewPage: "See this page in the PDF",
+    of: "of {n}",
+    zoomIn: "Zoom in",
+    zoomOut: "Zoom out",
+    inDrive: "This PDF is in your Google Drive. Sign in to open it (for now only; it isn’t saved on the phone again).",
+    openFromDrive: "Open from Drive"
+  },
+  find: {
+    short: "In my notes",
+    title: "In my notes",
+    looking: "Looking in your notes…",
+    scope: "Looked in {pdfs} study PDFs and {notes} notes of {subject}.",
+    hasAnswer: "has the answer",
+    none: "Nothing close to this question in your notes for this subject. It may be missing from your notes.",
+    noSources: "This subject has no notes or study PDFs yet.",
+    askAi: "Ask AI which one answers it",
+    revNote: "Revision note",
+    myNote: "My note"
+  },
+  speak: {
+    read: "Read aloud",
+    title: "Read aloud",
+    hint: "🔊 on a question reads it and its options. Tap again to stop.",
+    phone: "Phone voice",
+    gemini: "Natural voice (Gemini)",
+    phoneHint: "Your phone’s own voice: free and works offline. For Malayalam, the phone needs its Malayalam voice (Settings → Text-to-speech on the phone).",
+    geminiHint: "Google’s natural voice, with your Gemini key from Settings → AI. Each new question read uses your Gemini quota; only the question text is sent. If it fails, the phone voice reads instead.",
+    voiceName: "Voice",
+    model: "Speech model",
+    speed: "Speed",
+    button: "Show 🔊 on questions",
+    try: "Try it",
+    sampleQ: "Which is the longest river in Kerala?",
+    sampleOpts: "Periyar|Bharathapuzha|Pamba|Chaliyar",
+    noVoice: "This phone can’t read aloud.",
+    noMlVoice: "No Malayalam voice on this phone: install it in the phone’s text-to-speech settings.",
+    noGemini: "No Gemini preset with a key (Settings → AI).",
+    noAudio: "The speech model sent no sound.",
+    geminiFailed: "Natural voice didn’t work ({why}). Using the phone voice."
+  },
   analysis: {
     title: "AI analysis of this test",
     writing: "Writing the analysis… you can keep reviewing.",
@@ -1761,6 +1804,7 @@ export default {
     }
   },
   search: {
+    inNotes: (v) => (v.n === 1 ? "In your notes and study PDFs (1)" : "In your notes and study PDFs ({n})"),
     title: "Search",
     placeholder: "Search questions, topics, papers",
     hint: "Type at least 2 letters. Searches question text, options and explanations, plus subject, topic and paper names.",
@@ -2245,6 +2289,7 @@ export default {
       pause: "pause ai preset",
       aiOnCards: "ai buttons question cards explain",
       aiAutoAnalysis: "ai analysis after each test automatic result report",
+      readAloud: "read aloud speak voice sound tts listen gemini",
       removeKeys: "remove ai keys delete",
       backup: "backup export save file",
       restore: "restore backup import file",

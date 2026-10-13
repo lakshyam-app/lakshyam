@@ -21,6 +21,7 @@ export const SETTINGS_INDEX = [
 
   item("theme", "look", "setx.theme"),
   item("textSize", "look", "setx.textSize"),
+  item("readAloud", "look", "speak.title"),
   item("appLang", "look", "settings.appLang"),
   item("names", "look", "names.setting"),
   item("namesFile", "look", "names.import"),

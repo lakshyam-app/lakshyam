@@ -23,6 +23,7 @@ import * as mut from "../../data/mutations.js";
 import * as tests from "../../data/tests.js";
 import { mountCards, setPlace } from "../question/pager.js";
 import { addLeave } from "../../domain/focus.js";
+import { speakQuestion, speakButtonOn } from "../question/speak.js";
 
 const SAVE_EVERY_MS = 10000;
 const PAUSE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>';
@@ -41,7 +42,7 @@ function testCard(q, i, run) {
   const where = [paper?.name, paper?.postName, nameLabel(store.subject(q.subjectId)), nameLabel(store.topic(q.topicId))].filter(Boolean).join(" · ");
   return html`<article class="qcard tcard ${sel !== undefined ? "is-answered" : ""}" data-qid="${q.id}" data-i="${i}" lang="${q.lang === "ml" ? "ml" : "en"}">
     <header class="qcard-meta"><span class="qcard-where"><strong>${t("test.qOf", { n: i + 1, of: run.questionIds.length })}</strong>${q.number ? ` · ${t("question.paperNumber", { n: q.number })}` : ""}<br>${where}</span>
-      <span class="qcard-badges"><button type="button" class="icon-sm ${flagged ? "on" : ""}" data-action="flag" aria-pressed="${String(flagged)}" aria-label="${t("question.flag")}">${star(flagged)}</button></span>
+      <span class="qcard-badges">${speakButtonOn() ? html`<button type="button" class="icon-sm speak" data-action="speak" data-speak-q="${q.id}" aria-pressed="false" aria-label="${t("speak.read")}">🔊</button>` : ""}<button type="button" class="icon-sm ${flagged ? "on" : ""}" data-action="flag" aria-pressed="${String(flagged)}" aria-label="${t("question.flag")}">${star(flagged)}</button></span>
     </header>
     <div class="qtext">${richText(q.text)}</div>
     <ol class="options">${q.options.map((opt, k) => {
@@ -269,6 +270,7 @@ export const testScreen = {
         if (run.guesses[id]) delete run.guesses[id]; else run.guesses[id] = true;
         refresh(id);
       },
+      speak: (el) => { const q = store.question(el.closest("[data-qid]").dataset.qid); if (q) speakQuestion(q); },
       flag: (el) => {
         const id = el.closest("[data-qid]").dataset.qid;
         store.quietly(() => mut.setFlag(id, !store.questionState(id)?.flagged)).then(() => refresh(id));

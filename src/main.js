@@ -21,6 +21,7 @@ import { bankScreen, bankAddScreen } from "./features/library/banks.js";
 import { searchScreen } from "./features/search/search.js";
 import { aiHubScreen } from "./features/ai/content.js";
 import { pdfsScreen, pdfScreen, pdfPageScreen, pdfMakeScreen } from "./features/pdfs/pdfs.js";
+import { pdfViewScreen } from "./features/pdfs/pdf-view.js";
 import { insightsScreen, insightTopicScreen } from "./features/insights/insights.js";
 import { timetableScreen, ttListScreen } from "./features/timetable/timetable.js";
 import { ttPlansScreen, ttPlanScreen, ttScheduleScreen } from "./features/timetable/tt-edit.js";
@@ -36,7 +37,7 @@ import { settingsScreen } from "./features/settings/settings.js";
 import { remindersScreen, remindersOnOpen, syncSoon, listenToWorker } from "./features/reminders/reminders.js";
 
 [todayScreen, libraryScreen, subjectScreen, subjectAllScreen, topicScreen, paperScreen, bankScreen, bankAddScreen,
-  searchScreen, aiHubScreen, pdfsScreen, pdfScreen, pdfPageScreen, pdfMakeScreen, insightsScreen, insightTopicScreen, timetableScreen, ttListScreen, ttPlansScreen, ttPlanScreen, ttScheduleScreen, ttNewScreen, ttReviewScreen, diaryScreen, progressScreen, historyScreen, testsScreen, statsSubjectScreen, statsTopicScreen, statsTopicsScreen, statsTablesScreen, testScreen, resultScreen, notesScreen, settingsScreen, remindersScreen, examsScreen, mapScreen, guideScreen, guidePdfScreen]
+  searchScreen, aiHubScreen, pdfsScreen, pdfScreen, pdfPageScreen, pdfViewScreen, pdfMakeScreen, insightsScreen, insightTopicScreen, timetableScreen, ttListScreen, ttPlansScreen, ttPlanScreen, ttScheduleScreen, ttNewScreen, ttReviewScreen, diaryScreen, progressScreen, historyScreen, testsScreen, statsSubjectScreen, statsTopicScreen, statsTopicsScreen, statsTablesScreen, testScreen, resultScreen, notesScreen, settingsScreen, remindersScreen, examsScreen, mapScreen, guideScreen, guidePdfScreen]
   .forEach(registerScreen);
 
 function renderTabbar(activeId) {

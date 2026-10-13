@@ -241,7 +241,7 @@ export const insightTopicScreen = {
         ${section("nopdf", by("nopdf"))}`;
 
       onAction(body, {
-        page: (el) => go("pdf-page", { id: el.dataset.pdf, n: el.dataset.n, ...openedFrom("insight-topic", { id }) }),
+        page: (el) => go("pdf-view", { id: el.dataset.pdf, n: el.dataset.n, ...openedFrom("insight-topic", { id }) }),
         "add-pdf": () => go("pdfs", { type: "topic", id }),
         "practise-all": () => openStartTest({ scope: { type: "topic", ref: id, label: topic.name }, questions: topicQs, keepOrder: false }),
         "open-topic": () => go("topic", { id }),

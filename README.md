@@ -169,6 +169,7 @@ and [`docs/feature-check.md`](docs/feature-check.md) for where every old-app fea
 | 1.3 | Up to 20 exam countdowns, with a choice of which and how Today shows them |
 | 1.6 | Automatic Drive backup without sign-in, through your own Google Apps Script (docs/apps-script); background backup on installed app |
 | 1.5 | How to use Lakshyam: illustrated demo + PDF (English, മലയാളം) in Settings |
+| 1.18 | In-app PDF viewer (real pages, zoom, also from Drive); 🔎 In my notes from any question (word search, optional AI check) and notes in Search; 🔊 read aloud with the phone voice or Gemini's natural voice |
 | 1.17 | AI analysis of each test, written right after it and kept with the test; a 🤖 switch next to AI actions to pick which preset writes and in which language |
 | 1.16 | Smart insights in folding parts; notes check only in the topic's own PDFs and stricter; Back from a PDF page returns to Smart insights; back buttons and the phone's Back agree everywhere (no loops; tabs and filters aren't Back steps); leaving a test returns where it started; tidier result review |
 | 1.15 | Better PDF revision notes (context from the page before, watermark and repeat removal, ⭐ kept in place, coverage warning); double-check for general-knowledge questions; under each question its explanation (with model, Clear), 📚 Related facts and 💬 chat with AI, each kept in its own place; 🧠 Memory tricks on PDF notes; saved AI strategy block with Clear; list numbers; readable maths; Q1 strip fix; Back after a test goes where it was started |
