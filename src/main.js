@@ -10,6 +10,10 @@ import { requestPersistence } from "./core/storage-health.js";
 import { icons } from "./core/icons.js";
 import { openSheet, closeSheet } from "./core/sheet.js";
 import * as store from "./data/store.js";
+import { can } from "./core/entitlements.js";
+import { runFlow } from "./core/dialogs.js";
+import { aiTopLabel, chooseAiSetup } from "./features/ai/ai-ui.js";
+import { AI_CHANGED } from "./ai/presets.js";
 
 import { todayScreen } from "./features/today/today.js";
 import { examsScreen } from "./features/today/countdown.js";
@@ -56,9 +60,21 @@ function renderTopbar(activeId) {
   const search = document.getElementById("searchBtn");
   search.setAttribute("aria-label", t("top.search"));
   search.classList.toggle("active", activeId === "search");
+  paintAiButton();
   const settings = document.getElementById("settingsBtn");
   settings.setAttribute("aria-label", t("top.settings"));
   settings.classList.toggle("active", activeId === "settings");
+}
+
+/* 🤖 at the top: which AI writes and in which language, for every AI action in the app at once. */
+async function paintAiButton() {
+  const btn = document.getElementById("aiBtn");
+  const label = can("ai") ? await aiTopLabel() : null;
+  btn.hidden = !label;
+  if (!label) return;
+  document.getElementById("aiBtnName").textContent = `🤖 ${label.name}`;
+  document.getElementById("aiBtnLang").textContent = label.lang;
+  btn.setAttribute("aria-label", t("ai.topAria", { name: label.name, lang: label.lang }));
 }
 
 function openSyllabusPicker() {
@@ -100,8 +116,10 @@ async function boot() {
   onAction(document.getElementById("app"), {
     go: (el) => go(el.dataset.to),
     "open-search": () => go("search"),
-    "open-syllabus": openSyllabusPicker
+    "open-syllabus": openSyllabusPicker,
+    "open-ai": async () => { await runFlow(() => chooseAiSetup()); paintAiButton(); }
   });
+  window.addEventListener(AI_CHANGED, () => paintAiButton());
 
   let screenNow = "today";
   const awake = () => setAwake(wantAwake(store.setting("keepAwake", "tests"), screenNow));

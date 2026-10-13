@@ -18,7 +18,7 @@ import * as mut from "../../data/mutations.js";
 import * as presets from "../../ai/presets.js";
 import { ask, parseJsonLoose } from "../../ai/client.js";
 import * as P from "../../ai/prompts.js";
-import { ensureAi, askInSheet, errorText, aiSwitchLabel, aiSwitchButton, chooseAiSetup } from "./ai-ui.js";
+import { ensureAi, askInSheet, errorText } from "./ai-ui.js";
 import { topicFacts, questionLines } from "../../domain/topic-pattern.js";
 import { saveStrategy, strategyFor, patternFrom, clearStrategy, restoreStrategy, noteHasStrategy } from "../../data/strategy.js";
 import { can } from "../../core/entitlements.js";
@@ -88,14 +88,12 @@ export async function questionChat(q, { onSaved = null } = {}) {
   const history = () => store.questionState(q.id)?.ai?.chat || [];
   const keep = (chat) => store.quietly(() => mut.setQuestionAi(q.id, { chat: chat.length ? chat.slice(-40) : null }));
   let busy = false;
-  let label = await aiSwitchLabel();
   let mine = null; // this chat's sheet content (another sheet opened since → don't draw over it)
   const ours = () => Boolean(mine?.isConnected);
   const draw = (status = "", draft = "") => {
     const msgs = history();
     mine = openSheet(html`<h2>💬 ${t("ai.chat")}</h2>
       <p class="hint">${q.text.slice(0, 140)}</p>
-      <div class="ai-switch-row">${aiSwitchButton(label)}</div>
       <div class="chat-log" id="chatLog">${msgs.length ? msgs.map((m) => html`<div class="chat-msg ${m.role === "user" ? "me" : "ai"}">
           ${m.role === "user" ? html`<p>${m.text}</p>` : html`<div class="ai-answer">${aiText(m.text, { sections: false })}</div>${m.by ? html`<p class="hint">🤖 ${m.by}</p>` : ""}`}</div>`)
         : html`<p class="hint">${t("ai.chatEmpty")}</p>`}
@@ -107,14 +105,6 @@ export async function questionChat(q, { onSaved = null } = {}) {
         <button type="button" class="btn btn-quiet" data-action="close">${t("common.done")}</button>
         <button type="button" class="btn" data-action="send" ${busy ? "disabled" : ""}>${t("ai.chatSend")}</button></div>`, {
       close: () => closeSheet(),
-      // Which AI answers next, and in which language (kept for every AI action).
-      "ai-switch": async () => {
-        const draft = sheetBody()?.querySelector("#chatIn")?.value || "";
-        await chooseAiSetup();
-        if (!isSheetOpen()) return;
-        label = await aiSwitchLabel();
-        draw(busy ? t("ai.thinking") : "", draft);
-      },
       clear: async () => {
         if (busy) return;
         const ok = await confirmAction({ title: t("ai.chatClearTitle"), confirmLabel: t("ai.chatClear"), danger: true });
@@ -184,10 +174,8 @@ export async function generateQuestions(topic, seedQs = null) {
   const strategy = strategyFor(topic.id);
   const s = { n: 8, lang: subject?.name === "Malayalam" ? "ml" : "en", difficulty: "mixed", usePattern: Boolean(strategy), check: true };
   const pills = (key, values, label) => html`<div class="chip-wrap">${values.map((v) => html`<button type="button" class="pill ${s[key] === v ? "on" : ""}" data-action="set" data-k="${key}" data-v="${v}">${label(v)}</button>`)}</div>`;
-  let label = await aiSwitchLabel({ withLang: false });
   const draw = () => openSheet(html`<h2>${t("ai.genTitle")}</h2>${steps3(1)}
     <p class="hint">${nameLabel(subject)} · ${nameLabel(topic)}${seedQs?.length === 1 ? ` · ${t("ai.genSimilar")}` : ""}</p>
-    <div class="ai-switch-row">${aiSwitchButton(label)}</div>
     <h3>${t("ai.genCount")}</h3>${pills("n", [5, 8, 10, 15], (v) => v)}
     <h3>${t("ai.genLang")}</h3>${pills("lang", ["en", "ml"], (v) => t(`ai.langs.${v}`))}
     <h3>${t("ai.genDiff")}</h3>${pills("difficulty", ["mixed", "E", "M", "D"], (v) => (v === "mixed" ? t("ai.mixed") : t(`question.difficulty.${v}`)))}
@@ -203,7 +191,6 @@ export async function generateQuestions(topic, seedQs = null) {
     cancel: () => closeSheet(),
     pattern: () => { s.usePattern = !s.usePattern; draw(); },
     check: () => { s.check = !s.check; draw(); },
-    "ai-switch": async () => { await chooseAiSetup({ withLang: false }); if (!isSheetOpen()) return; label = await aiSwitchLabel({ withLang: false }); draw(); },
     go: () => run()
   }, { label: t("ai.genTitle") });
   draw();

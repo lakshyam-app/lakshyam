@@ -33,10 +33,15 @@ export async function getPresets() { return (await loadAll()).presets.map((p) =>
 export async function getConfig() { return { ...(await loadAll()).config }; }
 export async function hasPreset() { return (await loadAll()).presets.some((p) => p.apiKey && p.model); }
 
+/* The 🤖 button at the top shows the preset in use and the language; it follows every change here. */
+export const AI_CHANGED = "lakshyam-ai-changed";
+const changed = () => { if (typeof window !== "undefined") window.dispatchEvent(new Event(AI_CHANGED)); };
+
 export async function saveConfig(patch) {
   const all = await loadAll();
   all.config = { ...all.config, ...patch };
   await db.put("aiPresets", all.config);
+  changed();
 }
 
 export async function addPreset(templateKey) {
@@ -60,6 +65,8 @@ export async function updatePreset(id, patch) {
   if (!p) return;
   Object.assign(p, patch);
   await db.put("aiPresets", p);
+  // Use counts change on every answer; only what the button shows is worth a redraw.
+  if (["name", "apiKey", "model", "baseUrl", "pausedUntil", "limitHitAt"].some((k) => k in patch)) changed();
 }
 
 export async function deletePreset(id) {
@@ -67,6 +74,7 @@ export async function deletePreset(id) {
   all.presets = all.presets.filter((x) => x.id !== id);
   await db.remove("aiPresets", id);
   if (all.config.activeId === id) await saveConfig({ activeId: all.presets[0]?.id || null });
+  changed();
 }
 
 /** Moves a preset up (−1) or down (+1) in the priority order. */
@@ -78,6 +86,7 @@ export async function movePreset(id, delta) {
   [all.presets[i], all.presets[j]] = [all.presets[j], all.presets[i]];
   all.presets.forEach((p, k) => { p.order = k; });
   await db.writeAll({ aiPresets: { put: all.presets.map((p) => ({ ...p })) } });
+  changed();
 }
 
 /** Removes every preset and key from this phone. */

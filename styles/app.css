@@ -1298,10 +1298,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .ins-sec[open] > summary .ins-key { display: none; }
 .ins-sec > summary .ins-key { max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* 1.17: the 🤖 switch (which AI writes, in which language) and the test analysis */
-.ai-switch-row { display: flex; margin: 2px 0 4px; }
-.ai-switch { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; min-height: 32px; padding: 0 12px; border-radius: 999px;
-  border: 1px dashed var(--line); background: transparent; color: var(--muted); font: inherit; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 1.17: the test analysis */
 .analysis-card { border: 1px solid var(--line); border-left: 4px solid var(--brand); border-radius: var(--radius-panel, 14px); background: var(--surface); padding: 12px 14px; margin: 10px 0; display: grid; gap: 8px; }
 .analysis-card > summary { list-style: none; cursor: pointer; }
 .analysis-card > summary::-webkit-details-marker { display: none; }
@@ -1327,3 +1324,12 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .icon-sm.speak.speaking { background: var(--brand-soft); border-radius: 999px; animation: speakPulse 1.2s ease-in-out infinite; }
 @keyframes speakPulse { 50% { opacity: 0.55; } }
 @media (prefers-reduced-motion: reduce) { .icon-sm.speak.speaking { animation: none; } }
+
+/* 1.19: one 🤖 button at the top for the AI preset and language of the whole app */
+.topbar .syllabus-chip { flex: 0 1 auto; min-width: 0; }
+.topbar-actions { flex: none; align-items: center; gap: 2px; }
+.ai-top { display: inline-flex; align-items: center; gap: 5px; min-height: 36px; max-width: 38vw; padding: 0 10px; margin-right: 2px;
+  border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--text); font: inherit; font-size: 0.8rem; }
+.ai-top-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.ai-top-lang { flex: none; padding: 1px 6px; border-radius: 999px; background: var(--brand-soft); color: var(--brand); font-weight: 600; font-size: 0.72rem; }
+.ai-top:active { background: var(--brand-soft); }

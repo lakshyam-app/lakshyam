@@ -17,7 +17,7 @@ import { nameKey } from "../../data/ids.js";
 import { answerRecords, pickByBasis, accuracyBy } from "../../domain/stats.js";
 import { isDue } from "../../domain/study.js";
 import { ask, parseJsonLoose } from "../../ai/client.js";
-import { ensureAi, errorText, aiSwitchSlot, fillAiSwitch } from "../ai/ai-ui.js";
+import { ensureAi, errorText } from "../ai/ai-ui.js";
 import { examOf } from "../today/countdown.js";
 import { finishedTests } from "../progress/data.js";
 import { blockTitle, icon, fmt, fmtDuration, fmtDate } from "./common.js";
@@ -104,7 +104,6 @@ export const ttNewScreen = {
       ${can("ai") ? html`<h3>${t("tt.routine")}</h3><p class="hint">${t("tt.routineHint")}</p>
         <textarea class="field" rows="3" data-f="routine" placeholder="${t("tt.routinePh")}">${form.routine}</textarea>
         <label class="field-label">${t("tt.wish")}<input class="field" type="text" data-f="wish" value="${form.wish}" placeholder="${t("tt.wishPh")}" maxlength="300"></label>` : ""}
-      ${can("ai") ? aiSwitchSlot() : ""}
       <div class="actions-col">
         ${can("ai") ? html`<button type="button" class="btn" data-action="ai">✨ ${t("tt.buildAi")}</button>` : ""}
         <button type="button" class="btn ${can("ai") ? "btn-quiet" : ""}" data-action="auto">⚡ ${t("tt.buildAuto")}</button>
@@ -113,7 +112,6 @@ export const ttNewScreen = {
       <p class="hint">${t("tt.buildNote")}</p>
       <div id="aiStatus"></div>`;
 
-    fillAiSwitch(container, { withLang: false });
     container.querySelectorAll("[data-f]").forEach((el) => el.addEventListener("input", () => { form[el.dataset.f] = el.value; }));
     container.querySelectorAll("[data-w]").forEach((el) => el.addEventListener("input", () => { const [pi, wi, k] = el.dataset.w.split(":"); form.windows[pi][wi][k] = el.value; }));
     const redraw = () => store.touch();

@@ -26,7 +26,7 @@ import { countsLine, modelNames, aiModelOf } from "../../domain/made-by.js";
 import { header, backHandler, chev } from "../library/library.js";
 import { backFrom } from "../../core/back.js";
 import { pickTopic } from "../library/topic-picker.js";
-import { ensureAi, errorText, aiSwitchLabel, aiSwitchButton, chooseAiSetup } from "../ai/ai-ui.js";
+import { ensureAi, errorText } from "../ai/ai-ui.js";
 import { strategyFor, patternFrom } from "../../data/strategy.js";
 import { pdfFile, inDrive, onPhone, needsSignIn, ensureSignedIn } from "../../pdf/pdf-file.js";
 import { storageBox, storageHandlers, deleteChoice, cloudErrorText } from "./pdf-cloud.js";
@@ -416,11 +416,7 @@ function drawMake(container, rec, job) {
   } else {
     ({ body } = formView(rec, job, handlers));
   }
-  // Before writing: which AI writes (the same switch as everywhere else; the output language is set below).
-  const withSwitch = job.phase === "form" || job.phase === "error";
-  if (withSwitch) handlers["ai-switch"] = () => runFlow(() => chooseAiSetup({ withLang: false })).then(() => refresh(true));
-  container.innerHTML = html`${head}${stepLine(job)}${withSwitch ? html`<div class="ai-switch-row">${aiSwitchButton("…")}</div>` : ""}${body}`;
-  if (withSwitch) aiSwitchLabel({ withLang: false }).then((l) => { const b = container.querySelector('[data-action="ai-switch"]'); if (b) b.textContent = `🤖 ${l} ▾`; });
+  container.innerHTML = html`${head}${stepLine(job)}${body}`;
   onAction(container, handlers);
   bindForm(container, job);
   const mo = container.querySelector(".more-opts");

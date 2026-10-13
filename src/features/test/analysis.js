@@ -13,7 +13,7 @@ import * as store from "../../data/store.js";
 import * as presets from "../../ai/presets.js";
 import { ask } from "../../ai/client.js";
 import * as P from "../../ai/prompts.js";
-import { errorText, chooseAiSetup, aiSwitchLabel } from "../ai/ai-ui.js";
+import { errorText } from "../ai/ai-ui.js";
 
 const MIN_ANSWERS = 3;   // a 1–2 question test (e.g. from a reminder) isn't worth an analysis
 const running = new Map(); // attempt id → { error } while writing (error set if it failed)
@@ -65,8 +65,6 @@ const changed = (id) => window.dispatchEvent(new CustomEvent(ANALYSIS_EVENT, { d
 /** The analysis part of a result screen (and what its buttons do). */
 export async function analysisBlock(a) {
   const st = analysisState(a.id);
-  const label = can("ai") ? await aiSwitchLabel() : "";
-  const sw = label ? html`<button type="button" class="ai-switch" data-action="an-switch">🤖 ${label} ▾</button>` : "";
   if (st && !st.error) return html`<section class="analysis-card"><h2 class="section-title">🤖 ${t("analysis.title")}</h2><p class="sheet-status">${t("analysis.writing")}</p></section>`;
   if (a.analysis?.text) {
     const an = a.analysis;
@@ -78,19 +76,18 @@ export async function analysisBlock(a) {
         <button type="button" class="link" data-action="an-copy">${t("question.copy")}</button>
         ${can("ai") ? html`<button type="button" class="link" data-action="an-make">${t("analysis.again")}</button>` : ""}
         <button type="button" class="link danger" data-action="an-clear">${t("common.clear")}</button>
-      </div>${can("ai") ? html`<div class="ai-switch-row">${sw}</div>` : ""}</details>`;
+      </div></details>`;
   }
   if (!can("ai") || !canAnalyse(a)) return "";
   return html`<section class="analysis-card"><h2 class="section-title">🤖 ${t("analysis.title")}</h2>
     ${st?.error ? html`<p class="warn-box pre">${st.error}</p>` : html`<p class="hint">${t("analysis.hint")}</p>`}
-    <div class="actions-row"><button type="button" class="btn btn-quiet" data-action="an-make">${st?.error ? t("ai.tryAgain") : t("analysis.make")}</button>${sw}</div></section>`;
+    <div class="actions-row"><button type="button" class="btn btn-quiet" data-action="an-make">${st?.error ? t("ai.tryAgain") : t("analysis.make")}</button></div></section>`;
 }
 
 export function analysisHandlers(id) {
   const att = () => store.byId("attempts", id);
   return {
     "an-make": () => makeAnalysis(att()),
-    "an-switch": async () => { await runFlow(() => chooseAiSetup()); changed(id); },
     "an-copy": async () => { try { await navigator.clipboard.writeText(att()?.analysis?.text || ""); toast(t("common.copied")); } catch { toast(t("common.copyFailed")); } },
     "an-clear": () => runFlow(async () => {
       const a = att();

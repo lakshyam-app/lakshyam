@@ -217,7 +217,7 @@ Today screen with Quick 10 and daily goal · exam countdown · timetable (any da
 | Feature | Where | Status |
 |---|---|---|
 | 🤖 AI analysis of each test: written automatically right after the test (how it went, where marks were lost, facts to fix, next steps), kept with the test (in backups); Copy, Write again, Clear + Undo; a button on older tests; the figures are worked out in code | Test result; Settings → AI → Analyse each test automatically | ✅ |
-| 🤖 switch near AI writing: which preset is tried first and the AI's answer language (the same setting as Settings → AI); changing it in an answer sheet asks again at once | AI answer sheets (Explain, Facts, strategy, insights, memory tricks, guess coach), Ask AI chat, Make questions, study-PDF make screens, test analysis, diary reports, timetable builder; never during a test | ✅ |
+| 🤖 switch for which preset is tried first and the AI's answer language (the same setting as Settings → AI) — moved in 1.19 to one button at the top | Top bar | ✅ |
 | Chat with AI under each question; Related facts; memory tricks on PDF notes (1.15) | Question cards, Notes | ✅ |
 
 ## Added in 1.18
@@ -228,4 +228,10 @@ Today screen with Quick 10 and daily goal · exam countdown · timetable (any da
 | 🔎 In my notes from any question: a word search (no AI) over the subject's study PDFs, PDF revision notes and your own notes; best passages first, matched words marked, "has the answer" when the right answer is there; tap → the PDF page or the note; optional "Ask AI which one answers it" (sends only those passages) | Question cards (also with AI buttons off) | ✅ |
 | Search also finds words in your notes and study PDFs | 🔍 Search | ✅ |
 | 🔊 Read aloud a question and its options: the phone's voice (free, offline; Malayalam needs the phone's Malayalam voice) or the natural Gemini voice with your Gemini key (falls back to the phone voice); speed; show/hide the button | Question cards and tests; Settings → Look → Read aloud | ✅ (real Gemini voice not testable here) |
+
+## Changed in 1.19
+
+| Feature | Where | Status |
+|---|---|---|
+| One 🤖 button at the top of the app (next to 🔍) shows the preset in use and the AI language (EN / മല / EN+മല); tap to change either for every AI action at once, or open All AI settings. The per-screen 🤖 switches are gone. Follows changes made in Settings → AI and auto-switch. Hidden when no AI preset is set up, and during tests | Top bar | ✅ |
 
