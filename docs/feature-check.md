@@ -251,3 +251,8 @@ Today screen with Quick 10 and daily goal · exam countdown · timetable (any da
 | Questions: second independent answer check (disagreements unticked), reviewed, saved to the right topic with their sources, "Practise these now"; flashcards reviewed and saved to the topic; fact sheet saved to Notes with the test and its sources; Revise practises the wrong ones (no AI) | Same | ✅ |
 | Notes: only the chosen syllabus's notes (its topics, subjects, papers, questions, tests) and general notes by default; "All syllabi" shows every note | Notes tab | ✅ |
 
+## Changed in 1.20.1
+
+| Change | Where | Status |
+|---|---|---|
+| Next steps' web search tries each preset that can search in turn (your 🤖 one first). A key whose web-search limit was hit is tried last for an hour; this is kept apart from its normal limit, so normal AI work is not moved off that key. The error lists every key tried with the limit Google names (e.g. its free-tier search limit and size), and offers "Use the AI's own knowledge" | Test result → Do the next steps with AI | ✅ |

@@ -104,14 +104,16 @@ export async function runStep(a, step) {
     const max = lang === "en" ? 4000 : 8000;
     let r;
     try {
-      if (web) r = await askWeb(system, task, max);
+      if (web) r = await askWeb(system, task, max, { onTry: (p) => { const el = document.querySelector("#sheetRoot .sheet-status"); if (el && isSheetOpen()) el.textContent = t("ns.searching", { name: p.name || p.model || "" }); } });
       else { const x = await ask(system, task, max); r = { text: x.text, sources: [], by: x.preset?.model || x.preset?.name || "" }; }
     } catch (e) {
       if (!isSheetOpen()) return;
       if (e.noWeb) return noWebSheet();
-      openSheet(html`${head}<p class="warn-box pre">${errorText(e)}</p><div class="sheet-actions">
+      // A failed web search can still be done from the AI's own knowledge (normal answers have their own limits).
+      openSheet(html`${head}${web && e.limit ? html`<p class="hint">${t("ns.webLimit")}</p>` : ""}<p class="warn-box pre">${errorText(e)}</p><div class="sheet-actions">
         <button type="button" class="btn btn-quiet" data-action="close">${t("common.close")}</button>
-        <button type="button" class="btn" data-action="again">${t("ai.tryAgain")}</button></div>`, { close: () => closeSheet(), again: () => start(web) });
+        ${web ? html`<button type="button" class="btn btn-quiet" data-action="own">${t("ns.useOwn")}</button>` : ""}
+        <button type="button" class="btn" data-action="again">${t("ai.tryAgain")}</button></div>`, { close: () => closeSheet(), again: () => start(web), own: () => start(false) }, { label: title });
       return;
     }
     if (!isSheetOpen()) return;

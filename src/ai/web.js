@@ -14,11 +14,19 @@ const GROQ = /api\.groq\.com/i;
 
 export const canSearch = (p) => Boolean(p?.apiKey && p.model && p.baseUrl && ((GEMINI.test(p.baseUrl)) || (GROQ.test(p.baseUrl) && /gpt-oss/i.test(p.model))));
 
-/** The preset to search with: the one in use first (🤖 at the top), else the first other one that can. */
-export async function webPreset() {
+const WEB_PAUSE_MS = 3600000; // a key whose web-search limit was hit is tried last for an hour
+
+/** Every preset that can search, in the order to try them: the one in use first (🤖 at the top), then by priority;
+    ones whose web-search limit was hit in the last hour go last. (Google keeps a separate, smaller limit for
+    searches, so a key can still answer normally after its search limit is reached: that is tracked apart.) */
+export async function webOrder(now = Date.now()) {
   const [list, cfg] = await Promise.all([presets.getPresets(), presets.getConfig()]);
-  return presets.tryOrder(list, { ...cfg, fallback: true }).find(canSearch) || null;
+  const all = presets.tryOrder(list, { ...cfg, fallback: true }, now).filter(canSearch);
+  const fresh = all.filter((p) => !p.webLimitAt || now - p.webLimitAt > WEB_PAUSE_MS);
+  return [...fresh, ...all.filter((p) => !fresh.includes(p))];
 }
+/** The preset that will be tried first, or null when none can search. */
+export async function webPreset() { return (await webOrder())[0] || null; }
 
 /* Sites a PSC aspirant can rely on. "fair": fine to cross-check with. Everything else: check yourself. */
 const TRUSTED = [/\.gov\.in$/, /\.nic\.in$/, /^gov\.in$/, /\.ac\.in$/, /\.edu$/, /(^|\.)britannica\.com$/, /(^|\.)thehindu\.com$/, /(^|\.)indianexpress\.com$/,
@@ -60,10 +68,22 @@ async function post(url, headers, body) {
   } catch (e) { throw new AiError(e.name === "AbortError" ? "timeout" : "network"); } finally { clearTimeout(timer); }
   const data = await res.json().catch(() => null);
   if (!res.ok) {
-    const m = data?.error?.message || data?.message || `HTTP ${res.status}`;
-    throw new AiError(String(typeof m === "string" ? m : JSON.stringify(m)).slice(0, 240), { status: res.status, limit: res.status === 429 });
+    let m = data?.error?.message || data?.message || `HTTP ${res.status}`;
+    m = String(typeof m === "string" ? m : JSON.stringify(m)).split(/\.\s+For more information/i)[0].slice(0, 200);
+    const q = quotaOf(data);
+    if (q) m += ` [${q}]`;
+    const limit = res.status === 429 || res.status === 402 || /quota|rate.?limit|exhaust|billing/i.test(m);
+    throw new AiError(m, { status: res.status, limit, busy: !limit && [500, 502, 503, 504].includes(res.status) });
   }
   return data;
+}
+
+/** Google says which limit was hit (e.g. "…SearchGrounding…PerDay…FreeTier, limit 0"). Shown so you can tell. */
+export function quotaOf(data) {
+  const v = (data?.error?.details || []).flatMap((d) => d?.violations || []).find((x) => x?.quotaId || x?.quotaMetric);
+  if (!v) return "";
+  const name = String(v.quotaId || v.quotaMetric).replace(/^.*\//, "");
+  return v.quotaValue !== undefined ? `${name}, limit ${v.quotaValue}` : name;
 }
 
 async function geminiSearch(p, system, user, maxTokens) {
@@ -95,13 +115,31 @@ async function groqSearch(p, system, user, maxTokens) {
  * Asks with a web search. → { text, sources: [{ n, url, title, domain, trust }], queries, preset, by }
  * Throws { noWeb: true } when no preset can search. Sources: from Google when it gives them, else the AI's own list.
  */
-export async function askWeb(system, user, maxTokens = 3000) {
-  const p = await webPreset();
-  if (!p) throw new AiError("no-web", { noWeb: true });
-  const r = GEMINI.test(p.baseUrl) ? await geminiSearch(p, system, user, maxTokens) : await groqSearch(p, system, user, maxTokens);
-  const clean = stripThinking(r.text);
-  if (!clean) throw new AiError("empty");
-  await presets.updatePreset(p.id, { uses: (p.uses || 0) + 1, lastUsedAt: Date.now() });
+export async function askWeb(system, user, maxTokens = 3000, { onTry } = {}) {
+  const order = await webOrder();
+  if (!order.length) throw new AiError("no-web", { noWeb: true });
+  const errors = []; let allLimit = true;
+  for (const p of order) {
+    onTry?.(p);
+    try {
+      let r;
+      const once = () => (GEMINI.test(p.baseUrl) ? geminiSearch(p, system, user, maxTokens) : groqSearch(p, system, user, maxTokens));
+      try { r = await once(); } catch (e) { if (!e.busy) throw e; await new Promise((ok) => setTimeout(ok, 3500)); r = await once(); }
+      const clean = stripThinking(r.text);
+      if (!clean) throw new AiError("empty");
+      await presets.updatePreset(p.id, { uses: (p.uses || 0) + 1, lastUsedAt: Date.now(), webLimitAt: null });
+      return finish(r, clean, p);
+    } catch (e) {
+      errors.push(`${p.name}: ${e.message}${e.status ? ` (HTTP ${e.status})` : ""}`);
+      if (e.limit) await presets.updatePreset(p.id, { webLimitAt: Date.now() }); else allLimit = false;
+    }
+  }
+  const err = new AiError(errors.join("\n"), { limit: allLimit });
+  err.webFailed = true;
+  throw err;
+}
+
+function finish(r, clean, p) {
   const { body, sources } = splitSources(clean);
   // With Google's own list of the pages it searched, the AI's numbered citations would not match it: they are dropped.
   const text = r.found.length ? body.replace(/\s?\[\d+(?:\s*[,–-]\s*\d+)*\]/g, "") : body;

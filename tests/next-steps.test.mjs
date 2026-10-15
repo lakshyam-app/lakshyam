@@ -45,3 +45,11 @@ test("sources: listed by the AI, and marked trusted / fair / check", () => {
   assert.equal(trustOf(domainOf(sources[1].url)), "check");
   assert.equal(trustOf("britannica.com"), "trusted");
 });
+
+test("Google's quota details are shown in the error (which limit, and its size)", async () => {
+  const { quotaOf } = await import("../src/ai/web.js");
+  const data = { error: { code: 429, message: "You exceeded your current quota", details: [{ "@type": "type.googleapis.com/google.rpc.QuotaFailure", violations: [{ quotaMetric: "generativelanguage.googleapis.com/search_grounding_requests", quotaId: "SearchGroundingRequestsPerDayPerProject-FreeTier", quotaValue: "0" }] }, { "@type": "type.googleapis.com/google.rpc.RetryInfo", retryDelay: "40s" }] } };
+  assert.equal(quotaOf(data), "SearchGroundingRequestsPerDayPerProject-FreeTier, limit 0");
+  assert.equal(quotaOf({ error: { message: "x" } }), "");
+  assert.equal(quotaOf(null), "");
+});

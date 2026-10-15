@@ -1195,6 +1195,7 @@ export default {
     searching: "Looking up trusted sources on the web with {name}…",
     checking: "A second AI pass is answering each question on its own…",
     noWeb: "Your AI presets can’t search the web. A web search needs a Google Gemini preset, or a Groq preset with an openai/gpt-oss model (Settings → AI). You can still make it from the AI’s own knowledge, but it won’t be checked against any website.",
+    webLimit: "Every key that can search the web has hit its web-search limit. Google counts web searches separately from normal answers (a smaller allowance), so other AI work can still run. Keys made in the same Google project share one limit. Each key is tried again after an hour, or make it now from the AI’s own knowledge.",
     useOwn: "Use the AI’s own knowledge",
     fromWeb: "from web sources",
     notWeb: "from the AI’s own knowledge, not checked on the web",
