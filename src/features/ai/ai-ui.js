@@ -9,7 +9,7 @@ import { go } from "../../core/router.js";
 import { can } from "../../core/entitlements.js";
 import { aiText } from "../../domain/text.js";
 import * as presets from "../../ai/presets.js";
-import { ask } from "../../ai/client.js";
+import { ask, aiControl } from "../../ai/client.js";
 import { chooseAction } from "../../core/dialogs.js";
 import { flagChip, answerRef } from "./flag-ui.js";
 import { presetFlags } from "../../ai/flags.js";
@@ -67,6 +67,31 @@ export async function ensureAi() {
   return false;
 }
 
+/* While an AI is answering: which one, how long so far, and (after a while) "Ask the next AI" / "Stop".
+   Some models think for minutes before writing; you never have to sit and wait for one. */
+const SLOW_S = 15;
+export function waitingBox(prefix = "") {
+  return html`<div class="ai-wait"><p class="sheet-status" data-wait-line>${t("ai.thinking")}</p>
+    <p class="hint center" data-wait-slow hidden>${t("ai.slow")}</p>
+    <div class="wait-btns" data-wait-btns hidden><button type="button" class="btn btn-quiet" data-action="${prefix}stop">${t("ai.stop")}</button>
+      <button type="button" class="btn" data-action="${prefix}skip" data-wait-skip>${t("ai.askNext")}</button></div></div>`;
+}
+export function paintWaiting(root, c) {
+  if (!root?.isConnected || !c?.preset) return;
+  const s = Math.max(0, Math.round((Date.now() - c.startedAt) / 1000));
+  const line = root.querySelector("[data-wait-line]");
+  if (line) line.textContent = t("ai.thinkingWith", { name: c.preset.name || c.preset.model || "", s });
+  const slow = s >= SLOW_S;
+  const hint = root.querySelector("[data-wait-slow]"); if (hint) hint.hidden = !slow;
+  const btns = root.querySelector("[data-wait-btns]"); if (btns) btns.hidden = !slow;
+  const skip = root.querySelector("[data-wait-skip]"); if (skip) skip.hidden = c.left < 1;
+}
+/** Redraws the waiting line every second while that sheet is open. */
+export function watchWaiting(root, getControl) {
+  const id = setInterval(() => { if (!root?.isConnected) { clearInterval(id); return; } paintWaiting(root, getControl()); }, 1000);
+  paintWaiting(root, getControl());
+}
+
 /**
  * Shows "Thinking…", asks, then shows the answer with buttons.
  * opts: { title, sub, system, user, maxTokens, actions: [{ id, label, run(text) }], onModel(model), onAnswer(text, model), flagKind }
@@ -81,8 +106,15 @@ export async function askInSheet(opts) {
   let state = { kind: "thinking" };
   const ours = () => isSheetOpen() && mine?.isConnected;
   const head = () => html`<h2>${title}</h2>${sub ? html`<p class="hint">${sub}</p>` : ""}`;
+  let control = null;
   const draw = () => {
-    if (state.kind === "thinking") mine = openSheet(html`${head()}<p class="sheet-status">${t("ai.thinking")}</p>`, {}, { label: title });
+    if (state.kind === "thinking") {
+      mine = openSheet(html`${head()}${waitingBox()}`, {
+        skip: () => control?.skip(),
+        stop: () => { control?.cancel(); closeSheet(); }
+      }, { label: title });
+      watchWaiting(mine, () => control);
+    }
     else if (state.kind === "answer") {
       showAnswer({ head: head(), text: state.text, actions, presetName: state.preset.name, keepOpen, model: state.preset.model || "", done: state.done,
         flag: { ref: state.ref, kind: flagKind, presetId: state.preset.id }, onDraw: (b) => { mine = b; } });
@@ -102,7 +134,8 @@ export async function askInSheet(opts) {
     const lang = (await presets.getConfig()).lang || "en";
     const val = (x) => (typeof x === "function" ? x(lang) : x);
     try {
-      const { text, preset, switched } = await ask(val(opts.system), val(opts.user), val(maxTokens));
+      control = aiControl(() => { if (ours()) paintWaiting(mine, control); });
+      const { text, preset, switched } = await ask(val(opts.system), val(opts.user), val(maxTokens), { control });
       if (me !== run) return text; // asked again meanwhile: the newer answer is the one shown
       const model = preset?.model || preset?.name || "";
       if (onModel) onModel(model);
@@ -111,7 +144,7 @@ export async function askInSheet(opts) {
       if (ours()) { if (switched) toast(t("ai.switched", { name: preset.name })); draw(); }
       return text;
     } catch (e) {
-      if (me !== run) return null;
+      if (me !== run || e.cancelled) return null;
       state = { kind: "error", error: e };
       if (ours()) draw();
       return null;

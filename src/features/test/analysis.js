@@ -12,9 +12,9 @@ import { stepsBlock, stepsOf, stripTags, runStep } from "./next-steps.js";
 import { maxScore } from "../../domain/testing.js";
 import * as store from "../../data/store.js";
 import * as presets from "../../ai/presets.js";
-import { ask } from "../../ai/client.js";
+import { ask, aiControl } from "../../ai/client.js";
 import * as P from "../../ai/prompts.js";
-import { errorText } from "../ai/ai-ui.js";
+import { errorText, waitingBox, paintWaiting } from "../ai/ai-ui.js";
 import { flagChip } from "../ai/flag-ui.js";
 
 const MIN_ANSWERS = 3;   // a 1–2 question test (e.g. from a reminder) isn't worth an analysis
@@ -45,19 +45,23 @@ export function autoAnalyse(a) {
 export async function makeAnalysis(attempt, { quiet = false } = {}) {
   if (!attempt || running.has(attempt.id) && !running.get(attempt.id).error) return;
   if (!can("ai") || !(await presets.hasPreset())) { if (!quiet) toast(t("ai.err.noPreset")); return; }
-  running.set(attempt.id, {});
+  // Which AI is writing and for how long; "Ask the next AI" / "Stop" after a while (see ai-ui waitingBox).
+  const control = aiControl(() => paint());
+  const paint = () => document.querySelectorAll(`[data-an-wait="${CSS.escape(attempt.id)}"]`).forEach((el) => paintWaiting(el, control));
+  const tick = setInterval(paint, 1000);
+  running.set(attempt.id, { control });
   changed(attempt.id);
   try {
     const lang = (await presets.getConfig()).lang || "en";
     const topicName = (id) => store.topic(id)?.name || "";
     const { facts, lines } = analysisInput(attempt, { questionOf: (id) => store.question(id), topicOf: topicName, earlier: earlierTries(attempt) });
-    const { text, preset } = await ask(P.tutorSystem(lang, P.SECTIONED), P.inLang(P.testAnalysisTask(facts, lines), lang), lang === "en" ? 2600 : 5500);
+    const { text, preset } = await ask(P.tutorSystem(lang, P.SECTIONED), P.inLang(P.testAnalysisTask(facts, lines), lang), lang === "en" ? 2600 : 5500, { control });
     const fresh = store.byId("attempts", attempt.id);
     if (fresh) await store.quietly(() => store.apply({ attempts: { put: [{ ...fresh, analysis: { text: text.trim().slice(0, 12000), by: preset?.model || preset?.name || "", at: Date.now(), lang } }] } }));
     running.delete(attempt.id);
   } catch (e) {
-    running.set(attempt.id, { error: errorText(e) });
-  }
+    if (e.cancelled) running.delete(attempt.id); else running.set(attempt.id, { error: errorText(e) });
+  } finally { clearInterval(tick); }
   changed(attempt.id);
 }
 
@@ -68,7 +72,8 @@ const changed = (id) => window.dispatchEvent(new CustomEvent(ANALYSIS_EVENT, { d
 /** The analysis part of a result screen (and what its buttons do). */
 export async function analysisBlock(a) {
   const st = analysisState(a.id);
-  if (st && !st.error) return html`<section class="analysis-card"><h2 class="section-title">🤖 ${t("analysis.title")}</h2><p class="sheet-status">${t("analysis.writing")}</p></section>`;
+  if (st && !st.error) return html`<section class="analysis-card"><h2 class="section-title">🤖 ${t("analysis.title")}</h2><p class="hint">${t("analysis.writing")}</p>
+    <div data-an-wait="${a.id}">${waitingBox("an-")}</div></section>`;
   if (a.analysis?.text) {
     const an = a.analysis;
     const shut = hiddenIds.has(a.id);
@@ -97,6 +102,8 @@ export function analysisHandlers(id) {
   const att = () => store.byId("attempts", id);
   return {
     "an-make": () => makeAnalysis(att()),
+    "an-skip": () => analysisState(id)?.control?.skip(),
+    "an-stop": () => analysisState(id)?.control?.cancel(),
     "an-toggle": (el) => {
       const card = el.closest("[data-an-card]");
       if (!card) return;

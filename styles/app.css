@@ -1364,3 +1364,8 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 /* A sticky button row in a sheet sits right on the sheet's bottom edge (nothing scrolls visibly under it). */
 .sheet .sheet-actions.sticky-in { bottom: calc(-16px - env(safe-area-inset-bottom)); margin-bottom: calc(-16px - env(safe-area-inset-bottom)); padding-bottom: calc(10px + env(safe-area-inset-bottom)); background: var(--surface); }
 .btn.btn-quiet.danger { color: var(--danger); }
+/* 1.21.1: while an AI is writing */
+.ai-wait { display: grid; gap: 6px; }
+.ai-wait .center { text-align: center; }
+.wait-btns { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; padding: 4px 0 8px; }
+.wait-btns[hidden] { display: none; }

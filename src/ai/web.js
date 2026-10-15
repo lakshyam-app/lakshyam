@@ -59,13 +59,19 @@ export function splitSources(text) {
 
 const withTrust = (list) => list.map((x) => { const domain = x.domain || domainOf(x.url); return { ...x, domain, trust: trustOf(domain) }; });
 
-async function post(url, headers, body) {
+async function post(url, headers, body, signal = null) {
+  if (signal?.aborted) throw new AiError("skipped", { skipped: true });
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+  const skip = () => ctrl.abort();
+  signal?.addEventListener("abort", skip);
   let res;
   try {
     res = await fetch(url, { method: "POST", headers, body: JSON.stringify(body), signal: ctrl.signal, credentials: "omit", referrerPolicy: "no-referrer" });
-  } catch (e) { throw new AiError(e.name === "AbortError" ? "timeout" : "network"); } finally { clearTimeout(timer); }
+  } catch (e) {
+    if (signal?.aborted) throw new AiError("skipped", { skipped: true });
+    throw new AiError(e.name === "AbortError" ? "timeout" : "network");
+  } finally { clearTimeout(timer); signal?.removeEventListener("abort", skip); }
   const data = await res.json().catch(() => null);
   if (!res.ok) {
     let m = data?.error?.message || data?.message || `HTTP ${res.status}`;
@@ -89,7 +95,7 @@ export function quotaOf(data) {
 /** The answer only: models that think (e.g. Gemma 4) send their planning as parts marked "thought". */
 export function answerParts(parts) { return (parts || []).filter((x) => !x.thought).map((x) => x.text || "").join(""); }
 
-async function geminiSearch(p, system, user, maxTokens) {
+async function geminiSearch(p, system, user, maxTokens, signal) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(p.model)}:generateContent`;
   const headers = { "content-type": "application/json", "x-goog-api-key": p.apiKey };
   const body = { systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts: [{ text: user }] }], tools: [{ google_search: {} }], generationConfig: { maxOutputTokens: maxTokens } };
@@ -97,11 +103,11 @@ async function geminiSearch(p, system, user, maxTokens) {
   const gemma = /gemma/i.test(p.model);
   let data;
   if (gemma) {
-    try { data = await post(url, headers, { ...body, generationConfig: { ...body.generationConfig, thinkingConfig: { thinkingLevel: "minimal" } } }); } catch (e) {
+    try { data = await post(url, headers, { ...body, generationConfig: { ...body.generationConfig, thinkingConfig: { thinkingLevel: "minimal" } } }, signal); } catch (e) {
       if (e.status !== 400) throw e;
     }
   }
-  if (!data) data = await post(url, headers, body);
+  if (!data) data = await post(url, headers, body, signal);
   const cand = data?.candidates?.[0];
   const text = answerParts(cand?.content?.parts);
   const meta = cand?.groundingMetadata || {};
@@ -110,13 +116,13 @@ async function geminiSearch(p, system, user, maxTokens) {
   return { text, found, queries: meta.webSearchQueries || [] };
 }
 
-async function groqSearch(p, system, user, maxTokens) {
+async function groqSearch(p, system, user, maxTokens, signal) {
   const base = String(p.baseUrl).replace(/\/+$/, "");
   const data = await post(`${base}/chat/completions`, { "content-type": "application/json", authorization: `Bearer ${p.apiKey}` }, {
     model: p.model, max_completion_tokens: maxTokens, reasoning_effort: "low",
     messages: [{ role: "system", content: system }, { role: "user", content: `${user}\n\nWrite your final answer after a line '=== ANSWER ===' (nothing from the search pages before it is shown).` }],
     tools: [{ type: "browser_search" }], tool_choice: "required"
-  });
+  }, signal);
   let text = String(data?.choices?.[0]?.message?.content || "");
   const at = text.lastIndexOf("=== ANSWER ===");
   if (at >= 0) text = text.slice(at + "=== ANSWER ===".length);
@@ -127,22 +133,26 @@ async function groqSearch(p, system, user, maxTokens) {
  * Asks with a web search. → { text, sources: [{ n, url, title, domain, trust }], queries, preset, by }
  * Throws { noWeb: true } when no preset can search. Sources: from Google when it gives them, else the AI's own list.
  */
-export async function askWeb(system, user, maxTokens = 3000, { onTry } = {}) {
+export async function askWeb(system, user, maxTokens = 3000, { onTry, control = null } = {}) {
   const order = await webOrder();
   if (!order.length) throw new AiError("no-web", { noWeb: true });
   const errors = []; let allLimit = true;
-  for (const p of order) {
+  for (const [i, p] of order.entries()) {
+    if (control?.cancelled) throw new AiError("cancelled", { cancelled: true });
+    const sig = control ? (control.ctrl = new AbortController()).signal : null;
+    if (control) { control.preset = p; control.startedAt = Date.now(); control.left = order.length - i - 1; control.onTry?.(p, control); }
     onTry?.(p);
     try {
       let r;
-      const once = () => (GEMINI.test(p.baseUrl) ? geminiSearch(p, system, user, maxTokens) : groqSearch(p, system, user, maxTokens));
+      const once = () => (GEMINI.test(p.baseUrl) ? geminiSearch(p, system, user, maxTokens, sig) : groqSearch(p, system, user, maxTokens, sig));
       try { r = await once(); } catch (e) { if (!e.busy) throw e; await new Promise((ok) => setTimeout(ok, 3500)); r = await once(); }
       const clean = stripThinking(r.text);
       if (!clean) throw new AiError("empty");
       await presets.updatePreset(p.id, { uses: (p.uses || 0) + 1, lastUsedAt: Date.now(), webLimitAt: null });
       return finish(r, clean, p);
     } catch (e) {
-      errors.push(`${p.name}: ${e.message}${e.status ? ` (HTTP ${e.status})` : ""}`);
+      if (control?.cancelled) throw new AiError("cancelled", { cancelled: true });
+      errors.push(`${p.name}: ${e.skipped ? "skipped (took too long)" : e.message}${e.status ? ` (HTTP ${e.status})` : ""}`);
       if (e.limit) await presets.updatePreset(p.id, { webLimitAt: Date.now() }); else allLimit = false;
     }
   }

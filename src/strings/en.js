@@ -772,6 +772,7 @@ export default {
       custom: "Any OpenAI-compatible service: the address up to /v1 (the app adds /chat/completions)."
     },
     thinking: "Thinking…",
+    thinkingWith: "{name} is writing… {s} s", slow: "Some AIs think for a long time before they write. You can wait, or ask your next AI preset instead.", stop: "Stop", askNext: "Ask the next AI",
     generating: "Writing questions…",
     switched: "Switched to {name}",
     byPreset: "By {name}",
@@ -1200,6 +1201,7 @@ export default {
     title: "Do the next steps with AI",
     hint: "Made only when you tap. AI looks the facts up on trusted websites; you check everything before it is saved.",
     kind: { facts: "Make a fact sheet", questions: "Make practice questions", cards: "Make flashcards", revise: "Practise the wrong ones again" },
+    searchingWeb: "Looking up trusted sources on the web…",
     searching: "Looking up trusted sources on the web with {name}…",
     checking: "A second AI pass is answering each question on its own…",
     noWeb: "Your AI presets can’t search the web. A web search needs a Google Gemini preset, or a Groq preset with an openai/gpt-oss model (Settings → AI). You can still make it from the AI’s own knowledge, but it won’t be checked against any website.",

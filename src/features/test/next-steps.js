@@ -16,12 +16,12 @@ import * as store from "../../data/store.js";
 import * as mut from "../../data/mutations.js";
 import * as tests from "../../data/tests.js";
 import * as presets from "../../ai/presets.js";
-import { ask, parseJsonLoose } from "../../ai/client.js";
+import { ask, parseJsonLoose, aiControl } from "../../ai/client.js";
 import { askWeb, webPreset, domainOf, trustOf } from "../../ai/web.js";
 import { flagChip, answerRef } from "../ai/flag-ui.js";
 import * as P from "../../ai/prompts.js";
 import { applyAnswerCheck } from "../../pdf/pdf-tools.js";
-import { ensureAi, errorText } from "../ai/ai-ui.js";
+import { ensureAi, errorText, waitingBox, paintWaiting, watchWaiting } from "../ai/ai-ui.js";
 import { openStartTest } from "./start-sheet.js";
 
 const FLAG_KIND = { facts: "factSheet", questions: "questions", cards: "cards" }; // what a 🚩 counts as
@@ -106,7 +106,10 @@ export async function runStep(a, step) {
   const wp = await webPreset();
 
   const start = async (web) => {
-    openSheet(html`${head}<p class="sheet-status">${web ? t("ns.searching", { name: wp?.name || "" }) : t("ai.thinking")}</p>`, {}, { label: title });
+    const control = aiControl(() => paintWaiting(box, control));
+    const box = openSheet(html`${head}${web ? html`<p class="hint center">🌐 ${t("ns.searchingWeb")}</p>` : ""}${waitingBox()}`, {
+      skip: () => control.skip(), stop: () => { control.cancel(); closeSheet(); } }, { label: title });
+    watchWaiting(box, () => control);
     const lang = await langOf();
     const n = step.kind === "questions" ? 10 : 12;
     const task = step.kind === "facts" ? P.inLang(P.factSheetTask({ step: step.text, ...ctx, web }), lang)
@@ -115,10 +118,10 @@ export async function runStep(a, step) {
     const max = lang === "en" ? 4000 : 8000;
     let r;
     try {
-      if (web) r = await askWeb(system, task, max, { onTry: (p) => { const el = document.querySelector("#sheetRoot .sheet-status"); if (el && isSheetOpen()) el.textContent = t("ns.searching", { name: p.name || p.model || "" }); } });
-      else { const x = await ask(system, task, max); r = { text: x.text, sources: [], by: x.preset?.model || x.preset?.name || "", preset: x.preset }; }
+      if (web) r = await askWeb(system, task, max, { control });
+      else { const x = await ask(system, task, max, { control }); r = { text: x.text, sources: [], by: x.preset?.model || x.preset?.name || "", preset: x.preset }; }
     } catch (e) {
-      if (!isSheetOpen()) return;
+      if (!isSheetOpen() || e.cancelled || !box.isConnected) return;
       if (e.noWeb) return noWebSheet();
       // A failed web search can still be done from the AI's own knowledge (normal answers have their own limits).
       openSheet(html`${head}${web && e.limit ? html`<p class="hint">${t("ns.webLimit")}</p>` : ""}<p class="warn-box pre">${errorText(e)}</p><div class="sheet-actions">
@@ -127,7 +130,7 @@ export async function runStep(a, step) {
         <button type="button" class="btn" data-action="again">${t("ai.tryAgain")}</button></div>`, { close: () => closeSheet(), again: () => start(web), own: () => start(false) }, { label: title });
       return;
     }
-    if (!isSheetOpen()) return;
+    if (!isSheetOpen() || !box.isConnected) return;
     r.web = web;
     r.fref = answerRef(FLAG_KIND[step.kind] || "answer");
     if (step.kind === "facts") return showFacts(r);

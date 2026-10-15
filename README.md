@@ -169,6 +169,7 @@ and [`docs/feature-check.md`](docs/feature-check.md) for where every old-app fea
 | 1.3 | Up to 20 exam countdowns, with a choice of which and how Today shows them |
 | 1.6 | Automatic Drive backup without sign-in, through your own Google Apps Script (docs/apps-script); background backup on installed app |
 | 1.5 | How to use Lakshyam: illustrated demo + PDF (English, മലയാളം) in Settings |
+| 1.21.1 | While an AI writes: its name and seconds waited; after 15 s "Ask the next AI" / "Stop" (sheets, test analysis, next steps); Gemma on Google's API asked to think less (falls back if refused) |
 | 1.21 | 🚩 Flag under everything an AI made; flags counted per AI (Settings → AI → AI flags, and on each preset); one Hide / Show button for the test analysis block; Gemma's planning no longer shown in web answers; sheet buttons sit flush at the bottom |
 | 1.20.1 | Web search tries every key that can search (a key that hit Google's search limit is tried last for an hour); the error names the limit Google reports; "Use the AI's own knowledge" offered when the search fails |
 | 1.20 | Next steps of a test's AI analysis done in the app on request: fact sheet, practice questions and flashcards from trusted web sources (Gemini / Groq gpt-oss web search), with sources marked; Notes show the chosen syllabus by default, with All syllabi |

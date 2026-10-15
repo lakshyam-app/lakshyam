@@ -39,3 +39,12 @@ test("fact sheet: anything before the first ## section is dropped", () => {
   assert.equal(dropPreamble("## 1. A\n- x"), "## 1. A\n- x");
   assert.equal(dropPreamble("No sections here"), "No sections here");
 });
+
+test("Gemma on Google's API is asked to think less (answers come faster); other models are not", async () => {
+  const { buildRequest } = await import("../src/ai/client.js");
+  const g = { baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai", model: "gemma-4-31b-it", apiKey: "k" };
+  assert.equal(buildRequest(g, "s", "u").body.reasoning_effort, "minimal");
+  assert.equal(buildRequest({ ...g, noEffort: true }, "s", "u").body.reasoning_effort, undefined);
+  assert.equal(buildRequest({ ...g, model: "gemini-flash-latest" }, "s", "u").body.reasoning_effort, undefined);
+  assert.equal(buildRequest({ ...g, baseUrl: "https://api.groq.com/openai/v1" }, "s", "u").body.reasoning_effort, undefined);
+});

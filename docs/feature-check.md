@@ -267,3 +267,10 @@ Today screen with Quick 10 and daily goal · exam countdown · timetable (any da
 | Web answers from Gemma (Gemini API): its planning ("thought" parts) is left out, thinking is turned down; a fact sheet starts at its first section | Next steps | ✅ |
 | Sheets with a sticky button row: the row sits on the bottom edge (no text showing under it) | All sheets | ✅ |
 
+## Changed in 1.21.1
+
+| Change | Where | Status |
+|---|---|---|
+| While an AI is writing: "<preset> is writing… n s"; after 15 s "Ask the next AI" (stops waiting for that one and asks your next preset) and "Stop" | Every AI answer sheet, test analysis, next steps | ✅ |
+| Gemma models on Google's API are asked to think less (reasoning_effort minimal), so answers come in seconds instead of minutes; a model that refuses the setting is asked again without it and never sent it again | All AI answers | ✅ |
+
