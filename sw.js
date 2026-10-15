@@ -4,7 +4,7 @@
      (Other apps on the same site keep their caches.)
    - A new version waits until the user taps "Refresh" in the app. */
 
-const VERSION = "1.20.1";
+const VERSION = "1.21.0";
 // Background backup through your own Google script (see src/cloud/sw-backup.js).
 importScripts("./src/cloud/sw-backup.js");
 // Reminders: shows the reminder the app planned when your reminder script wakes it (see src/cloud/sw-notify.js).
@@ -28,6 +28,7 @@ const SHELL_FILES = [
   "./icons/badge-96.png",
   "./styles/app.css",
   "./src/ai/client.js",
+  "./src/ai/flags.js",
   "./src/ai/pdf-prompts.js",
   "./src/ai/presets.js",
   "./src/ai/prompts.js",
@@ -101,6 +102,7 @@ const SHELL_FILES = [
   "./src/features/ai/ai-settings.js",
   "./src/features/ai/ai-ui.js",
   "./src/features/ai/content.js",
+  "./src/features/ai/flag-ui.js",
   "./src/features/diary/diary.js",
   "./src/features/guide/content.js",
   "./src/features/guide/guide.js",

@@ -9,6 +9,7 @@ import * as store from "../../data/store.js";
 import { formatDuration } from "../../domain/testing.js";
 import { can } from "../../core/entitlements.js";
 import { speakButtonOn } from "./speak.js";
+import { flagChip } from "../ai/flag-ui.js";
 
 const star = (on) => html`<svg viewBox="0 0 24 24" aria-hidden="true" class="${on ? "filled" : ""}"><path d="M12 3.8l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16.8l-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/></svg>`;
 const dots = html`<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="18.5" cy="12" r="1.3"/></svg>`;
@@ -37,6 +38,9 @@ export function questionCard(q, { showPaper = true, mode = "study", revealed = n
   // that text — an edit later drops the label), its Related facts, and your chat about it.
   const ai = state?.ai || {};
   const explBy = ai.explainBy?.model && ai.explainBy.sig === textSig(q.explanation) ? ai.explainBy.model : "";
+  // 🚩 Flag: an AI-made question (with its answer and explanation), or the AI explanation you kept.
+  const qFlag = isAi && q.aiModel?.by && mode !== "edit" ? flagChip({ ref: `q:${q.id}`, by: q.aiModel.by, kind: "question" }) : "";
+  const explFlag = explBy && mode !== "edit" ? flagChip({ ref: `expl:${q.id}:${ai.explainBy.at || ""}`, by: explBy, kind: "explain" }) : "";
   // Numbers on the header line (next to the buttons); the paper and its post on their own full-width line below.
   const meta = [
     listNo !== null ? `#${listNo}` : null,
@@ -94,15 +98,16 @@ export function questionCard(q, { showPaper = true, mode = "study", revealed = n
     ${hidden ? html`<button type="button" class="link" data-action="q-reveal">${t("question.showAnswer")}</button>` : ""}
     ${explain && !hidden ? html`<details class="explain" data-k="expl"><summary>${t("question.explanation")}</summary>
       <div class="qtext ai-answer plain">${smartText(explain)}</div>
-      ${explBy || actions ? html`<div class="extra-foot">${explBy ? html`<span class="hint made-by">🤖 ${explBy}</span>` : ""}
+      ${explBy || actions || qFlag ? html`<div class="extra-foot">${explBy ? html`<span class="hint made-by">🤖 ${explBy} ${explFlag}</span>` : qFlag ? html`<span class="hint made-by">🤖 ${q.aiModel.by} ${qFlag}</span>` : ""}
         ${actions ? html`<button type="button" class="link danger" data-action="q-clear-expl">${t("question.clearExplanation")}</button>` : ""}</div>` : ""}</details>` : ""}
+    ${qFlag && !explain && !hidden ? html`<div class="extra-foot"><span class="hint made-by">🤖 ${q.aiModel.by} ${qFlag}</span></div>` : ""}
     ${ref && !hidden ? html`<details class="explain source-line" data-k="src"><summary>📄 ${t("question.sourceLine")}</summary>
       <p class="quote">${ref.quote}</p>${ref.pdf ? html`<p class="hint">${String(ref.pdf).replace(/\.pdf$/i, "")}${ref.page ? ` · ${t("question.pageShort", { n: ref.page })}` : ""}</p>` : ""}${byLine ? html`<p class="hint made-by">${byLine}</p>` : ""}
       ${actions && ref.pdfId ? html`<button type="button" class="link" data-action="q-open-pdf" data-pdf="${ref.pdfId}" data-n="${ref.page || 1}">📖 ${t("pv.viewPage")}</button>` : ""}</details>` : ""}
     ${isAi && Array.isArray(q.sourceRef?.web) && q.sourceRef.web.length && !hidden ? html`<details class="explain source-line" data-k="web"><summary>🌐 ${t("ns.webSources")}</summary>
       <ul class="ns-src-list">${q.sourceRef.web.map((w) => html`<li><a href="${w.url}" target="_blank" rel="noopener noreferrer">${w.domain || w.url}</a> <span class="src-chip src-${w.trust || "check"}">${w.trust === "trusted" ? "✓" : w.trust === "fair" ? "≈" : "⚠"}</span></li>`)}</ul>
       ${byLine ? html`<p class="hint made-by">${byLine}</p>` : ""}</details>` : ""}
-    ${!hidden ? aiExtras(ai, actions) : ""}
+    ${!hidden ? aiExtras(ai, actions, q.id) : ""}
     ${actions && !hidden && mode !== "edit" ? aiRow(review, can("ai") && store.setting("aiOnCards", true) !== false) : ""}
   </article>`;
 }
@@ -110,16 +115,16 @@ export function questionCard(q, { showPaper = true, mode = "study", revealed = n
 const when = (at) => (at ? new Date(at).toLocaleDateString(dateLocale(), { day: "numeric", month: "short" }) : "");
 
 /** What AI wrote for this question and you kept, each in its own place: Related facts and your chat. */
-function aiExtras(ai, actions) {
+function aiExtras(ai, actions, qid) {
   const facts = ai.facts?.text ? ai.facts : null;
   const chat = Array.isArray(ai.chat) ? ai.chat : [];
   return html`${facts ? html`<details class="explain ai-extra" data-k="facts"><summary>📚 ${t("ai.facts")}</summary>
       <div class="ai-answer">${aiText(facts.text, { sections: false })}</div>
-      <div class="extra-foot"><span class="hint made-by">${[facts.by ? `🤖 ${facts.by}` : "", when(facts.at)].filter(Boolean).join(" · ")}</span>
+      <div class="extra-foot"><span class="hint made-by">${[facts.by ? `🤖 ${facts.by}` : "", when(facts.at)].filter(Boolean).join(" · ")} ${facts.by ? flagChip({ ref: `facts:${qid}:${facts.at || ""}`, by: facts.by, kind: "facts" }) : ""}</span>
         ${actions ? html`<button type="button" class="link danger" data-action="q-clear-facts">${t("ai.clearFacts")}</button>` : ""}</div></details>` : ""}
     ${chat.length ? html`<details class="explain ai-extra" data-k="chat"><summary>💬 ${t("ai.chatSaved", { n: chat.filter((m) => m.role === "user").length })}</summary>
       <div class="chat-log">${chat.map((m) => html`<div class="chat-msg ${m.role === "user" ? "me" : "ai"}">${m.role === "user"
-        ? html`<p>${m.text}</p>` : html`<div class="ai-answer">${aiText(m.text, { sections: false })}</div>${m.by ? html`<p class="hint made-by">🤖 ${m.by}</p>` : ""}`}</div>`)}</div>
+        ? html`<p>${m.text}</p>` : html`<div class="ai-answer">${aiText(m.text, { sections: false })}</div>${m.by ? html`<p class="hint made-by">🤖 ${m.by} ${flagChip({ ref: `chat:${qid}:${m.at}`, by: m.by, kind: "chat" })}</p>` : ""}`}</div>`)}</div>
       ${actions ? html`<div class="extra-foot"><button type="button" class="link" data-action="q-ai" data-mode="chat">💬 ${t("ai.chatContinue")}</button></div>` : ""}</details>` : ""}`;
 }
 

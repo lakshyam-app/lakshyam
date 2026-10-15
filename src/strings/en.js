@@ -1187,6 +1187,14 @@ export default {
     noVoice: "This phone can’t read aloud.",
     noMlVoice: "No Malayalam voice on this phone: install it in the phone’s text-to-speech settings."
   },
+  flag: {
+    flag: "Flag", flagged: "Flagged", hint: "Flag this if the AI got it wrong. The app counts flags for each AI so you can see which makes more mistakes. Tap again to take it back.",
+    thisAi: "this AI", added: "🚩 Flagged. {name} now has {n} flag(s).", removed: "Flag taken back.",
+    title: "AI flags", about: "Each 🚩 you tap on something an AI made counts against that AI. The AI with the most flags is at the top.",
+    none: "No flags yet. Tap 🚩 Flag under anything an AI made that was wrong.", total: "{n} flag(s) in all.", last: "last {date}",
+    clear: "Clear all flags", clearTitle: "Clear all AI flags?", cleared: "Flags cleared.", open: "🚩 AI flags", count: "🚩 {n}",
+    kind: { answer: "Answer", explain: "Explanation", facts: "Related facts", chat: "Chat", similar: "Similar questions", strategy: "Strategy", tricks: "Memory tricks", analysis: "Test analysis", factSheet: "Fact sheet", questions: "Questions", cards: "Flashcards", question: "AI question", card: "Flashcard", pdfNotes: "PDF notes", plan: "Study plan" }
+  },
   ns: {
     factSheet: "Fact sheet",
     title: "Do the next steps with AI",
@@ -1212,6 +1220,7 @@ export default {
     webSources: "Web sources"
   },
   analysis: {
+    hide: "Hide", show: "Show analysis", hideToQs: "Hide analysis — go to the questions",
     title: "AI analysis of this test",
     writing: "Writing the analysis… you can keep reviewing.",
     hint: "How it went, where marks were lost, the facts to fix and what to do next. Kept with this test.",

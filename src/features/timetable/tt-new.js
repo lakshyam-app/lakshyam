@@ -23,6 +23,7 @@ import { finishedTests } from "../progress/data.js";
 import { blockTitle, icon, fmt, fmtDuration, fmtDate } from "./common.js";
 import { scheduleLine } from "./timetable.js";
 import { clearBestSlot } from "../insights/focus-view.js";
+import { flagChip } from "../ai/flag-ui.js";
 
 const PATTERNS = ["same", "5-2", "6-1", "alt"];
 let form = null; // kept while the app is open, so a redraw never loses what you entered
@@ -289,7 +290,7 @@ export const ttReviewScreen = {
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>${t("tt.title")}</span></button></div>
       <h1>${t("tt.reviewTitle")}</h1><p class="hint">${x.name} · ${fmtDate(x.startDate)} – ${fmtDate(x.endDate)} · ${scheduleLine(x)}</p></header>
       ${x.status !== "draft" ? html`<p class="ok-box">${t("tt.alreadyUsing")}</p>` : html`<p class="warn-box">${t(x.source === "ai" ? "tt.reviewAi" : "tt.reviewAuto")}</p>`}
-      ${x.aiNotes ? html`<p class="ai-note">🤖 ${x.aiNotes}${x.aiBy ? html` <span class="hint">(${x.aiBy})</span>` : ""}</p>` : ""}
+      ${x.aiNotes ? html`<p class="ai-note">🤖 ${x.aiNotes}${x.aiBy ? html` <span class="hint">(${x.aiBy})</span> ${flagChip({ ref: `plan:${x.id}:${x.aiAt || x.createdAt || ""}`, by: x.aiBy, kind: "plan" })}` : ""}</p>` : ""}
       ${x.aiIssues?.length ? html`<p class="hint">${t("tt.aiFixed", { list: x.aiIssues.map((k) => t(`tt.aiIssue.${k}`)).join(", ") })}</p>` : ""}
       ${issues.length ? html`<p class="warn-box">${t("tt.issues", { n: issues.length })}</p>` : ""}
       <h3 class="rows-head">${t("tt.firstWeek")}</h3>

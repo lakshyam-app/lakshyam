@@ -25,6 +25,7 @@ import { can } from "../../core/entitlements.js";
 import { viewNote, editNote, viewText } from "../notes/note-editor.js";
 import { listPdfs } from "../../pdf/pdf-store.js";
 import { madeByOf } from "../../domain/made-by.js";
+import { flagChip } from "./flag-ui.js";
 
 const inScope = (x, scope) => (scope.topicId ? x.topicId === scope.topicId : scope.subjectId ? x.subjectId === scope.subjectId : true);
 
@@ -212,7 +213,7 @@ export function renderCardsPanel(host, { syllabus, scope, topic = null }) {
       : html`<div class="fc-list">${all.filter(pass).map((c) => {
           const s = stateOf(c);
           return html`<article class="qcard" data-cid="${c.id}">
-            <header class="qcard-meta"><span>${c.sourceRef?.pyq ? `⭐ ${t("pdf.pyqArea")} · ` : ""}${t(`ai.fcStatus.${s.status}`)}${s.dueAt && s.status === "known" ? ` · ${t("ai.fcNext", { date: new Date(s.dueAt).toLocaleDateString(dateLocale()) })}` : ""}${c.aiModel?.by ? ` · 🤖 ${c.aiModel.by}` : ""}</span></header>
+            <header class="qcard-meta"><span>${c.sourceRef?.pyq ? `⭐ ${t("pdf.pyqArea")} · ` : ""}${t(`ai.fcStatus.${s.status}`)}${s.dueAt && s.status === "known" ? ` · ${t("ai.fcNext", { date: new Date(s.dueAt).toLocaleDateString(dateLocale()) })}` : ""}${c.aiModel?.by ? ` · 🤖 ${c.aiModel.by}` : ""}</span>${c.aiModel?.by ? flagChip({ ref: `card:${c.id}`, by: c.aiModel.by, kind: "card" }) : ""}</header>
             <div class="qtext"><strong>Q:</strong> ${richText(c.front)}</div><div class="qtext"><strong>A:</strong> ${richText(c.back)}</div>
             <div class="row-actions"><button type="button" class="link" data-action="fc-set" data-v="known">✓ ${t("ai.fcKnow")}</button>
               <button type="button" class="link" data-action="fc-set" data-v="again">↺ ${t("ai.fcAgain")}</button>
@@ -263,11 +264,11 @@ export function renderPdfNotesPanel(host, { scope, topic = null }) {
   const card = (n) => {
     const tp = store.topic(n.target.topicId);
     return html`<article class="note-card pdf-note" data-nid="${n.id}">
-      <header class="qcard-meta"><span>📄 ${n.label || "PDF"}${n.target.pages ? ` · ${t("ai.pnPages", { pages: n.target.pages })}` : ""} · ${when(n)}${!scope.topicId && tp ? ` · ${nameLabel(tp)}` : ""}${n.aiModels?.length ? ` · 🤖 ${n.aiModels.join(", ")}` : ""}</span></header>
+      <header class="qcard-meta"><span>📄 ${n.label || "PDF"}${n.target.pages ? ` · ${t("ai.pnPages", { pages: n.target.pages })}` : ""} · ${when(n)}${!scope.topicId && tp ? ` · ${nameLabel(tp)}` : ""}${n.aiModels?.length ? ` · 🤖 ${n.aiModels.join(", ")}` : ""}</span>${n.aiModels?.length ? flagChip({ ref: `pn:${n.id}`, by: n.aiModels[0], kind: "pdfNotes" }) : ""}</header>
       <div class="note-body-btn" data-action="pn-read"><div class="qtext note-body ai-answer ${n.text.length > 600 || n.text.split("\n").length > 10 ? "is-long" : ""}">${noteText(n.text)}</div></div>
       ${n.tricks?.text ? html`<details class="explain ai-extra note-tricks" data-k="tricks"><summary>🧠 ${t("ai.pnTricks")}</summary>
         <div class="ai-answer">${aiText(n.tricks.text, { sections: false })}</div>
-        <div class="extra-foot"><span class="hint made-by">${[n.tricks.by ? `🤖 ${n.tricks.by}` : "", n.tricks.at ? new Date(n.tricks.at).toLocaleDateString(dateLocale()) : ""].filter(Boolean).join(" · ")}</span>
+        <div class="extra-foot"><span class="hint made-by">${[n.tricks.by ? `🤖 ${n.tricks.by}` : "", n.tricks.at ? new Date(n.tricks.at).toLocaleDateString(dateLocale()) : ""].filter(Boolean).join(" · ")} ${n.tricks.by ? flagChip({ ref: `tricks:${n.id}:${n.tricks.at || ""}`, by: n.tricks.by, kind: "tricks" }) : ""}</span>
           ${can("ai") ? html`<button type="button" class="link" data-action="pn-tricks">${t("ai.pnTricksAgain")}</button>` : ""}
           <button type="button" class="link danger" data-action="pn-tricks-clear">${t("common.clear")}</button></div></details>` : ""}
       <div class="row-actions">

@@ -15,9 +15,11 @@ import * as presets from "../../ai/presets.js";
 import { ask } from "../../ai/client.js";
 import * as P from "../../ai/prompts.js";
 import { errorText } from "../ai/ai-ui.js";
+import { flagChip } from "../ai/flag-ui.js";
 
 const MIN_ANSWERS = 3;   // a 1–2 question test (e.g. from a reminder) isn't worth an analysis
 const running = new Map(); // attempt id → { error } while writing (error set if it failed)
+const hiddenIds = new Set(); // tests whose analysis you folded away (while the app is open)
 
 export const autoAnalysisOn = () => store.setting("aiAutoAnalysis", true) !== false;
 export const analysisState = (id) => running.get(id) || null;
@@ -69,15 +71,21 @@ export async function analysisBlock(a) {
   if (st && !st.error) return html`<section class="analysis-card"><h2 class="section-title">🤖 ${t("analysis.title")}</h2><p class="sheet-status">${t("analysis.writing")}</p></section>`;
   if (a.analysis?.text) {
     const an = a.analysis;
-    return html`<details class="analysis-card" open><summary><h2 class="section-title">🤖 ${t("analysis.title")}</h2></summary>
+    const shut = hiddenIds.has(a.id);
+    // One button folds the whole block (analysis and next steps) away, so the questions below are easy to read.
+    return html`<section class="analysis-card${shut ? " is-shut" : ""}" data-an-card>
+      <div class="an-head"><h2 class="section-title">🤖 ${t("analysis.title")}</h2>
+        <button type="button" class="an-toggle" data-action="an-toggle" aria-expanded="${String(!shut)}">${shut ? `▼ ${t("analysis.show")}` : `▲ ${t("analysis.hide")}`}</button></div>
+      <div class="an-body" ${shut ? "hidden" : ""}>
       <div class="ai-answer">${aiText(stripTags(an.text))}</div>
-      <p class="hint made-by">${[an.by ? `🤖 ${an.by}` : "", new Date(an.at).toLocaleString(dateLocale(), { dateStyle: "medium", timeStyle: "short" })].filter(Boolean).join(" · ")} · ${t("ai.verify")}</p>
+      <p class="hint made-by">${[an.by ? `🤖 ${an.by}` : "", new Date(an.at).toLocaleString(dateLocale(), { dateStyle: "medium", timeStyle: "short" })].filter(Boolean).join(" · ")} · ${t("ai.verify")} ${an.by ? flagChip({ ref: `an:${a.id}:${an.at}`, by: an.by, kind: "analysis" }) : ""}</p>
       ${st?.error ? html`<p class="warn-box pre">${st.error}</p>` : ""}
       <div class="row-actions">
         <button type="button" class="link" data-action="an-copy">${t("question.copy")}</button>
         ${can("ai") ? html`<button type="button" class="link" data-action="an-make">${t("analysis.again")}</button>` : ""}
         <button type="button" class="link danger" data-action="an-clear">${t("common.clear")}</button>
-      </div>${can("ai") ? stepsBlock(a) : ""}</details>`;
+      </div>${can("ai") ? stepsBlock(a) : ""}
+      <button type="button" class="btn btn-quiet wide an-fold" data-action="an-toggle" data-from="end">▲ ${t("analysis.hideToQs")}</button></div></section>`;
   }
   if (!can("ai") || !canAnalyse(a)) return "";
   return html`<section class="analysis-card"><h2 class="section-title">🤖 ${t("analysis.title")}</h2>
@@ -89,6 +97,19 @@ export function analysisHandlers(id) {
   const att = () => store.byId("attempts", id);
   return {
     "an-make": () => makeAnalysis(att()),
+    "an-toggle": (el) => {
+      const card = el.closest("[data-an-card]");
+      if (!card) return;
+      const shut = !hiddenIds.has(id);
+      if (shut) hiddenIds.add(id); else hiddenIds.delete(id);
+      card.classList.toggle("is-shut", shut);
+      card.querySelector(".an-body").hidden = shut;
+      const b = card.querySelector(".an-head .an-toggle");
+      b.textContent = shut ? `▼ ${t("analysis.show")}` : `▲ ${t("analysis.hide")}`;
+      b.setAttribute("aria-expanded", String(!shut));
+      // Folded from the bottom of a long analysis: keep the questions in view (they now start just below).
+      if (shut && el.dataset.from === "end") card.scrollIntoView({ block: "start", behavior: "instant" });
+    },
     "ns-do": (el) => { const a = att(); runStep(a, stepsOf(a)[Number(el.dataset.i)]); },
     "an-copy": async () => { try { await navigator.clipboard.writeText(stripTags(att()?.analysis?.text || "")); toast(t("common.copied")); } catch { toast(t("common.copyFailed")); } },
     "an-clear": () => runFlow(async () => {

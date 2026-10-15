@@ -18,10 +18,21 @@ import * as tests from "../../data/tests.js";
 import * as presets from "../../ai/presets.js";
 import { ask, parseJsonLoose } from "../../ai/client.js";
 import { askWeb, webPreset, domainOf, trustOf } from "../../ai/web.js";
+import { flagChip, answerRef } from "../ai/flag-ui.js";
 import * as P from "../../ai/prompts.js";
 import { applyAnswerCheck } from "../../pdf/pdf-tools.js";
 import { ensureAi, errorText } from "../ai/ai-ui.js";
 import { openStartTest } from "./start-sheet.js";
+
+const FLAG_KIND = { facts: "factSheet", questions: "questions", cards: "cards" }; // what a 🚩 counts as
+
+/** A fact sheet starts with its first "## " section (the AI is told: no introduction). Anything before it
+    is the AI talking to itself (some models write out their plan) and is dropped. */
+export function dropPreamble(text) {
+  const s = String(text || "").trim();
+  const at = s.search(/^##\s/m);
+  return at > 0 ? s.slice(at).trim() : s;
+}
 
 const TAG = /\[(FACTS|QUESTIONS|CARDS|REVISE)\]\s*/i;
 const KIND = { FACTS: "facts", QUESTIONS: "questions", CARDS: "cards", REVISE: "revise" };
@@ -105,7 +116,7 @@ export async function runStep(a, step) {
     let r;
     try {
       if (web) r = await askWeb(system, task, max, { onTry: (p) => { const el = document.querySelector("#sheetRoot .sheet-status"); if (el && isSheetOpen()) el.textContent = t("ns.searching", { name: p.name || p.model || "" }); } });
-      else { const x = await ask(system, task, max); r = { text: x.text, sources: [], by: x.preset?.model || x.preset?.name || "" }; }
+      else { const x = await ask(system, task, max); r = { text: x.text, sources: [], by: x.preset?.model || x.preset?.name || "", preset: x.preset }; }
     } catch (e) {
       if (!isSheetOpen()) return;
       if (e.noWeb) return noWebSheet();
@@ -118,6 +129,7 @@ export async function runStep(a, step) {
     }
     if (!isSheetOpen()) return;
     r.web = web;
+    r.fref = answerRef(FLAG_KIND[step.kind] || "answer");
     if (step.kind === "facts") return showFacts(r);
     let raw = [];
     try { raw = parseJsonLoose(r.text); } catch { raw = []; }
@@ -130,11 +142,11 @@ export async function runStep(a, step) {
     <div class="sheet-actions"><button type="button" class="btn btn-quiet" data-action="close">${t("common.close")}</button>
       <button type="button" class="btn" data-action="own">${t("ns.useOwn")}</button></div>`, { close: () => closeSheet(), own: () => start(false) }, { label: title });
 
-  const madeLine = (r) => html`<p class="made-with">🤖 ${r.by}${r.web ? ` · 🌐 ${t("ns.fromWeb")}` : ` · ⚠ ${t("ns.notWeb")}`}</p>`;
+  const madeLine = (r) => html`<p class="made-with">🤖 ${r.by}${r.web ? ` · 🌐 ${t("ns.fromWeb")}` : ` · ⚠ ${t("ns.notWeb")}`} ${flagChip({ ref: r.fref, by: r.by, kind: FLAG_KIND[step.kind], presetId: r.preset?.id || "" })}</p>`;
   const topicFor = (key) => ctx.topics.find((x) => x.key === key) || ctx.topics[0];
 
   function showFacts(r) {
-    const body = r.text.trim();
+    const body = dropPreamble(r.text);
     let saved = false;
     const draw = () => {
       openSheet(html`${head}${madeLine(r)}<div class="ai-answer">${aiText(body)}</div>${sourcesList(r.sources)}

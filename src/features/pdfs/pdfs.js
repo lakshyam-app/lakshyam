@@ -30,6 +30,7 @@ import { ensureAi, errorText } from "../ai/ai-ui.js";
 import { strategyFor, patternFrom } from "../../data/strategy.js";
 import { pdfFile, inDrive, onPhone, needsSignIn, ensureSignedIn } from "../../pdf/pdf-file.js";
 import { storageBox, storageHandlers, deleteChoice, cloudErrorText } from "./pdf-cloud.js";
+import { flagChip, answerRef } from "../ai/flag-ui.js";
 
 const PDF_SCREENS = ["pdfs", "pdf", "pdf-page", "pdf-make"];
 const KINDS = ["questions", "cards", "note", "read"];
@@ -669,10 +670,13 @@ function stoppedNote(r) {
 }
 
 /** "🤖 Made with: … · checked by …" after making (from the models that answered). */
-function madeWithLine(r) {
+const flagRefs = new WeakMap(); // one 🚩 per result (kept while it is redrawn)
+function madeWithLine(r, kind = "questions") {
   const w = countsLine(r?.models?.write); const c = countsLine(r?.models?.check);
   if (!w) return "";
-  return html`<p class="made-with">🤖 ${t("ai.madeWith", { list: w })}${c ? html` · ${t("ai.checkedByList", { list: c })}` : ""}</p>`;
+  if (!flagRefs.has(r)) flagRefs.set(r, answerRef(kind));
+  const first = Object.entries(r.models.write).sort((a, b) => b[1] - a[1])[0]?.[0] || "";
+  return html`<p class="made-with">🤖 ${t("ai.madeWith", { list: w })}${c ? html` · ${t("ai.checkedByList", { list: c })}` : ""} ${first ? flagChip({ ref: flagRefs.get(r), by: first, kind }) : ""}</p>`;
 }
 
 function reviewView(rec, job, handlers) {
@@ -694,7 +698,7 @@ function reviewView(rec, job, handlers) {
       toast(t("pdf.noteSavedTab", { topic: nameLabel(topic) }));
       go("topic", { id: topic.id, mode: "notes" });
     };
-    return { body: html`${madeWithLine(r)}<p class="hint">${t("pdf.noteReview", { to: targetLabel(tg) })}${r.tot.dropped ? ` ${t("pdf.noteDropped", { n: r.tot.dropped })}` : ""}${r.tot.repeats ? ` ${t("pdf.noteRepeats", { n: r.tot.repeats })}` : ""}</p>
+    return { body: html`${madeWithLine(r, "pdfNotes")}<p class="hint">${t("pdf.noteReview", { to: targetLabel(tg) })}${r.tot.dropped ? ` ${t("pdf.noteDropped", { n: r.tot.dropped })}` : ""}${r.tot.repeats ? ` ${t("pdf.noteRepeats", { n: r.tot.repeats })}` : ""}</p>
       ${r.left ? html`<p class="warn-box">${t("pdf.noteLeft", { a: r.planned?.[0] ?? cfg.from, b: r.planned?.[1] ?? cfg.to, c: r.left[0], d: r.left[1], max: jobsApi.NOTE_MAX_SECTIONS })}</p>` : ""}
       ${stoppedNote(r)}
       <textarea class="field page-text" id="noteText" rows="16" aria-label="${t("pdf.kind.note")}">${job.noteText}</textarea>
@@ -737,7 +741,7 @@ function reviewView(rec, job, handlers) {
     ${source(it)}
     ${!isCards && it.explanation ? html`<p class="hint">${richText(it.explanation)}</p>` : ""}
   </article>`);
-  return { body: html`${madeWithLine(r)}<p class="hint">${t(isCards ? "pdf.reviewCards" : "pdf.reviewQuestions", { n: items.length, to: targetLabel(tg) })}${dropped ? ` ${t("pdf.droppedN", { n: dropped, bad: r.tot.badQuote })}` : ""}</p>
+  return { body: html`${madeWithLine(r, isCards ? "cards" : "questions")}<p class="hint">${t(isCards ? "pdf.reviewCards" : "pdf.reviewQuestions", { n: items.length, to: targetLabel(tg) })}${dropped ? ` ${t("pdf.droppedN", { n: dropped, bad: r.tot.badQuote })}` : ""}</p>
     <p class="warn-box">${t("pdf.reviewTick")}</p>
     ${stoppedNote(r)}
     ${list}

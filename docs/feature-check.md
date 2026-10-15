@@ -256,3 +256,14 @@ Today screen with Quick 10 and daily goal · exam countdown · timetable (any da
 | Change | Where | Status |
 |---|---|---|
 | Next steps' web search tries each preset that can search in turn (your 🤖 one first). A key whose web-search limit was hit is tried last for an hour; this is kept apart from its normal limit, so normal AI work is not moved off that key. The error lists every key tried with the limit Google names (e.g. its free-tier search limit and size), and offers "Use the AI's own knowledge" | Test result → Do the next steps with AI | ✅ |
+
+## Added in 1.21
+
+| Feature | Where | Status |
+|---|---|---|
+| 🚩 Flag: under each thing an AI made — answers in the AI sheet (explain, facts, tricks, strategy, coach, weak spots…), saved explanation / Related facts / chat replies on a question, AI-made questions, flashcards (list), PDF notes and their memory tricks, saved strategy, test analysis, next steps (fact sheet, questions, flashcards), PDF question/card/note reviews, AI study plan. Tap again to take the flag back. Kept in your backups (no keys) | Everywhere AI shows its model name | ✅ |
+| Flag counts per AI: Settings → AI → 🚩 AI flags (most flagged first, what for, when); 🚩 n on each preset row and in the 🤖 switch at the top; Clear all (with Undo) | Settings → AI | ✅ |
+| Test analysis: one ▲ Hide / ▼ Show button for the whole block (analysis and next steps), and "Hide analysis — go to the questions" at its end; stays folded while you review | Test result | ✅ |
+| Web answers from Gemma (Gemini API): its planning ("thought" parts) is left out, thinking is turned down; a fact sheet starts at its first section | Next steps | ✅ |
+| Sheets with a sticky button row: the row sits on the bottom edge (no text showing under it) | All sheets | ✅ |
+

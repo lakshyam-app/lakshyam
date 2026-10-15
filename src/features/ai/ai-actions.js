@@ -19,6 +19,7 @@ import * as presets from "../../ai/presets.js";
 import { ask, parseJsonLoose } from "../../ai/client.js";
 import * as P from "../../ai/prompts.js";
 import { ensureAi, askInSheet, errorText } from "./ai-ui.js";
+import { flagChip, answerRef } from "./flag-ui.js";
 import { topicFacts, questionLines } from "../../domain/topic-pattern.js";
 import { saveStrategy, strategyFor, patternFrom, clearStrategy, restoreStrategy, noteHasStrategy } from "../../data/strategy.js";
 import { can } from "../../core/entitlements.js";
@@ -54,6 +55,7 @@ export async function aiHelp(q, { selected, mode: preset = null, onSaved = null 
   const kind = mode === "facts" || mode === "note" ? "facts" : "explain";
   let model = "";
   await askInSheet({
+    flagKind: kind,
     title: kind === "facts" ? `📚 ${t("ai.facts")}` : mistake ? t("ai.explainMistake") : t("ai.explain"), sub: q.text.slice(0, 100),
     system: (l) => P.tutorSystem(l), user: (l) => P.inLang(kind === "explain" ? P.tasks.explain(pq, selected) : P.tasks.facts(pq), l),
     onModel: (m) => { model = m || ""; },
@@ -95,7 +97,7 @@ export async function questionChat(q, { onSaved = null } = {}) {
     mine = openSheet(html`<h2>💬 ${t("ai.chat")}</h2>
       <p class="hint">${q.text.slice(0, 140)}</p>
       <div class="chat-log" id="chatLog">${msgs.length ? msgs.map((m) => html`<div class="chat-msg ${m.role === "user" ? "me" : "ai"}">
-          ${m.role === "user" ? html`<p>${m.text}</p>` : html`<div class="ai-answer">${aiText(m.text, { sections: false })}</div>${m.by ? html`<p class="hint">🤖 ${m.by}</p>` : ""}`}</div>`)
+          ${m.role === "user" ? html`<p>${m.text}</p>` : html`<div class="ai-answer">${aiText(m.text, { sections: false })}</div>${m.by ? html`<p class="hint">🤖 ${m.by} ${flagChip({ ref: `chat:${q.id}:${m.at}`, by: m.by, kind: "chat" })}</p>` : ""}`}</div>`)
         : html`<p class="hint">${t("ai.chatEmpty")}</p>`}
         ${status ? html`<p class="chat-status">${status}</p>` : ""}</div>
       <p class="hint">${t("ai.verify")}</p>
@@ -147,6 +149,7 @@ export async function noteTricks(note, { onSaved = null } = {}) {
   if (!note?.text || !(await ensureAi())) return;
   let model = "";
   await askInSheet({
+    flagKind: "tricks",
     title: `🧠 ${t("ai.pnTricks")}`, sub: note.label || "",
     system: (l) => P.tutorSystem(l), user: (l) => P.inLang(P.noteTricksTask(note.text), l),
     maxTokens: (l) => (l === "en" ? 2000 : 4500), onModel: (m) => { model = m || ""; },
@@ -222,6 +225,7 @@ export async function generateQuestions(topic, seedQs = null) {
   }
 
   function review(items, by = null, cb = null) {
+    const fref = answerRef("questions");
     // A question the second pass answered differently (or couldn't answer) starts unticked.
     const keep = new Set(items.map((x, i) => (x.check === "disagree" || x.check === "unclear" ? -1 : i)).filter((i) => i >= 0));
     const badge = (x) => (x.check === "agree" ? html`<div class="badges"><span class="badge ok">✓ ${t("pdf.checkAgree")}</span></div>`
@@ -229,7 +233,7 @@ export async function generateQuestions(topic, seedQs = null) {
         : x.check === "unclear" ? html`<div class="badges"><span class="badge warn">⚠ ${t("ai.checkNotSure")}</span></div>` : "");
     const drawReview = () => {
       openSheet(html`<h2>${t("ai.reviewTitle")}</h2>${steps3(3)}
-        ${by ? html`<p class="made-with">🤖 ${t("ai.madeWith", { list: by })}${cb ? html` · ${t("ai.checkedByList", { list: cb })}` : ""}</p>` : ""}
+        ${by ? html`<p class="made-with">🤖 ${t("ai.madeWith", { list: by })}${cb ? html` · ${t("ai.checkedByList", { list: cb })}` : ""} ${flagChip({ ref: fref, by: String(by).split(",")[0].trim(), kind: "questions" })}</p>` : ""}
         <p class="warn-box">${t("ai.reviewNote")}</p>
         ${items.map((x, i) => html`<article class="qcard gen ${keep.has(i) ? "" : "off"}">
           <label class="switch-row"><input type="checkbox" data-i="${i}" ${keep.has(i) ? "checked" : ""}><strong>${t("ai.genQ", { n: i + 1 })}</strong></label>
@@ -282,6 +286,7 @@ export async function topicStrategy(topic) {
   const mk = markingInfo(syllabus.marking);
   const label = `${nameLabel(subject)} · ${nameLabel(topic)}`;
   await askInSheet({
+    flagKind: "strategy",
     // Kept for the question makers (AI questions, questions from a PDF) to follow this pattern (each answer, also one asked again).
     onAnswer: async (text, by) => { if (!text) return; await saveStrategy(topic.id, { text, by, lang: await lang() }); store.touch(); toast(t("ai.strategyKept")); },
     title: `🤖 ${t("ai.strategyTitle")}`, sub: `${label} · ${t("ai.strategySub", { n: total, papers: f.papers })}`,
@@ -301,7 +306,7 @@ export function viewStrategy(topic) {
   const st = topic ? strategyFor(topic.id) : null;
   if (!st) return;
   const meta = [st.at ? new Date(st.at).toLocaleDateString(dateLocale()) : "", st.by ? `🤖 ${st.by}` : "", st.from === "note" ? t("ai.strategyFromNote") : ""].filter(Boolean).join(" · ");
-  openSheet(html`<h2>🎯 ${t("ai.strategyTitle")}</h2><p class="hint">${nameLabel(topic)}${meta ? ` · ${meta}` : ""}</p>
+  openSheet(html`<h2>🎯 ${t("ai.strategyTitle")}</h2><p class="hint">${nameLabel(topic)}${meta ? ` · ${meta}` : ""} ${st.by ? flagChip({ ref: `strat:${topic.id}:${st.at || ""}`, by: st.by, kind: "strategy" }) : ""}</p>
     <div class="ai-answer">${aiText(st.text)}</div>
     <div class="sheet-actions sticky-in">
       <button type="button" class="btn btn-quiet push-left" data-action="clear">🗑 ${t("ai.strategyClear")}</button>

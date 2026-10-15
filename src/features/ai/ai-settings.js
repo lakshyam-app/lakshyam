@@ -10,6 +10,8 @@ import * as store from "../../data/store.js";
 import { request } from "../../ai/client.js";
 import { TEST_PROMPT } from "../../ai/prompts.js";
 import { errorText } from "./ai-ui.js";
+import { openFlags } from "./flag-ui.js";
+import { presetFlags, flagList } from "../../ai/flags.js";
 
 const PAUSE = html`<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="6.5" y="5" width="3.5" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="3.5" height="14" rx="1" fill="currentColor"/></svg>`;
 const PLAY = html`<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg>`;
@@ -39,7 +41,7 @@ export async function openAiSettings() {
         <button type="button" class="preset-main" data-action="activate" data-id="${p.id}" aria-pressed="${String(p.id === cfg.activeId)}">
           <span class="radio">${p.id === cfg.activeId ? "●" : "○"}</span>
           <span class="row-main"><span class="row-title">${i + 1}. ${p.name}</span>
-          <span class="row-sub">${[p.model || t("ai.noModel"), mask(p.apiKey), t("ai.uses", { n: p.uses || 0 }), limited ? t("ai.limited", { m: Math.max(1, 60 - Math.floor((now - p.limitHitAt) / 60000)) }) : null].filter(Boolean).join(" · ")}</span>
+          <span class="row-sub">${[p.model || t("ai.noModel"), mask(p.apiKey), t("ai.uses", { n: p.uses || 0 }), presetFlags(p) ? t("flag.count", { n: presetFlags(p) }) : null, limited ? t("ai.limited", { m: Math.max(1, 60 - Math.floor((now - p.limitHitAt) / 60000)) }) : null].filter(Boolean).join(" · ")}</span>
           ${paused ? html`<span class="row-sub paused-note">${p.pausedUntil >= presets.FOREVER ? t("ai.pausedOff") : t("ai.pausedUntil", { when: pauseWhen(p.pausedUntil) })}</span>` : ""}</span>
         </button>
         <button type="button" class="icon-sm" data-action="up" data-id="${p.id}" ${i === 0 ? "disabled" : ""} aria-label="${t("ai.up")}">↑</button>
@@ -48,7 +50,8 @@ export async function openAiSettings() {
         <button type="button" class="icon-sm" data-action="edit" data-id="${p.id}" aria-label="${t("common.edit")}">✎</button>
       </div>`;
     })}</div>` : html`<p>${t("ai.none")}</p>`}
-    <button type="button" class="btn" data-action="add">${t("ai.add")}</button>
+    <div class="actions-row"><button type="button" class="btn" data-action="add">${t("ai.add")}</button>
+      <button type="button" class="btn btn-quiet" data-action="flags">${t("flag.open")}${flagList().length ? ` (${flagList().length})` : ""}</button></div>
     <label class="switch-row"><input type="checkbox" id="aiFallback" ${cfg.fallback ? "checked" : ""}><span>${t("ai.fallback")}<span class="row-sub">${t("ai.fallbackHint")}</span></span></label>
     <h3>${t("ai.lang")}</h3>
     <div class="segmented three">${presets.LANGS.map((l) => html`<button type="button" class="${cfg.lang === l ? "on" : ""}" data-action="lang" data-l="${l}">${t(`ai.langs.${l}`)}</button>`)}</div>
@@ -78,6 +81,7 @@ export async function openAiSettings() {
       editPreset(p.id);
     },
     lang: async (el) => { await presets.saveConfig({ lang: el.dataset.l }); openAiSettings(); },
+    flags: () => openFlags(() => openAiSettings()),
     "remove-all": async () => {
       const ok = await confirmAction({ title: t("ai.removeAllTitle"), body: t("ai.removeAllBody"), confirmLabel: t("ai.removeAllButton"), danger: true });
       if (ok) { await presets.removeAllKeys(); toast(t("ai.removed")); }

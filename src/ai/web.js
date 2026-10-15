@@ -86,12 +86,24 @@ export function quotaOf(data) {
   return v.quotaValue !== undefined ? `${name}, limit ${v.quotaValue}` : name;
 }
 
+/** The answer only: models that think (e.g. Gemma 4) send their planning as parts marked "thought". */
+export function answerParts(parts) { return (parts || []).filter((x) => !x.thought).map((x) => x.text || "").join(""); }
+
 async function geminiSearch(p, system, user, maxTokens) {
-  const data = await post(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(p.model)}:generateContent`,
-    { "content-type": "application/json", "x-goog-api-key": p.apiKey },
-    { systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts: [{ text: user }] }], tools: [{ google_search: {} }], generationConfig: { maxOutputTokens: maxTokens } });
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(p.model)}:generateContent`;
+  const headers = { "content-type": "application/json", "x-goog-api-key": p.apiKey };
+  const body = { systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts: [{ text: user }] }], tools: [{ google_search: {} }], generationConfig: { maxOutputTokens: maxTokens } };
+  // Gemma writes out its planning unless thinking is turned down; if a model doesn't take that setting, ask without it.
+  const gemma = /gemma/i.test(p.model);
+  let data;
+  if (gemma) {
+    try { data = await post(url, headers, { ...body, generationConfig: { ...body.generationConfig, thinkingConfig: { thinkingLevel: "minimal" } } }); } catch (e) {
+      if (e.status !== 400) throw e;
+    }
+  }
+  if (!data) data = await post(url, headers, body);
   const cand = data?.candidates?.[0];
-  const text = (cand?.content?.parts || []).map((x) => x.text || "").join("");
+  const text = answerParts(cand?.content?.parts);
   const meta = cand?.groundingMetadata || {};
   // Google gives each page as a link through Google plus the site's name (title).
   const found = (meta.groundingChunks || []).map((c, i) => c.web && { n: i + 1, url: c.web.uri, title: c.web.title || "", domain: domainOf(c.web.title?.includes(".") ? `https://${c.web.title}` : c.web.uri) }).filter(Boolean);

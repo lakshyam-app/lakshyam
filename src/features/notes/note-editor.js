@@ -12,6 +12,7 @@ import { ids } from "../../data/ids.js";
 import * as store from "../../data/store.js";
 import { label as nameLabel } from "../../core/names.js";
 import * as mut from "../../data/mutations.js";
+import { flagChip } from "../ai/flag-ui.js";
 
 export const noteFor = (type, id) => store.byId("notes", ids.note(type, id)) || null;
 
@@ -49,7 +50,7 @@ export function viewNote(type, id, label) {
   openSheet(html`<h2>${t("notes.myNote")}</h2>${label ? html`<p class="hint">${label}</p>` : ""}
     <div class="ai-answer note-view">${noteText(note.text)}</div>
     ${note.tricks?.text ? html`<details class="explain ai-extra note-tricks" open><summary>🧠 ${t("ai.pnTricks")}</summary>
-      <div class="ai-answer">${aiText(note.tricks.text, { sections: false })}</div>${note.tricks.by ? html`<p class="hint made-by">🤖 ${note.tricks.by}</p>` : ""}</details>` : ""}
+      <div class="ai-answer">${aiText(note.tricks.text, { sections: false })}</div>${note.tricks.by ? html`<p class="hint made-by">🤖 ${note.tricks.by} ${flagChip({ ref: `tricks:${note.id}:${note.tricks.at || ""}`, by: note.tricks.by, kind: "tricks" })}</p>` : ""}</details>` : ""}
     <div class="sheet-actions">
       <button type="button" class="btn btn-quiet" data-action="copy">${t("question.copy")}</button>
       <button type="button" class="btn btn-quiet" data-action="edit">✎ ${t("common.edit")}</button>

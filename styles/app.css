@@ -1345,3 +1345,22 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .ns-src-list { margin: 6px 0; padding-left: 18px; display: grid; gap: 4px; font-size: 0.9rem; overflow-wrap: anywhere; }
 .ns-item { gap: 6px; }
 .ns-item.off { opacity: 0.55; }
+
+/* 1.21: 🚩 flag a wrong AI answer */
+.flag-chip { display: inline-flex; align-items: center; gap: 2px; min-height: 28px; padding: 2px 9px; margin-left: 4px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--muted); font: inherit; font-size: 0.8125rem; line-height: 1.2; vertical-align: middle; cursor: pointer; white-space: nowrap; }
+.flag-chip.on { border-color: var(--danger); color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, transparent); font-weight: 600; }
+.flag-row { display: flex; align-items: center; gap: 10px; padding: 10px 2px; border-bottom: 1px solid var(--line); }
+.flag-row .flag-rank { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--line); font-size: 0.8125rem; flex: none; }
+.flag-row .row-main { flex: 1 1 auto; min-width: 0; display: grid; }
+.flag-row .row-title { overflow-wrap: anywhere; }
+.flag-row .flag-n { font-weight: 700; color: var(--danger); white-space: nowrap; }
+/* Test analysis: one Hide / Show button for the whole block */
+.analysis-card { scroll-margin-top: 72px; }
+.analysis-card .an-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.analysis-card .an-toggle { flex: none; min-height: 36px; padding: 4px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg); color: var(--brand); font: inherit; font-size: 0.875rem; font-weight: 600; cursor: pointer; }
+.analysis-card .an-body { display: grid; gap: 8px; }
+.analysis-card .an-fold { margin-top: 4px; }
+.analysis-card.is-shut { padding-bottom: 12px; }
+/* A sticky button row in a sheet sits right on the sheet's bottom edge (nothing scrolls visibly under it). */
+.sheet .sheet-actions.sticky-in { bottom: calc(-16px - env(safe-area-inset-bottom)); margin-bottom: calc(-16px - env(safe-area-inset-bottom)); padding-bottom: calc(10px + env(safe-area-inset-bottom)); background: var(--surface); }
+.btn.btn-quiet.danger { color: var(--danger); }

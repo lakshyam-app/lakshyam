@@ -11,6 +11,8 @@ import { aiText } from "../../domain/text.js";
 import * as presets from "../../ai/presets.js";
 import { ask } from "../../ai/client.js";
 import { chooseAction } from "../../core/dialogs.js";
+import { flagChip, answerRef } from "./flag-ui.js";
+import { presetFlags } from "../../ai/flags.js";
 
 export function errorText(e) {
   if (e?.allPaused) return t("ai.err.allPaused");
@@ -41,7 +43,7 @@ export async function chooseAiSetup({ withLang = true } = {}) {
   const first = presets.tryOrder(list, cfg)[0];
   const id = await chooseAction({ title: t("ai.switchTitle"), sub: t("ai.switchSub"), items: [
     { heading: t("ai.switchPreset") },
-    ...usable.map((p) => ({ id: `p:${p.id}`, label: p.name, sub: p.model, current: first?.id === p.id })),
+    ...usable.map((p) => { const n = presetFlags(p); return { id: `p:${p.id}`, label: p.name, sub: [p.model, n ? t("flag.count", { n }) : ""].filter(Boolean).join(" · "), current: first?.id === p.id }; }),
     ...(withLang ? [{ heading: t("ai.lang") }, ...presets.LANGS.map((l) => ({ id: `l:${l}`, label: t(`ai.langs.${l}`), current: (cfg.lang || "en") === l }))] : []),
     { id: "settings", label: `⚙ ${t("ai.allSettings")}` }
   ] });
@@ -67,13 +69,13 @@ export async function ensureAi() {
 
 /**
  * Shows "Thinking…", asks, then shows the answer with buttons.
- * opts: { title, sub, system, user, maxTokens, actions: [{ id, label, run(text) }], onModel(model), onAnswer(text, model) }
+ * opts: { title, sub, system, user, maxTokens, actions: [{ id, label, run(text) }], onModel(model), onAnswer(text, model), flagKind }
  * system / user / maxTokens may be functions of the AI language (the one chosen with 🤖 at the top).
  * onAnswer runs when the answer arrives.
  * Returns the first answer's text (or null on error).
  */
 export async function askInSheet(opts) {
-  const { title, sub = "", maxTokens = 2500, actions = [], keepOpen = false, onModel = null, onAnswer = null } = opts;
+  const { title, sub = "", maxTokens = 2500, actions = [], keepOpen = false, onModel = null, onAnswer = null, flagKind = "answer" } = opts;
   let mine = null; // this flow's sheet content: another sheet opened meanwhile is never drawn over
   let run = 0;
   let state = { kind: "thinking" };
@@ -83,7 +85,7 @@ export async function askInSheet(opts) {
     if (state.kind === "thinking") mine = openSheet(html`${head()}<p class="sheet-status">${t("ai.thinking")}</p>`, {}, { label: title });
     else if (state.kind === "answer") {
       showAnswer({ head: head(), text: state.text, actions, presetName: state.preset.name, keepOpen, model: state.preset.model || "", done: state.done,
-        onDraw: (b) => { mine = b; } });
+        flag: { ref: state.ref, kind: flagKind, presetId: state.preset.id }, onDraw: (b) => { mine = b; } });
     } else {
       mine = openSheet(html`${head()}<p class="warn-box pre">${errorText(state.error)}</p>
         <p class="hint">${t("ai.checkPreset")}</p>
@@ -104,7 +106,7 @@ export async function askInSheet(opts) {
       if (me !== run) return text; // asked again meanwhile: the newer answer is the one shown
       const model = preset?.model || preset?.name || "";
       if (onModel) onModel(model);
-      state = { kind: "answer", text, preset, done: new Set() };
+      state = { kind: "answer", text, preset, done: new Set(), ref: answerRef(flagKind) };
       if (onAnswer) await onAnswer(text, model);
       if (ours()) { if (switched) toast(t("ai.switched", { name: preset.name })); draw(); }
       return text;
@@ -119,11 +121,12 @@ export async function askInSheet(opts) {
 }
 
 /** done: ids of actions already carried out (shown ticked). extra: more handlers (e.g. the 🤖 switch). */
-export function showAnswer({ head, text, actions, presetName, keepOpen, model = "", done = new Set(), extra = {}, onDraw = null }) {
-  const again = () => showAnswer({ head, text, actions, presetName, keepOpen, model, done, extra, onDraw });
+export function showAnswer({ head, text, actions, presetName, keepOpen, model = "", done = new Set(), extra = {}, onDraw = null, flag = null }) {
+  const fl = flag || { ref: answerRef("answer"), kind: "answer" };
+  const again = () => showAnswer({ head, text, actions, presetName, keepOpen, model, done, extra, onDraw, flag: fl });
   const body = openSheet(html`${head}
     <div class="ai-answer">${aiText(text)}</div>
-    <p class="hint">${t("ai.byPreset", { name: presetName })}${model && model !== presetName ? ` (${model})` : ""} · ${t("ai.verify")}</p>
+    <p class="hint">${t("ai.byPreset", { name: presetName })}${model && model !== presetName ? ` (${model})` : ""} · ${t("ai.verify")} ${flagChip({ ...fl, by: model || presetName })}</p>
     <div class="ai-actions">
       <button type="button" class="btn btn-quiet btn-small" data-action="copy">${t("question.copy")}</button>
       ${actions.map((a) => html`<button type="button" class="btn btn-quiet btn-small" data-action="act" data-id="${a.id}" ${done.has(a.id) ? "disabled" : ""}>${done.has(a.id) ? "✓ " : ""}${a.label}</button>`)}
