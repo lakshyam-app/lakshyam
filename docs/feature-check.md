@@ -241,3 +241,13 @@ Today screen with Quick 10 and daily goal · exam countdown · timetable (any da
 |---|---|---|
 | Read aloud uses only the phone's own voice: the Gemini natural-voice option is removed (nothing is sent to Google when reading; a Gemini choice saved by 1.18 is ignored); the app no longer allows playing downloaded audio (CSP back to before 1.18) | Question cards, tests, Settings → Look → Read aloud | ✅ |
 
+## Added in 1.20
+
+| Feature | Where | Status |
+|---|---|---|
+| The test analysis's Next steps are tagged ([FACTS] / [QUESTIONS] / [CARDS] / [REVISE]) and each gets a "Do it" button (older analyses offer one of each). Made only when you tap | Test result → AI analysis → Do the next steps with AI | ✅ |
+| Fact sheet / practice questions / flashcards made with a web search: Gemini presets use Google Search grounding, Groq gpt-oss presets their browser search; the AI is told to use only trustworthy sources (government, NCERT/SCERT, universities, Britannica, The Hindu, Indian Express; Wikipedia only to cross-check; no quiz, coaching, blog or forum sites); each source marked ✓ trusted / ≈ fair / ⚠ check; with Gemini only pages Google really found are kept | Same | ✅ (real web search not testable here) |
+| Without a web-capable preset: says so; can use the AI's own knowledge instead, marked "not checked on the web" | Same | ✅ |
+| Questions: second independent answer check (disagreements unticked), reviewed, saved to the right topic with their sources, "Practise these now"; flashcards reviewed and saved to the topic; fact sheet saved to Notes with the test and its sources; Revise practises the wrong ones (no AI) | Same | ✅ |
+| Notes: only the chosen syllabus's notes (its topics, subjects, papers, questions, tests) and general notes by default; "All syllabi" shows every note | Notes tab | ✅ |
+

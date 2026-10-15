@@ -1333,3 +1333,15 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .ai-top-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .ai-top-lang { flex: none; padding: 1px 6px; border-radius: 999px; background: var(--brand-soft); color: var(--brand); font-weight: 600; font-size: 0.72rem; }
 .ai-top:active { background: var(--brand-soft); }
+
+/* 1.20: next steps from a test's analysis (web sources) */
+.ns-block { border-top: 1px solid var(--line); padding-top: 8px; display: grid; gap: 6px; }
+.ns-block h3 { margin: 0; font-size: 1rem; }
+.ns-row .row-sub { -webkit-line-clamp: 2; }
+.src-chip { display: inline-block; font-size: 0.72rem; padding: 0 6px; border-radius: 999px; border: 1px solid var(--line); white-space: nowrap; }
+.src-chip.src-trusted { color: var(--ok); border-color: currentColor; }
+.src-chip.src-fair { color: var(--muted); }
+.src-chip.src-check { color: var(--danger); border-color: currentColor; }
+.ns-src-list { margin: 6px 0; padding-left: 18px; display: grid; gap: 4px; font-size: 0.9rem; overflow-wrap: anywhere; }
+.ns-item { gap: 6px; }
+.ns-item.off { opacity: 0.55; }

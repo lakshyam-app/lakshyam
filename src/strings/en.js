@@ -1187,6 +1187,29 @@ export default {
     noVoice: "This phone can’t read aloud.",
     noMlVoice: "No Malayalam voice on this phone: install it in the phone’s text-to-speech settings."
   },
+  ns: {
+    factSheet: "Fact sheet",
+    title: "Do the next steps with AI",
+    hint: "Made only when you tap. AI looks the facts up on trusted websites; you check everything before it is saved.",
+    kind: { facts: "Make a fact sheet", questions: "Make practice questions", cards: "Make flashcards", revise: "Practise the wrong ones again" },
+    searching: "Looking up trusted sources on the web with {name}…",
+    checking: "A second AI pass is answering each question on its own…",
+    noWeb: "Your AI presets can’t search the web. A web search needs a Google Gemini preset, or a Groq preset with an openai/gpt-oss model (Settings → AI). You can still make it from the AI’s own knowledge, but it won’t be checked against any website.",
+    useOwn: "Use the AI’s own knowledge",
+    fromWeb: "from web sources",
+    notWeb: "from the AI’s own knowledge, not checked on the web",
+    sources: (v) => (v.ok === v.n ? "{n} sources, all from trusted sites" : "{n} sources ({ok} from trusted sites)"),
+    trustHint: "✓ trusted site (government, NCERT, university, Britannica, The Hindu…) · ≈ fair (e.g. Wikipedia: cross-check) · ⚠ check this one yourself.",
+    sourcesHead: "Sources:",
+    saveNote: "Save to Notes",
+    savedNote: "Saved to Notes (with this test)",
+    reviewHint: "Check each ✓ answer. Questions the second pass answered differently start unticked.",
+    reviewCards: "Untick any card you don’t want.",
+    practise: (v) => (v.n === 1 ? "Practise it now" : "Practise these {n} now"),
+    practiseLabel: "Next steps: {label}",
+    savedCards: (v) => (v.n === 1 ? "1 flashcard saved (topic → Cards)" : "{n} flashcards saved (topic → Cards)"),
+    webSources: "Web sources"
+  },
   analysis: {
     title: "AI analysis of this test",
     writing: "Writing the analysis… you can keep reviewing.",
@@ -1787,7 +1810,7 @@ export default {
     removed: "Note removed",
     search: "Search notes",
     open: "Open",
-    kind: { question: "Question", topic: "Topic", subject: "Subject", paper: "Paper", bank: "Bank", list: "Topic list", other: "Note", pdfnote: "PDF note" },
+    kind: { question: "Question", topic: "Topic", subject: "Subject", paper: "Paper", bank: "Bank", list: "Topic list", other: "Note", pdfnote: "PDF note", test: "Test" },
     count: "{n} of {of} notes",
     asked: "{n} in papers",
     noneHere: "No notes match these filters.",
@@ -1795,7 +1818,10 @@ export default {
     sort: { recent: "Recently edited", oldest: "Oldest edited", most: "Most asked first", least: "Least asked first", az: "A–Z", syllabus: "Syllabus order", longest: "Longest first" },
     f: {
       allSubjects: "All subjects", noSubject: "Not about a subject", subjectTitle: "Notes for which subject?", kindTitle: "Which notes?",
-      kind: { all: "All notes", topic: "Topic notes", pdfnote: "📄 PDF notes", subject: "Subject notes", paper: "Paper notes", question: "Question notes", bank: "Banks & lists", ai: "🤖 AI write-ups", own: "✍️ My own notes" }
+      kind: { all: "All notes", topic: "Topic notes", pdfnote: "📄 PDF notes", subject: "Subject notes", paper: "Paper notes", question: "Question notes", test: "📝 From tests", bank: "Banks & lists", ai: "🤖 AI write-ups", own: "✍️ My own notes" },
+      thisSyllabus: "{name}", allSyllabi: "All syllabi", scopeTitle: "Notes of which syllabus?",
+      thisSub: (v) => (v.n === 1 ? "1 note: this syllabus’s topics, papers and tests, and general notes" : "{n} notes: this syllabus’s topics, papers and tests, and general notes"),
+      allSub: (v) => (v.n === 1 ? "1 note" : "{n} notes, every syllabus")
     }
   },
   search: {

@@ -99,6 +99,9 @@ export function questionCard(q, { showPaper = true, mode = "study", revealed = n
     ${ref && !hidden ? html`<details class="explain source-line" data-k="src"><summary>📄 ${t("question.sourceLine")}</summary>
       <p class="quote">${ref.quote}</p>${ref.pdf ? html`<p class="hint">${String(ref.pdf).replace(/\.pdf$/i, "")}${ref.page ? ` · ${t("question.pageShort", { n: ref.page })}` : ""}</p>` : ""}${byLine ? html`<p class="hint made-by">${byLine}</p>` : ""}
       ${actions && ref.pdfId ? html`<button type="button" class="link" data-action="q-open-pdf" data-pdf="${ref.pdfId}" data-n="${ref.page || 1}">📖 ${t("pv.viewPage")}</button>` : ""}</details>` : ""}
+    ${isAi && Array.isArray(q.sourceRef?.web) && q.sourceRef.web.length && !hidden ? html`<details class="explain source-line" data-k="web"><summary>🌐 ${t("ns.webSources")}</summary>
+      <ul class="ns-src-list">${q.sourceRef.web.map((w) => html`<li><a href="${w.url}" target="_blank" rel="noopener noreferrer">${w.domain || w.url}</a> <span class="src-chip src-${w.trust || "check"}">${w.trust === "trusted" ? "✓" : w.trust === "fair" ? "≈" : "⚠"}</span></li>`)}</ul>
+      ${byLine ? html`<p class="hint made-by">${byLine}</p>` : ""}</details>` : ""}
     ${!hidden ? aiExtras(ai, actions) : ""}
     ${actions && !hidden && mode !== "edit" ? aiRow(review, can("ai") && store.setting("aiOnCards", true) !== false) : ""}
   </article>`;

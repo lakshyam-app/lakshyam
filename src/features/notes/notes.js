@@ -10,10 +10,31 @@ import { label as nameLabel } from "../../core/names.js";
 
 let term = "";
 /* Sort & filter (kept while the app is open). */
-const view = { sort: "recent", subject: "all", kind: "all" };
+const view = { sort: "recent", subject: "all", kind: "all", scope: "this" }; // scope: this syllabus (default) | all syllabi
 const SORTS = ["recent", "oldest", "most", "least", "az", "syllabus", "longest"];
-const KINDS = ["all", "topic", "pdfnote", "subject", "paper", "question", "bank", "ai", "own"];
-const isAi = (n) => n.target?.type === "pdfnote" || /🤖|^\s*#{1,4}\s/m.test(n.text || "");
+const KINDS = ["all", "topic", "pdfnote", "subject", "paper", "question", "test", "bank", "ai", "own"];
+const isAi = (n) => n.ai || n.target?.type === "pdfnote" || /🤖|^\s*#{1,4}\s/m.test(n.text || "");
+
+/** Which syllabi a note belongs to (a Set), or null for a general note (a bank, list or your own misc note).
+    Subjects and topics are shared, so their notes belong to every syllabus whose papers ask about them. */
+function syllabusIndex() {
+  const paperSyl = new Map(store.all("papers").map((p) => [p.id, p.syllabusId]));
+  const byTopic = new Map(); const bySubject = new Map();
+  const add = (m, k, v) => { if (!k || !v) return; if (!m.has(k)) m.set(k, new Set()); m.get(k).add(v); };
+  store.all("questions").forEach((q) => { const sy = paperSyl.get(q.paperId); add(byTopic, q.topicId, sy); add(bySubject, q.subjectId, sy); });
+  (store.all("flashcards") || []).forEach((c) => { add(byTopic, c.topicId, c.syllabusId); add(bySubject, c.subjectId, c.syllabusId); });
+  return (n) => {
+    if (n.syllabusId) return new Set([n.syllabusId]);
+    const { type, id } = n.target || {};
+    if (type === "question") { const q = store.question(id); return new Set([paperSyl.get(q?.paperId)].filter(Boolean)); }
+    if (type === "paper") return new Set([paperSyl.get(id)].filter(Boolean));
+    if (type === "topic") return byTopic.get(id) || new Set();
+    if (type === "subject") return bySubject.get(id) || new Set();
+    if (type === "pdfnote") return byTopic.get(n.target.topicId) || new Set();
+    if (type === "test") { const a = store.byId("attempts", id); return new Set([a?.syllabusId].filter(Boolean)); }
+    return null;
+  };
+}
 
 /** For each note: its subject (if any), how many past-paper questions sit behind it, its name and syllabus order. */
 function facts(notes) {
@@ -56,7 +77,13 @@ export const notesScreen = {
       container.innerHTML = html`<section class="empty"><h1>${t("notes.emptyTitle")}</h1><p>${t("notes.emptyBody")}</p></section>`;
       return;
     }
-    const all = facts(notes);
+    // By default only the notes of the syllabus chosen at the top (and general ones); "All syllabi" shows every note.
+    const syl = store.currentSyllabus();
+    const relOf = syllabusIndex();
+    const inThis = (n) => { const r = relOf(n); return r === null || !syl || r.has(syl.id); };
+    const scoped = view.scope === "all" ? notes : notes.filter(inThis);
+    const hiddenOther = notes.length - notes.filter(inThis).length;
+    const all = facts(scoped);
     const subjectsWithNotes = [...new Set(all.map((x) => x.subjectId).filter(Boolean))].map((id) => store.subject(id)).filter(Boolean)
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name));
     if (view.subject !== "all" && view.subject !== "none" && !store.subject(view.subject)) view.subject = "all";
@@ -74,6 +101,7 @@ export const notesScreen = {
     const filtered = () => !(view.subject === "all" && view.kind === "all");
     const drawBar = () => {
       barEl.innerHTML = html`
+        ${hiddenOther || view.scope === "all" ? html`<button type="button" class="pill ${view.scope === "all" ? "on" : ""}" data-action="n-scope">${view.scope === "all" ? t("notes.f.allSyllabi") : t("notes.f.thisSyllabus", { name: syl?.name || "" })} ▾</button>` : ""}
         <button type="button" class="pill ${view.subject !== "all" ? "on" : ""}" data-action="n-subject">${subjName(view.subject)} ▾</button>
         <button type="button" class="pill ${view.kind !== "all" ? "on" : ""}" data-action="n-kind">${t(`notes.f.kind.${view.kind}`)} ▾</button>
         <button type="button" class="pill" data-action="n-sort">↕ ${t(`notes.sort.${view.sort}`)} ▾</button>
@@ -116,6 +144,12 @@ export const notesScreen = {
         all.some((y) => !y.subjectId) ? { id: "none", label: t("notes.f.noSubject"), sub: String(all.filter((y) => !y.subjectId).length), current: view.subject === "none" } : null
       ].filter(Boolean), "subject"),
       "n-clear": () => { view.subject = "all"; view.kind = "all"; draw(); },
+      "n-scope": () => runFlow(async () => {
+        const id = await chooseAction({ title: t("notes.f.scopeTitle"), items: [
+          { id: "this", label: t("notes.f.thisSyllabus", { name: syl?.name || "" }), sub: t("notes.f.thisSub", { n: notes.length - hiddenOther }), current: view.scope === "this" },
+          { id: "all", label: t("notes.f.allSyllabi"), sub: t("notes.f.allSub", { n: notes.length }), current: view.scope === "all" }] });
+        if (id && id !== view.scope) { view.scope = id; store.touch(); }
+      }),
       read: (el) => { const n = store.byId("notes", el.dataset.id); viewNote(n.target.type, n.target.id, n.label || noteTarget(n)?.name || ""); },
       open: (el) => { const target = noteTarget(store.byId("notes", el.dataset.id)); go(target.to, target.params); },
       edit: (el) => {

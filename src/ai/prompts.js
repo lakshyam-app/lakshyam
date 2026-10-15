@@ -156,7 +156,7 @@ Task: write a short analysis of this test for the student, in these parts:
 ## 1. How it went — 2–3 bullets: the score in plain words; compared with earlier tries if they are given.
 ## 2. Where marks were lost — the patterns: which topics, which kinds of question (statement-type, 'NOT', numbers and years, matching), quick careless answers, guessing that cost marks, blanks that could have been tried.
 ## 3. Facts to fix — for the wrong or blank questions, the key fact to remember (one bullet each, at most 10, the most exam-worthy first). Only facts you are sure of; skip a question if unsure.
-## 4. Next steps — 3 concrete things to do in the next two or three days.
+## 4. Next steps — 3 concrete things to do in the next two or three days, as '- ' bullets. Start each bullet with ONE tag that tells the app how it can do it for the student: [FACTS] a one-page fact sheet, [QUESTIONS] new practice questions, [CARDS] flashcards, [REVISE] practising the wrong and blank questions again. After the tag, say exactly what to cover (the topics or facts by name).
 Be specific to this test, encouraging but honest, and brief.`;
 }
 
@@ -172,5 +172,46 @@ Task: using ONLY these passages, say which one states the fact needed to answer 
 - Then quote the exact sentence(s) from that passage that give the answer.
 - Then one short line on how it answers the question, or what is missing from the notes.
 Do not use outside knowledge to fill a gap; if the notes don't have it, say so plainly.`;
+}
+
+/* ---------- next steps after a test, made from trusted web sources ---------- */
+
+/** How to use the web: only sources a PSC aspirant can trust. */
+export const WEB_RULES = "Look the facts up on the web before you write. Use ONLY trustworthy sources: official Government of India and Kerala government sites (gov.in, nic.in, kerala.gov.in, keralapsc.gov.in, pib.gov.in, prsindia.org), NCERT and SCERT textbooks, universities (ac.in), Encyclopaedia Britannica, The Hindu or The Indian Express; Wikipedia only to cross-check another source. Never use quiz, coaching-centre, blog, video or forum sites. If trustworthy sources disagree or you cannot confirm a fact, leave it out. Keep names, dates and numbers exactly as the source gives them.";
+const SOURCES_END = "End with a line 'SOURCES:' and then one line per source you used: '- [n] title — full URL' (n as cited above).";
+
+const missedBlock = (missed) => (missed.length ? `\n\nQUESTIONS THE STUDENT GOT WRONG OR LEFT (the facts behind these matter most):\n${missed.join("\n")}` : "");
+const topicBlock = (topics) => topics.map((x) => `${x.key}: ${x.path}`).join("\n");
+
+/** A one-page fact sheet for the next step. */
+export function factSheetTask({ step, topics, missed, web }) {
+  return `NEXT STEP FROM THE STUDENT'S TEST ANALYSIS: ${step || "Make a fact sheet of the key facts behind the missed questions."}
+
+TOPICS:
+${topicBlock(topics)}${missedBlock(missed)}
+
+Task: write a one-page fact sheet for a Kerala PSC aspirant on exactly this step. Use '## ' for each topic and '- ' bullets; one fact per bullet with the key term in **double asterisks**; first the facts behind the missed questions, then the closely related facts PSC asks. Short and exam-focused: no introduction.${web ? ` After each bullet put the number of its source in brackets, like [1]. ${SOURCES_END}` : " Only facts you are sure of."}`;
+}
+
+/** New practice questions for the next step (JSON). */
+export function webQuestionsTask({ step, topics, missed, n, web }) {
+  return `NEXT STEP FROM THE STUDENT'S TEST ANALYSIS: ${step || "Practise the areas behind the missed questions."}
+
+TOPICS (use the key in "topic"):
+${topicBlock(topics)}${missedBlock(missed)}
+
+Task: write ${n} NEW Kerala PSC-style multiple-choice questions for this step (do not repeat the questions above word for word; test the same facts and closely related ones). 4 options each, exactly one correct.
+Return ONLY a JSON array; each item: {"question_text":"...","options":["...","...","...","..."],"correct_answer_index":0-3,"explanation":"1-2 sentences with the fact","topic":"T1","difficulty":"E"|"M"|"D"${web ? ',"source":"the URL of the trustworthy page that states this fact"' : ""}}`;
+}
+
+/** Flashcards for the next step (JSON). */
+export function webCardsTask({ step, topics, missed, n, web }) {
+  return `NEXT STEP FROM THE STUDENT'S TEST ANALYSIS: ${step || "Flashcards for the facts behind the missed questions."}
+
+TOPICS (use the key in "topic"):
+${topicBlock(topics)}${missedBlock(missed)}
+
+Task: make ${n} flashcards for this step: one fact per card, the front a short cue or question (a name, a date, 'Who/When/Which…'), the back the short answer (at most 20 words).
+Return ONLY a JSON array; each item: {"front":"...","back":"...","topic":"T1"${web ? ',"source":"the URL of the trustworthy page that states this fact"' : ""}}`;
 }
 

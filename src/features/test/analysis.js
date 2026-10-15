@@ -8,6 +8,7 @@ import { can } from "../../core/entitlements.js";
 import { confirmAction, runFlow } from "../../core/dialogs.js";
 import { aiText } from "../../domain/text.js";
 import { analysisInput } from "../../domain/test-analysis.js";
+import { stepsBlock, stepsOf, stripTags, runStep } from "./next-steps.js";
 import { maxScore } from "../../domain/testing.js";
 import * as store from "../../data/store.js";
 import * as presets from "../../ai/presets.js";
@@ -69,14 +70,14 @@ export async function analysisBlock(a) {
   if (a.analysis?.text) {
     const an = a.analysis;
     return html`<details class="analysis-card" open><summary><h2 class="section-title">🤖 ${t("analysis.title")}</h2></summary>
-      <div class="ai-answer">${aiText(an.text)}</div>
+      <div class="ai-answer">${aiText(stripTags(an.text))}</div>
       <p class="hint made-by">${[an.by ? `🤖 ${an.by}` : "", new Date(an.at).toLocaleString(dateLocale(), { dateStyle: "medium", timeStyle: "short" })].filter(Boolean).join(" · ")} · ${t("ai.verify")}</p>
       ${st?.error ? html`<p class="warn-box pre">${st.error}</p>` : ""}
       <div class="row-actions">
         <button type="button" class="link" data-action="an-copy">${t("question.copy")}</button>
         ${can("ai") ? html`<button type="button" class="link" data-action="an-make">${t("analysis.again")}</button>` : ""}
         <button type="button" class="link danger" data-action="an-clear">${t("common.clear")}</button>
-      </div></details>`;
+      </div>${can("ai") ? stepsBlock(a) : ""}</details>`;
   }
   if (!can("ai") || !canAnalyse(a)) return "";
   return html`<section class="analysis-card"><h2 class="section-title">🤖 ${t("analysis.title")}</h2>
@@ -88,7 +89,8 @@ export function analysisHandlers(id) {
   const att = () => store.byId("attempts", id);
   return {
     "an-make": () => makeAnalysis(att()),
-    "an-copy": async () => { try { await navigator.clipboard.writeText(att()?.analysis?.text || ""); toast(t("common.copied")); } catch { toast(t("common.copyFailed")); } },
+    "ns-do": (el) => { const a = att(); runStep(a, stepsOf(a)[Number(el.dataset.i)]); },
+    "an-copy": async () => { try { await navigator.clipboard.writeText(stripTags(att()?.analysis?.text || "")); toast(t("common.copied")); } catch { toast(t("common.copyFailed")); } },
     "an-clear": () => runFlow(async () => {
       const a = att();
       if (!a?.analysis || !(await confirmAction({ title: t("analysis.clearTitle"), confirmLabel: t("common.clear"), danger: true }))) return;
