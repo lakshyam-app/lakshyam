@@ -100,6 +100,20 @@ export async function movePreset(id, delta) {
   changed();
 }
 
+/** Puts a preset at a new place in the priority list (0 = first). */
+export async function movePresetTo(id, to) {
+  const all = await loadAll();
+  const i = all.presets.findIndex((p) => p.id === id);
+  if (i < 0) return;
+  const j = Math.max(0, Math.min(all.presets.length - 1, to));
+  if (i === j) return;
+  const [p] = all.presets.splice(i, 1);
+  all.presets.splice(j, 0, p);
+  all.presets.forEach((x, k) => { x.order = k; });
+  await db.writeAll({ aiPresets: { put: all.presets.map((x) => ({ ...x })) } });
+  changed();
+}
+
 /** Removes every preset and key from this phone. */
 export async function removeAllKeys() {
   const all = await loadAll();

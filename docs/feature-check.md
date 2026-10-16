@@ -294,3 +294,9 @@ Today screen with Quick 10 and daily goal · exam countdown · timetable (any da
 |---|---|---|
 | With an OpenRouter router model (openrouter/free, openrouter/auto), everything made shows the model that actually answered (from the reply's "model" field), e.g. "OpenRouter (upstage/solar-pro-3:free)"; that name is saved with explanations, questions, analyses, notes, and 🚩 flags count against it. Usage still counts on the OpenRouter preset | Everywhere AI shows its model | ✅ |
 
+## Changed in 1.22.2
+
+| Change | Where | Status |
+|---|---|---|
+| AI preset order: ↑ ↓ buttons replaced by a ⠿ handle — hold and drag up or down (the list scrolls near its top/bottom; your place is kept after the drop); tap it for Move to the top / up / down / to the bottom | Settings → AI | ✅ |
+

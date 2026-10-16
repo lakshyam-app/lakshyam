@@ -15,6 +15,7 @@ import { presetFlags, flagList } from "../../ai/flags.js";
 import { usageView, openRouterKey } from "../../ai/usage.js";
 
 const PAUSE = html`<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="6.5" y="5" width="3.5" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="3.5" height="14" rx="1" fill="currentColor"/></svg>`;
+const GRIP = html`<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">${[6, 12, 18].map((y) => html`<circle cx="9" cy="${y}" r="1.7" fill="currentColor"/><circle cx="15" cy="${y}" r="1.7" fill="currentColor"/>`)}</svg>`;
 const PLAY = html`<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg>`;
 const pauseWhen = (ms) => new Date(ms).toLocaleString(dateLocale(), { hour: "numeric", minute: "2-digit", day: new Date(ms).toDateString() === new Date().toDateString() ? undefined : "numeric", month: new Date(ms).toDateString() === new Date().toDateString() ? undefined : "short" });
 const mask = (key) => (key ? `••••${key.slice(-4)}` : t("ai.noKey"));
@@ -84,8 +85,7 @@ export async function openAiSettings() {
           <span class="row-sub usage-line">${usageLines(p, now).map((l) => html`<span>${l}</span>`)}${/openrouter\.ai/i.test(p.baseUrl || "") && p.apiKey ? html`<span data-or="${p.id}"></span>` : ""}</span>
           ${paused ? html`<span class="row-sub paused-note">${p.pausedUntil >= presets.FOREVER ? t("ai.pausedOff") : t("ai.pausedUntil", { when: pauseWhen(p.pausedUntil) })}</span>` : ""}</span>
         </button>
-        <button type="button" class="icon-sm" data-action="up" data-id="${p.id}" ${i === 0 ? "disabled" : ""} aria-label="${t("ai.up")}">↑</button>
-        <button type="button" class="icon-sm" data-action="down" data-id="${p.id}" ${i === list.length - 1 ? "disabled" : ""} aria-label="${t("ai.down")}">↓</button>
+        <button type="button" class="icon-sm drag-handle" data-drag="${p.id}" aria-label="${t("ai.dragHint")}" title="${t("ai.dragHint")}">${GRIP}</button>
         <button type="button" class="icon-sm" data-action="pause" data-id="${p.id}" aria-label="${paused ? t("ai.resume") : t("ai.pause")}">${paused ? PLAY : PAUSE}</button>
         <button type="button" class="icon-sm" data-action="edit" data-id="${p.id}" aria-label="${t("common.edit")}">✎</button>
       </div>`;
@@ -130,12 +130,77 @@ export async function openAiSettings() {
     close: () => closeSheet()
   }, { label: t("ai.title"), onClose: () => store.touch() }); // Settings shows the new summary
   document.querySelector("#aiFallback")?.addEventListener("change", (e) => presets.saveConfig({ fallback: e.target.checked }));
+  dragToReorder(list);
   // OpenRouter tells how many free-model requests are left today: asked for each OpenRouter preset (its own key only).
   list.filter((p) => /openrouter\.ai/i.test(p.baseUrl || "") && p.apiKey).forEach(async (p) => {
     const line = orLine(await orInfo(p));
     const el = document.querySelector(`[data-or="${CSS.escape(p.id)}"]`);
     if (el && line) el.textContent = line;
   });
+}
+
+/* ⠿ Hold the handle and drag a preset up or down (the list scrolls when you reach its top or bottom).
+   A tap on the handle (no drag) offers Move to top / up / down / to bottom instead. */
+function dragToReorder(list) {
+  const menu = document.querySelector("#sheetRoot .menu");
+  const scroller = document.querySelector("#sheetRoot .sheet-body");
+  if (!menu || !scroller) return;
+  menu.querySelectorAll("[data-drag]").forEach((h) => {
+    h.addEventListener("pointerdown", (e) => {
+      if (e.button > 0) return;
+      e.preventDefault();
+      const row = h.closest(".preset");
+      const id = h.dataset.drag;
+      const from = list.findIndex((p) => p.id === id);
+      const y0 = e.clientY; let lastY = e.clientY; let moved = false; let raf = 0;
+      const place = () => {
+        // The dragged row goes before the first row whose middle is below the finger.
+        const rows = [...menu.querySelectorAll(".preset")].filter((r) => r !== row);
+        const before = rows.find((r) => { const b = r.getBoundingClientRect(); return lastY < b.top + b.height / 2; });
+        if (before) { if (row.nextElementSibling !== before) menu.insertBefore(row, before); }
+        else if (menu.lastElementChild !== row) menu.appendChild(row);
+      };
+      const edge = () => {
+        const b = scroller.getBoundingClientRect();
+        const step = lastY < b.top + 60 ? -12 : lastY > b.bottom - 60 ? 12 : 0;
+        if (step) { scroller.scrollTop += step; place(); }
+        raf = requestAnimationFrame(edge);
+      };
+      const move = (ev) => {
+        lastY = ev.clientY;
+        if (!moved && Math.abs(lastY - y0) < 8) return;
+        if (!moved) { moved = true; row.classList.add("dragging"); raf = requestAnimationFrame(edge); }
+        place();
+      };
+      const end = async () => {
+        window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", end); window.removeEventListener("pointercancel", end);
+        cancelAnimationFrame(raf);
+        row.classList.remove("dragging");
+        if (!moved) return moveMenu(list, from);
+        const to = [...menu.querySelectorAll(".preset")].indexOf(row);
+        if (to !== from) { await presets.movePresetTo(id, to); toast(t("ai.movedTo", { name: list[from].name, n: to + 1 })); }
+        const top = scroller.scrollTop;
+        await openAiSettings();
+        const nb = document.querySelector("#sheetRoot .sheet-body"); if (nb) nb.scrollTop = top; // stay where you were in a long list
+      };
+      // On the window: moving the row in the list would end a capture on the handle itself.
+      window.addEventListener("pointermove", move); window.addEventListener("pointerup", end); window.addEventListener("pointercancel", end);
+    });
+  });
+}
+
+async function moveMenu(list, i) {
+  const p = list[i];
+  const last = list.length - 1;
+  const choice = await chooseAction({ title: p.name, sub: t("ai.dragHint"), items: [
+    i > 0 ? { id: "top", label: `⤒ ${t("ai.moveTop")}` } : null,
+    i > 0 ? { id: "up", label: `↑ ${t("ai.up")}` } : null,
+    i < last ? { id: "down", label: `↓ ${t("ai.down")}` } : null,
+    i < last ? { id: "bottom", label: `⤓ ${t("ai.moveBottom")}` } : null
+  ].filter(Boolean) });
+  const to = { top: 0, up: i - 1, down: i + 1, bottom: last }[choice];
+  if (to !== undefined) await presets.movePresetTo(p.id, to);
+  openAiSettings();
 }
 
 async function editPreset(id) {

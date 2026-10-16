@@ -1372,3 +1372,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 /* 1.22: AI usage on each preset */
 .preset .usage-line { display: grid; gap: 1px; margin-top: 2px; }
 .preset .usage-line span { overflow-wrap: anywhere; }
+/* 1.22.2: drag AI presets to reorder */
+.preset .drag-handle { touch-action: none; cursor: grab; color: var(--muted); }
+.preset.dragging { position: relative; z-index: 3; background: var(--bg); box-shadow: 0 6px 18px rgb(0 0 0 / 0.18); border-radius: 12px; }
+.preset.dragging .drag-handle { cursor: grabbing; color: var(--brand); }
