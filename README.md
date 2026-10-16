@@ -169,6 +169,7 @@ and [`docs/feature-check.md`](docs/feature-check.md) for where every old-app fea
 | 1.3 | Up to 20 exam countdowns, with a choice of which and how Today shows them |
 | 1.6 | Automatic Drive backup without sign-in, through your own Google Apps Script (docs/apps-script); background backup on installed app |
 | 1.5 | How to use Lakshyam: illustrated demo + PDF (English, മലയാളം) in Settings |
+| 1.23 | 📱 Screen time from your Digital Wellbeing / Samsung screenshot (or PDF): AI reads it, you check it and tap how much of each app (20 min+) was study; study / needed / wasted per day, weekly figures, a limit from your own baseline, if–then plan, app-timer tip; in the day, Today card and weekly report. Study diary: swipe between days; All daily entries by week or month, as a list or one day at a time |
 | 1.22.5 | Fix: short Library tabs (Banks, Papers) no longer stretch the tabs, search box and button |
 | 1.22.4 | Library: swipe left / right to move between Subjects, Topics, Papers and Banks |
 | 1.22.3 | Coloured labels on AI presets: ⛔ Limit reached (red) and 🌐 Web search limit (amber), with minutes left, in Settings → AI and the 🤖 switch |

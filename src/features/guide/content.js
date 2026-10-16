@@ -114,8 +114,8 @@ export const STEPS = [
     id: "night", tone: "gold", scene: "night",
     title: { en: "Every night: review your day (3 minutes)", ml: "എല്ലാ രാത്രിയും: ദിവസം വിലയിരുത്തുക (3 മിനിറ്റ്)" },
     points: {
-      en: ["Today’s checklist fills itself from your tests, ticks and timetable.", "Pick a face for the day and write one honest line.", "Green days are effective days. Aim for a green week.", "If Today asks, tap ☁ Back up to Google Drive."],
-      ml: ["ഇന്നത്തെ ചെക്ക്‌ലിസ്റ്റ് ടെസ്റ്റുകളിൽ നിന്നും ടിക്കുകളിൽ നിന്നും ടൈംടേബിളിൽ നിന്നും സ്വയം നിറയും.", "ദിവസത്തിന് ഒരു മുഖം തിരഞ്ഞെടുത്ത് സത്യസന്ധമായി ഒരു വരി എഴുതൂ.", "പച്ച ദിവസങ്ങൾ ഫലപ്രദമായ ദിവസങ്ങൾ. ഒരു പച്ച ആഴ്ച ലക്ഷ്യമിടൂ.", "“ഇന്ന്” ചോദിച്ചാൽ ☁ Google Drive-ലേക്ക് ബാക്കപ്പ് തൊടൂ."]
+      en: ["Today’s checklist fills itself from your tests, ticks and timetable.", "Pick a face for the day and write one honest line.", "Green days are effective days. Aim for a green week.", "📱 Add your Digital Wellbeing screenshot and tap how much of each app was study. Keep wasted time under your limit.", "If Today asks, tap ☁ Back up to Google Drive."],
+      ml: ["ഇന്നത്തെ ചെക്ക്‌ലിസ്റ്റ് ടെസ്റ്റുകളിൽ നിന്നും ടിക്കുകളിൽ നിന്നും ടൈംടേബിളിൽ നിന്നും സ്വയം നിറയും.", "ദിവസത്തിന് ഒരു മുഖം തിരഞ്ഞെടുത്ത് സത്യസന്ധമായി ഒരു വരി എഴുതൂ.", "പച്ച ദിവസങ്ങൾ ഫലപ്രദമായ ദിവസങ്ങൾ. ഒരു പച്ച ആഴ്ച ലക്ഷ്യമിടൂ.", "📱 Digital Wellbeing സ്ക്രീൻഷോട്ട് ചേർത്ത് ഓരോ ആപ്പിലും എത്ര പഠനമായിരുന്നു എന്ന് തൊടൂ. പാഴാകുന്ന സമയം പരിധിക്കുള്ളിൽ നിർത്തൂ.", "“ഇന്ന്” ചോദിച്ചാൽ ☁ Google Drive-ലേക്ക് ബാക്കപ്പ് തൊടൂ."]
     },
     tip: { en: "Missed the night? Fill it in next morning; it still counts.", ml: "രാത്രി വിട്ടുപോയോ? പിറ്റേന്ന് രാവിലെ എഴുതിയാലും മതി." },
     go: { to: "diary", label: { en: "Open study diary", ml: "പഠന ഡയറി തുറക്കുക" } }

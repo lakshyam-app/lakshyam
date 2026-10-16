@@ -318,3 +318,15 @@ Today screen with Quick 10 and daily goal · exam countdown · timetable (any da
 |---|---|---|
 | Tabs, search box and "+ New bank" / "Add a paper" buttons were stretched tall on short tabs since 1.22.4 | Library | ✅ |
 
+## Added in 1.23
+
+| Feature | Where | Status |
+|---|---|---|
+| 📱 Add screen time: pick 1–4 screenshots of Digital Wellbeing (App activity details) or Samsung Screen time, or a PDF; your AI preset reads app names and times (the screenshot is not kept); apps under 20 minutes are left out; date read from the screenshot when shown (else you pick it); you can fix any time | Today card; a day in the Study diary | ✅ |
+| For each app one tap: All study / Mostly / About half / A little / None / Needed (calls, banking: neither study nor wasted); your usual answer is filled in after the same answer on 2 days; Lakshyam starts as "All study" | Screen-time sheet | ✅ |
+| After saving: study · needed · wasted bar, vs your usual day, over/under your limit (kind wording on a bad day), biggest time-wasters, your if–then plan | Screen-time sheet | ✅ |
+| Weekly report: study and wasted per day (▲▼ vs the week before), share that was study, days under your limit; limit suggested after 7 days (~20% under your usual day, lowered 10% when kept on 5+ of 7 days, or set your own); biggest time-waster with a Digital Wellbeing app-timer suggestion; ✍ if–then plan (shown on the Today card); the AI weekly report is told the figures. Screen time does not change the day score or colour | Study diary → This week / Last week | ✅ |
+| A day in the diary: screen time with Edit / Delete (Undo); swipe left / right or ‹ › for the next / previous day | Study diary → tap a day | ✅ |
+| 📖 All daily entries: by week or by month (‹ › to move), "List" (scroll) or "One day" (swipe or ‹ ›); each day shows score, mood, tags, note, questions, topics, screen time; tap to open the day | Study diary, below the calendar | ✅ |
+| Fix: on Today at 360 px in Malayalam the goal and habits rows were a little too wide | Today | ✅ |
+

@@ -4,7 +4,7 @@
      (Other apps on the same site keep their caches.)
    - A new version waits until the user taps "Refresh" in the app. */
 
-const VERSION = "1.22.5";
+const VERSION = "1.23.0";
 // Background backup through your own Google script (see src/cloud/sw-backup.js).
 importScripts("./src/cloud/sw-backup.js");
 // Reminders: shows the reminder the app planned when your reminder script wakes it (see src/cloud/sw-notify.js).
@@ -75,6 +75,7 @@ const SHELL_FILES = [
   "./src/data/paper-json.js",
   "./src/data/review.js",
   "./src/data/schema.js",
+  "./src/data/screen-time.js",
   "./src/data/snapshots.js",
   "./src/data/store.js",
   "./src/data/strategy.js",
@@ -93,6 +94,7 @@ const SHELL_FILES = [
   "./src/domain/reminders.js",
   "./src/domain/review.js",
   "./src/domain/scoring.js",
+  "./src/domain/screen-time.js",
   "./src/domain/stats.js",
   "./src/domain/study.js",
   "./src/domain/test-analysis.js",
@@ -105,7 +107,9 @@ const SHELL_FILES = [
   "./src/features/ai/ai-ui.js",
   "./src/features/ai/content.js",
   "./src/features/ai/flag-ui.js",
+  "./src/features/diary/diary-days.js",
   "./src/features/diary/diary.js",
+  "./src/features/diary/screen-time.js",
   "./src/features/guide/content.js",
   "./src/features/guide/guide.js",
   "./src/features/import/import-flow.js",

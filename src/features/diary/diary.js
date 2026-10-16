@@ -22,6 +22,8 @@ import { tutorSystem, inLang } from "../../ai/prompts.js";
 import { ensureAi, errorText } from "../ai/ai-ui.js";
 import { blockTitle, icon, fmt, fmtDate } from "../timetable/common.js";
 import { focusReportLine } from "../insights/focus-view.js";
+import { onSwipe } from "../../core/swipe.js";
+import { screenDayBlock, screenHandlers, todayScreenRow, screenReport, reportHandlers, screenReportLine, addScreenTime, editScreenTime, screenDays } from "./screen-time.js";
 
 const TAGS = ["focused", "revised", "mock", "notes", "distracted", "tired", "phone", "late", "unwell", "busy"];
 
@@ -55,6 +57,7 @@ export function todayDiaryCard(syllabus) {
     </ul>
     ${!list.items.length ? html`<p class="hint">${t("diary.noPlanHint")}</p>` : ""}
     ${askYesterday ? moodRow(yesterday, t("diary.howYesterday")) : askToday ? moodRow(today, t("diary.howToday")) : ""}
+    ${todayScreenRow()}
     <button type="button" class="day-strip" data-action="diary" aria-label="${t("diary.open")}">${strip.map((x) => html`<span class="ds-cell lv-${x.level} ${x.d === today ? "is-today" : ""}" title="${fmtDate(x.d)}: ${t(`diary.level.${x.level}`)}">${x.mood ? D.MOOD_FACE[x.mood] : ""}</span>`)}</button>
     <div class="dc-foot"><span class="hint">${t("diary.last14")}</span><button type="button" class="link" data-action="diary">${t("diary.open")} ›</button></div>
   </section>`;
@@ -66,7 +69,9 @@ function moodRow(date, title) {
 
 export const diaryHandlers = {
   diary: () => go("diary"),
-  mood: (el) => openReview(el.dataset.d, Number(el.dataset.m))
+  mood: (el) => openReview(el.dataset.d, Number(el.dataset.m)),
+  "sc-add": (el) => addScreenTime(el.dataset.d || null),
+  "sc-edit": (el) => editScreenTime(el.dataset.d)
 };
 
 /* ---------- review of the day ---------- */
@@ -134,6 +139,7 @@ export const diaryScreen = {
           <span class="cd-n">${Number(c.d.slice(8))}</span><span class="cd-m">${c.mood ? D.MOOD_FACE[c.mood] : ""}</span></button>`)}</div>
       <div class="legend">${["great", "good", "fair", "low", "missed", "none"].map((l) => html`<span><i class="lv-${l}"></i>${t(`diary.level.${l}`)}</span>`)}</div>
       <p class="hint">${t("diary.scoreExplain")}</p>
+      <button type="button" class="btn btn-quiet wide" data-action="entries" data-m="${month}">📖 ${t("diary.entries")}</button>
       <h2 class="section-title">${t("diary.reports")}</h2>
       ${reportCard(syllabus, "week", lastMonday, T.addDays(lastMonday, 6), t("diary.lastWeek", { from: fmtDate(lastMonday, { day: "numeric", month: "short" }), to: fmtDate(T.addDays(lastMonday, 6), { day: "numeric", month: "short" }) }))}
       ${reportCard(syllabus, "week", D.mondayOf(today), today, t("diary.thisWeek"), { partial: true })}
@@ -144,7 +150,9 @@ export const diaryScreen = {
       month: (el) => go("diary", { m: el.dataset.m }),
       day: (el) => daySheet(syllabus, el.dataset.d),
       "ai-report": (el) => writeReport(syllabus, el.dataset.kind, el.dataset.from, el.dataset.to, el.dataset.key, el),
-      "old-report": (el) => { const r = store.byId("diary", el.dataset.id); if (r) showReport(r); }
+      "old-report": (el) => { const r = store.byId("diary", el.dataset.id); if (r) showReport(r); },
+      entries: (el) => go("diary-days", { p: "month", k: el.dataset.m }),
+      ...reportHandlers(() => store.touch())
     });
   }
 };
@@ -168,13 +176,15 @@ function statsHtml(s) {
 function reportCard(syllabus, kind, from, to, title, { partial = false, key = from } = {}) {
   const s = D.summarize(periodDays(syllabus, from, to));
   const saved = partial ? null : diary.getReport(kind, key);
+  const scDays = kind === "week" ? screenDays(from, to) : 0;
   return html`<section class="report-card">
     <h3>${kind === "week" ? "🗓" : "📅"} ${title}</h3>
     ${statsHtml(s)}
+    ${kind === "week" ? screenReport(from, to, { current: partial }) : ""}
     ${s.best && s.best.score > 0 ? html`<p class="hint">${t("diary.bestDay", { day: fmtDate(s.best.date), score: s.best.score })}</p>` : ""}
     ${saved ? reportBody(saved) : ""}
-    ${!partial && !saved && !s.studied && !s.reviewed ? html`<p class="hint">${t("diary.nothingThen")}</p>` : ""}
-    ${!partial && can("ai") && (s.studied || s.reviewed || saved) ? html`<button type="button" class="btn ${saved ? "btn-quiet" : ""}" data-action="ai-report" data-kind="${kind}" data-from="${from}" data-to="${to}" data-key="${key}">🤖 ${saved ? t("diary.rewrite") : t(`diary.write.${kind}`)}</button>` : ""}
+    ${!partial && !saved && !s.studied && !s.reviewed && !scDays ? html`<p class="hint">${t("diary.nothingThen")}</p>` : ""}
+    ${!partial && can("ai") && (s.studied || s.reviewed || saved || scDays) ? html`<button type="button" class="btn ${saved ? "btn-quiet" : ""}" data-action="ai-report" data-kind="${kind}" data-from="${from}" data-to="${to}" data-key="${key}">🤖 ${saved ? t("diary.rewrite") : t(`diary.write.${kind}`)}</button>` : ""}
     ${partial ? html`<p class="hint">${t("diary.partialHint")}</p>` : ""}
   </section>`;
 }
@@ -197,23 +207,37 @@ function showReport(r) {
 
 /* ---------- one day ---------- */
 
-function daySheet(syllabus, date) {
+/** One day's details. Swipe left / right (or ‹ ›) for the next / previous day. */
+export function daySheet(syllabus, date) {
+  const today = T.isoDate();
   const { f, score, level } = factsOf(syllabus, date);
   const list = diary.dayChecklist(syllabus.id, date);
   const r = diary.review(date);
   const act = store.byId("activity", date) || {};
   const topicNames = [...new Set(act.topics || [])].map((id) => nameLabel(store.topic(id))).filter(Boolean);
-  openSheet(html`<p class="tt-kicker">${fmtDate(date, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
+  const next = date < today ? T.addDays(date, 1) : null;
+  const prev = T.addDays(date, -1);
+  const body = openSheet(html`<div class="day-swipe">
+    <div class="day-nav"><button type="button" class="icon-sm" data-action="dprev" aria-label="${t("diary.prevDay")}">‹</button>
+      <p class="tt-kicker">${fmtDate(date, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
+      <button type="button" class="icon-sm" data-action="dnext" ${next ? "" : "disabled"} aria-label="${t("diary.nextDay")}">›</button></div>
     <div class="day-sum lv-${level}"><span class="score-pill lv-${level}">${score}</span><span>${t(`diary.level.${level}`)}</span></div>
     ${list.items.length ? html`<h3>${t("diary.plan")}</h3><ul class="checklist">${list.items.map((i) => html`<li class="${i.done ? "done" : ""}"><span class="ck">${i.done ? "✓" : i.skipped ? "–" : ""}</span><span class="ck-main"><span>${icon(i.block)} ${blockTitle(i.block)}</span><span class="hint">${fmt(i.block.start)}${i.topicIds.length ? ` · ${i.topicIds.map((x) => nameLabel(store.topic(x))).filter(Boolean).join(", ")}` : ""}</span></span></li>`)}</ul>` : ""}
     <p>${t("diary.questions", { n: f.questions, goal: f.goal })}${f.questions ? ` · ${t("diary.accuracy", { pct: Math.round((f.correct / f.questions) * 100) })}` : ""}</p>
     ${topicNames.length ? html`<p>${t("diary.topics", { n: topicNames.length })}: <span class="hint">${topicNames.join(", ")}</span></p>` : ""}
     ${r ? html`<div class="review-show"><span class="f-emoji">${D.MOOD_FACE[r.mood]}</span><div>${r.tags?.length ? html`<p class="hint">${r.tags.map((k) => t(`diary.tag.${k}`)).join(" · ")}</p>` : ""}${r.note ? html`<p class="pre">${r.note}</p>` : ""}</div></div>` : ""}
+    ${screenDayBlock(date)}
+    <p class="hint center swipe-hint">${t("diary.swipeDays")}</p></div>
     <div class="sheet-actions"><button type="button" class="btn btn-quiet" data-action="close">${t("common.close")}</button>
       <button type="button" class="btn" data-action="rev">${r ? t("diary.editReview") : t("diary.addReview")}</button></div>`, {
     close: () => closeSheet(),
-    rev: () => openReview(date)
+    rev: () => openReview(date),
+    dprev: () => daySheet(syllabus, prev),
+    dnext: () => { if (next) daySheet(syllabus, next); },
+    ...screenHandlers(() => daySheet(syllabus, date))
   }, { label: fmtDate(date) });
+  const wrap = body.querySelector(".day-swipe");
+  if (wrap) onSwipe(wrap, { left: () => { if (next) daySheet(syllabus, next); }, right: () => daySheet(syllabus, prev) });
 }
 
 /* ---------- AI report ---------- */
@@ -234,6 +258,7 @@ async function writeReport(syllabus, kind, from, to, key, btn) {
 Totals: average score ${s.avgScore}, studied on ${s.studied} of ${s.days} days, ${s.missed} planned day(s) missed, timetable kept ${s.planRate ?? "–"}%, ${s.questions} questions${s.accuracy !== null ? ` at ${s.accuracy}% accuracy` : ""}, ${s.topics} topics, average mood ${s.avgMood ?? "not rated"}.
 The period before: average score ${before.avgScore}, studied ${before.studied}/${before.days} days, ${before.questions} questions.
 ${focusReportLine(syllabus, from, to)}
+${screenReportLine(from, to)}
 
 Day by day:
 ${kind === "week" ? lines.join("\n") : lines.filter((l) => !/score 0\/100.*no review/.test(l)).slice(-31).join("\n")}

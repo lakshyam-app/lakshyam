@@ -1386,3 +1386,59 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .swipe-in-prev { animation: swipe-in-prev 160ms ease-out; }
 @media (prefers-reduced-motion: reduce) { .swipe-in-next, .swipe-in-prev { animation: none; } }
 .library { min-height: calc(100dvh - 190px); align-content: start; } /* the whole area below the tabs takes a swipe; its parts keep their own height */
+/* 1.23: screen time (study · needed · wasted) */
+:root { --sc-study: #3E9A57; --sc-needed: #8FA7B3; --sc-wasted: #D2704F; --sc-unsorted: #CFCFCF; }
+:root[data-theme="dark"] { --sc-study: #58B873; --sc-needed: #6E8794; --sc-wasted: #E08A6C; --sc-unsorted: #555; }
+.sc-bar { display: flex; height: 14px; border-radius: 7px; overflow: hidden; background: var(--line); margin: 6px 0 4px; }
+.sc-bar span { display: block; height: 100%; }
+.b-study { background: var(--sc-study); } .b-needed { background: var(--sc-needed); } .b-wasted { background: var(--sc-wasted); } .b-unsorted { background: var(--sc-unsorted); }
+.sc-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.875rem; color: var(--muted); }
+.sc-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: 0; }
+.sc-legend b { color: var(--text); font-weight: 600; }
+.sc-list { display: grid; gap: 10px; }
+.sc-app { border: 1px solid var(--line); border-radius: 12px; padding: 10px; display: grid; gap: 8px; }
+.sc-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sc-name { font-weight: 600; overflow-wrap: anywhere; }
+.sc-min { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 0.875rem; flex: none; }
+.sc-min input { width: 76px; min-height: 36px; padding: 4px 8px; text-align: right; }
+.sc-choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.sc-pick { min-height: 38px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--text); font: inherit; font-size: 0.8125rem; padding: 4px; }
+.sc-pick.on { border-color: var(--brand); background: var(--brand-soft); font-weight: 600; }
+.sc-pick.sc-none.on { border-color: var(--sc-wasted); background: color-mix(in srgb, var(--sc-wasted) 14%, transparent); }
+.sc-pick.sc-needed.on { border-color: var(--sc-needed); background: color-mix(in srgb, var(--sc-needed) 18%, transparent); }
+.sc-usual { margin: -2px 0 0; font-size: 0.8125rem; }
+.sc-day, .sc-week { display: grid; gap: 6px; border-top: 1px solid var(--line); padding-top: 10px; margin-top: 6px; }
+.sc-day h3, .sc-week h4 { margin: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sc-apps { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.sc-apps li { display: flex; justify-content: space-between; gap: 8px; font-size: 0.9375rem; }
+.sc-today { margin: 6px 0; display: grid; gap: 4px; }
+.sc-today .row { padding: 6px 0; }
+.plan-box { border-left: 3px solid var(--brand); padding: 6px 10px; background: var(--brand-soft); border-radius: 0 10px 10px 0; margin: 4px 0; }
+.plan-box.small { font-size: 0.875rem; }
+.fact-l .good { color: var(--ok); } .fact-l .bad { color: var(--danger); }
+/* 1.23: diary — move between days; all daily entries */
+.day-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.day-nav .tt-kicker { margin: 0; text-align: center; flex: 1; }
+.swipe-hint { font-size: 0.8125rem; margin: 4px 0 0; }
+.entries { display: grid; gap: 10px; }
+.entry-card { display: grid; gap: 4px; text-align: left; width: 100%; border: 1px solid var(--line); border-left: 6px solid var(--lv); border-radius: 12px; background: var(--surface); color: var(--text); font: inherit; padding: 10px 12px; }
+.entry-card.no-entry { opacity: 0.7; padding: 8px 12px; }
+.entry-card.big { padding: 14px; gap: 8px; min-height: 200px; align-content: start; }
+.ec-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ec-date { font-weight: 600; }
+.ec-right { display: inline-flex; align-items: center; gap: 8px; }
+.ec-face { font-size: 1.25rem; }
+.ec-facts, .ec-screen { font-size: 0.9rem; color: var(--muted); }
+.ec-note { white-space: pre-wrap; }
+.ec-note.clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.entry-one { display: grid; gap: 10px; }
+.segmented.small button { min-height: 34px; font-size: 0.8125rem; padding: 0 8px; }
+.toolbar .segmented.small { margin: 0; }
+/* Today at 360 px in Malayalam: the goal and the habits row fit the card (they were ~17 px too wide) */
+.goal > :last-child { min-width: 0; overflow-wrap: anywhere; }
+.habits { grid-template-columns: auto minmax(0, 1fr); min-width: 0; }
+.habits .week { min-width: 0; overflow: hidden; }
+.goal, .habits { max-width: 100%; }
+.entries { display: flex; flex-direction: column; gap: 10px; }
+.entry-card { align-content: start; }
+.sc-week .fact-n { white-space: nowrap; }

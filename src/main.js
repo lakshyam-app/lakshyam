@@ -31,6 +31,7 @@ import { timetableScreen, ttListScreen } from "./features/timetable/timetable.js
 import { ttPlansScreen, ttPlanScreen, ttScheduleScreen } from "./features/timetable/tt-edit.js";
 import { ttNewScreen, ttReviewScreen } from "./features/timetable/tt-new.js";
 import { diaryScreen } from "./features/diary/diary.js";
+import { diaryDaysScreen } from "./features/diary/diary-days.js";
 import { progressScreen, historyScreen, testsScreen } from "./features/progress/progress.js";
 import { statsSubjectScreen, statsTopicScreen, statsTopicsScreen } from "./features/progress/drill.js";
 import { statsTablesScreen } from "./features/progress/tables.js";
@@ -41,7 +42,7 @@ import { settingsScreen } from "./features/settings/settings.js";
 import { remindersScreen, remindersOnOpen, syncSoon, listenToWorker } from "./features/reminders/reminders.js";
 
 [todayScreen, libraryScreen, subjectScreen, subjectAllScreen, topicScreen, paperScreen, bankScreen, bankAddScreen,
-  searchScreen, aiHubScreen, pdfsScreen, pdfScreen, pdfPageScreen, pdfViewScreen, pdfMakeScreen, insightsScreen, insightTopicScreen, timetableScreen, ttListScreen, ttPlansScreen, ttPlanScreen, ttScheduleScreen, ttNewScreen, ttReviewScreen, diaryScreen, progressScreen, historyScreen, testsScreen, statsSubjectScreen, statsTopicScreen, statsTopicsScreen, statsTablesScreen, testScreen, resultScreen, notesScreen, settingsScreen, remindersScreen, examsScreen, mapScreen, guideScreen, guidePdfScreen]
+  searchScreen, aiHubScreen, pdfsScreen, pdfScreen, pdfPageScreen, pdfViewScreen, pdfMakeScreen, insightsScreen, insightTopicScreen, timetableScreen, ttListScreen, ttPlansScreen, ttPlanScreen, ttScheduleScreen, ttNewScreen, ttReviewScreen, diaryScreen, diaryDaysScreen, progressScreen, historyScreen, testsScreen, statsSubjectScreen, statsTopicScreen, statsTopicsScreen, statsTablesScreen, testScreen, resultScreen, notesScreen, settingsScreen, remindersScreen, examsScreen, mapScreen, guideScreen, guidePdfScreen]
   .forEach(registerScreen);
 
 function renderTabbar(activeId) {
