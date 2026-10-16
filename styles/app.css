@@ -1369,3 +1369,6 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .ai-wait .center { text-align: center; }
 .wait-btns { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; padding: 4px 0 8px; }
 .wait-btns[hidden] { display: none; }
+/* 1.22: AI usage on each preset */
+.preset .usage-line { display: grid; gap: 1px; margin-top: 2px; }
+.preset .usage-line span { overflow-wrap: anywhere; }

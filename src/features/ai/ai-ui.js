@@ -13,6 +13,7 @@ import { ask, aiControl } from "../../ai/client.js";
 import { chooseAction } from "../../core/dialogs.js";
 import { flagChip, answerRef } from "./flag-ui.js";
 import { presetFlags } from "../../ai/flags.js";
+import { usageView } from "../../ai/usage.js";
 
 export function errorText(e) {
   if (e?.allPaused) return t("ai.err.allPaused");
@@ -43,7 +44,7 @@ export async function chooseAiSetup({ withLang = true } = {}) {
   const first = presets.tryOrder(list, cfg)[0];
   const id = await chooseAction({ title: t("ai.switchTitle"), sub: t("ai.switchSub"), items: [
     { heading: t("ai.switchPreset") },
-    ...usable.map((p) => { const n = presetFlags(p); return { id: `p:${p.id}`, label: p.name, sub: [p.model, n ? t("flag.count", { n }) : ""].filter(Boolean).join(" · "), current: first?.id === p.id }; }),
+    ...usable.map((p) => { const n = presetFlags(p); const u = usageView(p); return { id: `p:${p.id}`, label: p.name, sub: [p.model, t("ai.usage.todayShort", { r: u.dayReq }), n ? t("flag.count", { n }) : ""].filter(Boolean).join(" · "), current: first?.id === p.id }; }),
     ...(withLang ? [{ heading: t("ai.lang") }, ...presets.LANGS.map((l) => ({ id: `l:${l}`, label: t(`ai.langs.${l}`), current: (cfg.lang || "en") === l }))] : []),
     { id: "settings", label: `⚙ ${t("ai.allSettings")}` }
   ] });

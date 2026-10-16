@@ -7,6 +7,7 @@
    comes back is also checked here against a list of trusted sites, so you can see which to double-check. */
 import * as presets from "./presets.js";
 import { AiError, stripThinking } from "./client.js";
+import { tokensOf, rateOf } from "./usage.js";
 
 const TIMEOUT_MS = 120000;
 const GEMINI = /generativelanguage\.googleapis\.com/i;
@@ -59,7 +60,7 @@ export function splitSources(text) {
 
 const withTrust = (list) => list.map((x) => { const domain = x.domain || domainOf(x.url); return { ...x, domain, trust: trustOf(domain) }; });
 
-async function post(url, headers, body, signal = null) {
+async function post(url, headers, body, signal = null, preset = null) {
   if (signal?.aborted) throw new AiError("skipped", { skipped: true });
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
@@ -73,6 +74,7 @@ async function post(url, headers, body, signal = null) {
     throw new AiError(e.name === "AbortError" ? "timeout" : "network");
   } finally { clearTimeout(timer); signal?.removeEventListener("abort", skip); }
   const data = await res.json().catch(() => null);
+  if (res.ok && preset?.id) presets.recordUsage(preset.id, { tokens: tokensOf(data), rate: rateOf(res.headers) }).catch(() => {});
   if (!res.ok) {
     let m = data?.error?.message || data?.message || `HTTP ${res.status}`;
     m = String(typeof m === "string" ? m : JSON.stringify(m)).split(/\.\s+For more information/i)[0].slice(0, 200);
@@ -103,11 +105,11 @@ async function geminiSearch(p, system, user, maxTokens, signal) {
   const gemma = /gemma/i.test(p.model);
   let data;
   if (gemma) {
-    try { data = await post(url, headers, { ...body, generationConfig: { ...body.generationConfig, thinkingConfig: { thinkingLevel: "minimal" } } }, signal); } catch (e) {
+    try { data = await post(url, headers, { ...body, generationConfig: { ...body.generationConfig, thinkingConfig: { thinkingLevel: "minimal" } } }, signal, p); } catch (e) {
       if (e.status !== 400) throw e;
     }
   }
-  if (!data) data = await post(url, headers, body, signal);
+  if (!data) data = await post(url, headers, body, signal, p);
   const cand = data?.candidates?.[0];
   const text = answerParts(cand?.content?.parts);
   const meta = cand?.groundingMetadata || {};
@@ -122,7 +124,7 @@ async function groqSearch(p, system, user, maxTokens, signal) {
     model: p.model, max_completion_tokens: maxTokens, reasoning_effort: "low",
     messages: [{ role: "system", content: system }, { role: "user", content: `${user}\n\nWrite your final answer after a line '=== ANSWER ===' (nothing from the search pages before it is shown).` }],
     tools: [{ type: "browser_search" }], tool_choice: "required"
-  }, signal);
+  }, signal, p);
   let text = String(data?.choices?.[0]?.message?.content || "");
   const at = text.lastIndexOf("=== ANSWER ===");
   if (at >= 0) text = text.slice(at + "=== ANSWER ===".length);

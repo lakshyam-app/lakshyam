@@ -1,7 +1,7 @@
 /* Settings → AI: presets (provider + model + your key), priority order,
    automatic fallback, answer language, Test, and "Remove all AI keys". */
 import { html } from "../../core/dom.js";
-import { t, dateLocale } from "../../core/i18n.js";
+import { t, dateLocale, formatNumber } from "../../core/i18n.js";
 import { openSheet, closeSheet, isSheetOpen } from "../../core/sheet.js";
 import { chooseAction, confirmAction } from "../../core/dialogs.js";
 import { toast } from "../../core/toast.js";
@@ -12,11 +12,49 @@ import { TEST_PROMPT } from "../../ai/prompts.js";
 import { errorText } from "./ai-ui.js";
 import { openFlags } from "./flag-ui.js";
 import { presetFlags, flagList } from "../../ai/flags.js";
+import { usageView, openRouterKey } from "../../ai/usage.js";
 
 const PAUSE = html`<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="6.5" y="5" width="3.5" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="3.5" height="14" rx="1" fill="currentColor"/></svg>`;
 const PLAY = html`<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg>`;
 const pauseWhen = (ms) => new Date(ms).toLocaleString(dateLocale(), { hour: "numeric", minute: "2-digit", day: new Date(ms).toDateString() === new Date().toDateString() ? undefined : "numeric", month: new Date(ms).toDateString() === new Date().toDateString() ? undefined : "short" });
 const mask = (key) => (key ? `••••${key.slice(-4)}` : t("ai.noKey"));
+// 2,400 → "2.4k", 1,250,000 → "1.3M" (the phone's compact style for India would write "2.4T" for thousand).
+const compact = (n) => (n < 1000 ? formatNumber(n) : n < 1e6 ? `${formatNumber(Math.round(n / 100) / 10)}k` : `${formatNumber(Math.round(n / 1e5) / 10)}M`);
+const GROQ = /api\.groq\.com/i;
+
+/** Today / in all, counted on this phone; and what the provider says is left (when it says). */
+function usageLines(p, now) {
+  const u = usageView(p, now);
+  const lines = [t("ai.usage.today", { r: formatNumber(u.dayReq), tk: compact(u.dayTok) }), t("ai.usage.total", { r: formatNumber(u.totReq), tk: compact(u.totTok) })];
+  const r = u.rate;
+  // Only fresh figures (they change by the minute); Groq's request limit is per day, its token limit per minute.
+  if (r && now - r.at < 6 * 3600000) {
+    const when = new Date(r.at).toLocaleTimeString(dateLocale(), { hour: "numeric", minute: "2-digit" });
+    const day = GROQ.test(p.baseUrl || "");
+    const parts = [
+      Number.isFinite(r.reqLeft) ? t(day ? "ai.usage.reqLeftDay" : "ai.usage.reqLeft", { n: formatNumber(r.reqLeft), of: Number.isFinite(r.reqLimit) ? formatNumber(r.reqLimit) : "?" }) : null,
+      Number.isFinite(r.tokLeft) ? t(day ? "ai.usage.tokLeftMin" : "ai.usage.tokLeft", { n: compact(r.tokLeft), of: Number.isFinite(r.tokLimit) ? compact(r.tokLimit) : "?" }) : null
+    ].filter(Boolean);
+    if (parts.length) lines.push(`${t("ai.usage.says", { name: p.name })}: ${parts.join(" · ")} (${when})`);
+  }
+  return lines;
+}
+const orCache = new Map(); // preset id → { at, info } (asked again after 5 minutes)
+async function orInfo(p) {
+  const c = orCache.get(p.id);
+  if (c && Date.now() - c.at < 300000) return c.info;
+  const info = await openRouterKey(p);
+  orCache.set(p.id, { at: Date.now(), info });
+  return info;
+}
+function orLine(info) {
+  if (!info) return "";
+  const parts = [
+    Number.isFinite(info.freeLeft) ? t("ai.usage.orFree", { n: formatNumber(info.freeLeft), of: Number.isFinite(info.freeLimit) ? formatNumber(info.freeLimit) : "?" }) : null,
+    Number.isFinite(info.creditLeft) ? t("ai.usage.orCredit", { n: info.creditLeft.toFixed(2) }) : null
+  ].filter(Boolean);
+  return parts.length ? `${t("ai.usage.says", { name: "OpenRouter" })}: ${parts.join(" · ")}` : "";
+}
 
 /** The small summary shown inside Settings. */
 export async function aiBlock() {
@@ -34,6 +72,7 @@ export async function openAiSettings() {
   const now = Date.now();
   openSheet(html`<h2>${t("ai.title")}</h2>
     <p class="hint">${t("ai.privacy")}</p>
+    ${list.length ? html`<p class="hint">${t("ai.usage.about")}</p>` : ""}
     ${list.length ? html`<div class="menu">${list.map((p, i) => {
       const limited = p.limitHitAt && now - p.limitHitAt < 3600000;
       const paused = presets.isPaused(p, now);
@@ -41,7 +80,8 @@ export async function openAiSettings() {
         <button type="button" class="preset-main" data-action="activate" data-id="${p.id}" aria-pressed="${String(p.id === cfg.activeId)}">
           <span class="radio">${p.id === cfg.activeId ? "●" : "○"}</span>
           <span class="row-main"><span class="row-title">${i + 1}. ${p.name}</span>
-          <span class="row-sub">${[p.model || t("ai.noModel"), mask(p.apiKey), t("ai.uses", { n: p.uses || 0 }), presetFlags(p) ? t("flag.count", { n: presetFlags(p) }) : null, limited ? t("ai.limited", { m: Math.max(1, 60 - Math.floor((now - p.limitHitAt) / 60000)) }) : null].filter(Boolean).join(" · ")}</span>
+          <span class="row-sub">${[p.model || t("ai.noModel"), mask(p.apiKey), presetFlags(p) ? t("flag.count", { n: presetFlags(p) }) : null, limited ? t("ai.limited", { m: Math.max(1, 60 - Math.floor((now - p.limitHitAt) / 60000)) }) : null].filter(Boolean).join(" · ")}</span>
+          <span class="row-sub usage-line">${usageLines(p, now).map((l) => html`<span>${l}</span>`)}${/openrouter\.ai/i.test(p.baseUrl || "") && p.apiKey ? html`<span data-or="${p.id}"></span>` : ""}</span>
           ${paused ? html`<span class="row-sub paused-note">${p.pausedUntil >= presets.FOREVER ? t("ai.pausedOff") : t("ai.pausedUntil", { when: pauseWhen(p.pausedUntil) })}</span>` : ""}</span>
         </button>
         <button type="button" class="icon-sm" data-action="up" data-id="${p.id}" ${i === 0 ? "disabled" : ""} aria-label="${t("ai.up")}">↑</button>
@@ -90,6 +130,12 @@ export async function openAiSettings() {
     close: () => closeSheet()
   }, { label: t("ai.title"), onClose: () => store.touch() }); // Settings shows the new summary
   document.querySelector("#aiFallback")?.addEventListener("change", (e) => presets.saveConfig({ fallback: e.target.checked }));
+  // OpenRouter tells how many free-model requests are left today: asked for each OpenRouter preset (its own key only).
+  list.filter((p) => /openrouter\.ai/i.test(p.baseUrl || "") && p.apiKey).forEach(async (p) => {
+    const line = orLine(await orInfo(p));
+    const el = document.querySelector(`[data-or="${CSS.escape(p.id)}"]`);
+    if (el && line) el.textContent = line;
+  });
 }
 
 async function editPreset(id) {

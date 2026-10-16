@@ -776,6 +776,13 @@ export default {
       mistral: "Key from console.mistral.ai.",
       custom: "Any OpenAI-compatible service: the address up to /v1 (the app adds /chat/completions)."
     },
+    usage: {
+      todayShort: "{r} today",
+      about: "Requests and tokens are counted on this phone from each AI reply (Today = your day). Tokens are counted from version 1.22 on; the request totals include earlier ones. How much is left is shown only where the provider tells apps (Groq, OpenRouter). Google doesn’t: see ai.dev/rate-limit; its free daily limits restart at midnight US Pacific time (about 12:30–1:30 pm in India).",
+      today: (v) => `Today: ${v.r} request${v.r === "1" ? "" : "s"} · ${v.tk} tokens`, total: (v) => `In all: ${v.r} request${v.r === "1" ? "" : "s"} · ${v.tk} tokens`, says: "{name} says",
+      reqLeftDay: "{n} of {of} requests left today", reqLeft: "{n} of {of} requests left", tokLeftMin: "{n} of {of} tokens left this minute", tokLeft: "{n} of {of} tokens left",
+      orFree: "{n} of {of} free-model requests left today", orCredit: "credit left ${n}"
+    },
     thinking: "Thinking…",
     thinkingWith: "{name} is writing… {s} s", slow: "Some AIs think for a long time before they write. You can wait, or ask your next AI preset instead.", stop: "Stop", askNext: "Ask the next AI",
     generating: "Writing questions…",

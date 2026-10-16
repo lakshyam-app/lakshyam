@@ -2,6 +2,7 @@
    They live in the private "aiPresets" store: never in backups, never in safety
    copies, never sent anywhere except to the provider you chose. */
 import * as db from "../data/db.js";
+import { addUsage } from "./usage.js";
 
 const CONFIG_ID = "_config";
 const LIMIT_PAUSE_MS = 3600000; // a preset that hit its limit is tried last for an hour
@@ -67,6 +68,16 @@ export async function updatePreset(id, patch) {
   await db.put("aiPresets", p);
   // Use counts change on every answer; only what the button shows is worth a redraw.
   if (["name", "apiKey", "model", "baseUrl", "pausedUntil", "limitHitAt"].some((k) => k in patch)) changed();
+}
+
+/** One more reply from this preset: requests and tokens today / in all, and what the provider says is left.
+    (Read and changed in one step, so replies arriving together are all counted.) */
+export async function recordUsage(id, info) {
+  const all = await loadAll();
+  const p = all.presets.find((x) => x.id === id);
+  if (!p) return;
+  p.usage = addUsage(p, info);
+  await db.put("aiPresets", p);
 }
 
 export async function deletePreset(id) {

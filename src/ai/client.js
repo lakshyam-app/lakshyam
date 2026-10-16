@@ -2,6 +2,7 @@
    (Gemini, OpenRouter, Groq, OpenAI, DeepSeek, Mistral, custom) and Anthropic.
    Your key goes only in the request to that provider's address. */
 import * as presets from "./presets.js";
+import { tokensOf, rateOf } from "./usage.js";
 
 const TIMEOUT_MS = 90000;
 
@@ -102,6 +103,8 @@ export async function request(preset, system, user, maxTokens = 2500, retried = 
     }
     throw new AiError(message, { status: res.status, ...classify(res.status, message) });
   }
+  // Counted on this phone: one request and the tokens the reply says it used (+ what the provider says is left).
+  if (preset.id) presets.recordUsage(preset.id, { tokens: tokensOf(data), rate: rateOf(res.headers) }).catch(() => {});
   const text = replyText(preset.format, data);
   if (!text) {
     // Reasoning models can spend the whole budget thinking: retry once with more room.

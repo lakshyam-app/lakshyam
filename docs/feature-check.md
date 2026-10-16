@@ -280,3 +280,11 @@ Today screen with Quick 10 and daily goal · exam countdown · timetable (any da
 |---|---|---|
 | Answer filter on question lists: a "n without answer" pill (shown when some question has no correct answer marked) → All / Without a correct answer / With a correct answer; "Showing n of m"; Practice and Copy use the filtered list; kept while the app is open | Topic (PYQs), subject, paper, bank lists | ✅ |
 
+## Added in 1.22
+
+| Feature | Where | Status |
+|---|---|---|
+| Each preset shows "Today: n requests · n tokens" and "In all: n requests · n tokens" (counted on this phone from every successful reply, including web searches and PDF jobs; today = your local day; tokens from 1.22 on, request totals include the earlier count) | Settings → AI | ✅ |
+| What is left, only where the provider says it: Groq (requests left today, tokens left this minute, from its reply headers if the browser can read them); OpenRouter (free-model requests left today, credit left; asked when Settings → AI opens). Google Gemini: not available to apps (ai.dev/rate-limit) | Settings → AI | ✅ |
+| "n today" next to each preset in the 🤖 switch at the top | Top bar | ✅ |
+
