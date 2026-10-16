@@ -27,6 +27,7 @@ import { inReview, stopReviewing } from "../../data/review.js";
 const examsBy = new Map();   // listing key → Set of included paper IDs (none = all)
 const sortBy = new Map();    // listing key → "none" | "diff-asc" | "diff-desc"
 const revealBy = new Map();  // listing key → Map(questionId → picked index | true)
+const answerBy = new Map();  // listing key → "none" (only questions without a correct answer) | "has" (only with one)
 let editMode = false;
 
 const RANK = { E: 1, M: 2, D: 3 };
@@ -35,10 +36,16 @@ export const viewMode = () => (editMode ? "edit" : store.setting("questionView",
 export const listLayout = () => store.setting("listLayout", "scroll");
 export const difficultyOn = () => store.setting("difficultyEnabled", true) !== false;
 
-/** Questions after the listing's exam filter and sort. */
+/** No correct answer marked yet (a question PSC deleted has none by design and is not counted). */
+export const lacksAnswer = (q) => (q.answerIndex === null || q.answerIndex === undefined) && q.status !== "deleted_by_psc";
+
+/** Questions after the listing's exam filter, answer filter and sort. */
 export function visibleQuestions(key, questions) {
   const exams = examsBy.get(key);
   let list = exams ? questions.filter((q) => exams.has(q.paperId)) : questions.slice();
+  const ans = answerBy.get(key);
+  if (ans === "none") list = list.filter((q) => lacksAnswer(store.question(q.id) || q));
+  if (ans === "has") list = list.filter((q) => !lacksAnswer(store.question(q.id) || q));
   const sort = sortBy.get(key) || "none";
   if (sort !== "none") {
     const r = (q) => RANK[difficultyOf(q)] || 0;
@@ -112,6 +119,8 @@ export function mountQuestions(host, { key, questions, showPaper = true, bank = 
   const reveal = revealBy.get(key) || new Map();
   revealBy.set(key, reveal);
   const sort = sortBy.get(key) || "none";
+  const ans = answerBy.get(key) || "all";
+  const noAns = questions.filter((q) => lacksAnswer(store.question(q.id) || q)).length;
 
   host.innerHTML = html`
     <div class="toolbar">
@@ -120,10 +129,12 @@ export function mountQuestions(host, { key, questions, showPaper = true, bank = 
       <button type="button" class="pill" data-action="ql-sort">${t(`sort.${sort}`)} ▾</button>`}
       ${papers.length > 1 ? html`<button type="button" class="pill ${exams ? "on" : ""}" data-action="ql-exams">
         ${exams ? t("exams.some", { n: exams.size, of: papers.length }) : t("exams.all", { n: papers.length })} ▾</button>` : ""}
+      ${noAns || ans !== "all" ? html`<button type="button" class="pill ${ans !== "all" ? "on" : ""}" data-action="ql-answer">${t(`answerFilter.${ans}`, { n: noAns })} ▾</button>` : ""}
     </div>
     ${mode === "edit" ? html`<div class="banner"><span>${t("view.editBanner")}</span>
       <button type="button" class="btn btn-small" data-action="ql-edit-done">${t("common.done")}</button></div>` : ""}
-    ${exams ? html`<p class="hint">${t("exams.showing", { n: list.length, of: questions.length })}</p>` : ""}
+    ${exams || ans !== "all" ? html`<p class="hint">${t("exams.showing", { n: list.length, of: questions.length })}</p>` : ""}
+    ${ans === "none" && !list.length ? html`<p class="hint pad">${t("answerFilter.allDone")}</p>` : ""}
     <div class="qhost"></div>`;
 
   // Always draw from the saved copy, so a redrawn card shows the latest edit.
@@ -178,6 +189,19 @@ export function mountQuestions(host, { key, questions, showPaper = true, bank = 
       const id = await chooseAction({ title: t("sort.title"), items: sortItems() });
       if (!id) return;
       sortBy.set(key, id);
+      forgetPlace(key);
+      redraw();
+    }),
+    // Only the questions without a correct answer (e.g. to mark them in Edit, or ask AI), or only those with one.
+    "ql-answer": () => runFlow(async () => {
+      const has = questions.length - noAns;
+      const id = await chooseAction({ title: t("answerFilter.title"), items: [
+        { id: "all", label: t("answerFilter.allItem", { n: questions.length }), current: ans === "all" },
+        { id: "none", label: t("answerFilter.noneItem", { n: noAns }), sub: t("answerFilter.noneSub"), current: ans === "none" },
+        { id: "has", label: t("answerFilter.hasItem", { n: has }), current: ans === "has" }
+      ] });
+      if (!id) return;
+      if (id === "all") answerBy.delete(key); else answerBy.set(key, id);
       forgetPlace(key);
       redraw();
     }),

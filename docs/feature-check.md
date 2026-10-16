@@ -274,3 +274,9 @@ Today screen with Quick 10 and daily goal · exam countdown · timetable (any da
 | While an AI is writing: "<preset> is writing… n s"; after 15 s "Ask the next AI" (stops waiting for that one and asks your next preset) and "Stop" | Every AI answer sheet, test analysis, next steps | ✅ |
 | Gemma models on Google's API are asked to think less (reasoning_effort minimal), so answers come in seconds instead of minutes; a model that refuses the setting is asked again without it and never sent it again | All AI answers | ✅ |
 
+## Added in 1.21.2
+
+| Feature | Where | Status |
+|---|---|---|
+| Answer filter on question lists: a "n without answer" pill (shown when some question has no correct answer marked) → All / Without a correct answer / With a correct answer; "Showing n of m"; Practice and Copy use the filtered list; kept while the app is open | Topic (PYQs), subject, paper, bank lists | ✅ |
+

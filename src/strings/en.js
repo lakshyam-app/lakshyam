@@ -172,6 +172,11 @@ export default {
     "diff-asc": "Easy → Hard",
     "diff-desc": "Hard → Easy"
   },
+  answerFilter: {
+    all: "{n} without answer", none: "No answer only", has: "With answer only", title: "Show questions",
+    allItem: "All questions ({n})", noneItem: "Without a correct answer ({n})", noneSub: "No correct answer marked yet. Mark them in “Edit answers” view (tap the right option), or ask 🤖 Explain.",
+    hasItem: "With a correct answer ({n})", allDone: "No question here is without an answer now."
+  },
   exams: {
     title: "Choose exams to include",
     hint: "Only changes this list. Untick an exam to leave out its questions.",
