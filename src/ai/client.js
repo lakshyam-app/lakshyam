@@ -71,7 +71,14 @@ export function classify(status, message) {
   return { limit, busy };
 }
 
-export async function request(preset, system, user, maxTokens = 2500, retried = false, images = [], signal = null) {
+/* OpenRouter routers (e.g. "openrouter/free", "openrouter/auto") pick a model for each request; the reply's
+   "model" field says which one wrote it, so that is the name shown with what it made (and flagged). */
+export function servedModel(preset, data) {
+  const m = typeof data?.model === "string" ? data.model.trim() : "";
+  return m && /openrouter\.ai/i.test(preset?.baseUrl || "") && m !== preset.model ? m.slice(0, 80) : "";
+}
+
+export async function request(preset, system, user, maxTokens = 2500, retried = false, images = [], signal = null, meta = null) {
   if (!preset.apiKey) throw new AiError("No API key", { status: 401 });
   if (!preset.model) throw new AiError("No model name", { status: 400 });
   if (signal?.aborted) throw new AiError("skipped", { skipped: true });
@@ -99,16 +106,17 @@ export async function request(preset, system, user, maxTokens = 2500, retried = 
     if (res.status === 400 && quickThinking(preset) && /reason|effort|think/i.test(message)) {
       const { updatePreset } = await import("./presets.js");
       await updatePreset(preset.id, { noEffort: true });
-      return request({ ...preset, noEffort: true }, system, user, maxTokens, retried, images, signal);
+      return request({ ...preset, noEffort: true }, system, user, maxTokens, retried, images, signal, meta);
     }
     throw new AiError(message, { status: res.status, ...classify(res.status, message) });
   }
   // Counted on this phone: one request and the tokens the reply says it used (+ what the provider says is left).
   if (preset.id) presets.recordUsage(preset.id, { tokens: tokensOf(data), rate: rateOf(res.headers) }).catch(() => {});
+  if (meta) meta.model = servedModel(preset, data);
   const text = replyText(preset.format, data);
   if (!text) {
     // Reasoning models can spend the whole budget thinking: retry once with more room.
-    if (!retried && maxTokens < 6000) return request(preset, system, user, Math.min(8000, Math.max(1500, maxTokens * 4)), true, images, signal);
+    if (!retried && maxTokens < 6000) return request(preset, system, user, Math.min(8000, Math.max(1500, maxTokens * 4)), true, images, signal, meta);
     throw new AiError("empty");
   }
   return text;
@@ -156,18 +164,21 @@ export async function ask(system, user, maxTokens = 2500, { images = [], control
     if (control) { control.preset = p; control.startedAt = Date.now(); control.left = order.length - i - 1; control.onTry?.(p, control); }
     try {
       let text;
-      try { text = await request(p, system, user, maxTokens, false, images, sig); } catch (e) {
+      const meta = {};
+      try { text = await request(p, system, user, maxTokens, false, images, sig, meta); } catch (e) {
         if (!e.busy) throw e;
         await new Promise((r) => setTimeout(r, 3500));
-        text = await request(p, system, user, maxTokens, false, images, sig);
+        text = await request(p, system, user, maxTokens, false, images, sig, meta);
       }
       await presets.updatePreset(p.id, { uses: (p.uses || 0) + 1, lastUsedAt: Date.now(), limitHitAt: null });
-      if (images.length) return { text, preset: p, switched: false };
+      // The model that actually wrote it (OpenRouter's routers): shown and saved as "made by" instead of the router's name.
+      const used = meta.model ? { ...p, model: meta.model, routedBy: p.model } : p;
+      if (images.length) return { text, preset: used, switched: false };
       // A paused active preset stays your choice: it is used again once the pause ends.
       const activePaused = list.some((x) => x.id === config.activeId && presets.isPaused(x));
       const switched = config.activeId !== p.id && !activePaused;
       if (switched) await presets.saveConfig({ activeId: p.id });
-      return { text, preset: p, switched };
+      return { text, preset: used, switched };
     } catch (e) {
       if (control?.cancelled) throw new AiError("cancelled", { cancelled: true });
       errors.push(`${p.name}: ${e.skipped ? "skipped (took too long)" : e.message}${e.status ? ` (HTTP ${e.status})` : ""}`);

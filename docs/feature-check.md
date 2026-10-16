@@ -288,3 +288,9 @@ Today screen with Quick 10 and daily goal · exam countdown · timetable (any da
 | What is left, only where the provider says it: Groq (requests left today, tokens left this minute, from its reply headers if the browser can read them); OpenRouter (free-model requests left today, credit left; asked when Settings → AI opens). Google Gemini: not available to apps (ai.dev/rate-limit) | Settings → AI | ✅ |
 | "n today" next to each preset in the 🤖 switch at the top | Top bar | ✅ |
 
+## Changed in 1.22.1
+
+| Change | Where | Status |
+|---|---|---|
+| With an OpenRouter router model (openrouter/free, openrouter/auto), everything made shows the model that actually answered (from the reply's "model" field), e.g. "OpenRouter (upstage/solar-pro-3:free)"; that name is saved with explanations, questions, analyses, notes, and 🚩 flags count against it. Usage still counts on the OpenRouter preset | Everywhere AI shows its model | ✅ |
+

@@ -39,3 +39,13 @@ test("OpenRouter key info: free-model requests left today and credit left", asyn
   assert.equal(await openRouterKey({ baseUrl: "https://api.groq.com/openai/v1", apiKey: "k" }, fake), null);
   assert.equal(await openRouterKey({ baseUrl: "https://openrouter.ai/api/v1", apiKey: "k" }, async () => ({ ok: false })), null);
 });
+
+test("OpenRouter's router: the model that actually answered is the one named", async () => {
+  const { servedModel } = await import("../src/ai/client.js");
+  const or = { baseUrl: "https://openrouter.ai/api/v1", model: "openrouter/free" };
+  assert.equal(servedModel(or, { model: "upstage/solar-pro-3:free" }), "upstage/solar-pro-3:free");
+  assert.equal(servedModel(or, { model: "openrouter/free" }), "");
+  assert.equal(servedModel(or, {}), "");
+  // other providers keep the preset's model name (e.g. OpenAI adds a date to it)
+  assert.equal(servedModel({ baseUrl: "https://api.openai.com/v1", model: "gpt-4o-mini" }, { model: "gpt-4o-mini-2024-07-18" }), "");
+});

@@ -169,6 +169,7 @@ and [`docs/feature-check.md`](docs/feature-check.md) for where every old-app fea
 | 1.3 | Up to 20 exam countdowns, with a choice of which and how Today shows them |
 | 1.6 | Automatic Drive backup without sign-in, through your own Google Apps Script (docs/apps-script); background backup on installed app |
 | 1.5 | How to use Lakshyam: illustrated demo + PDF (English, മലയാളം) in Settings |
+| 1.22.1 | OpenRouter routers (e.g. openrouter/free): the model that actually answered is shown, saved as "made by" and flagged, instead of the router's name |
 | 1.22 | Settings → AI: requests and tokens today and in all for each preset (counted on the phone from the replies); what is left where the provider says it (Groq headers, OpenRouter key info); "n today" in the 🤖 switch |
 | 1.21.2 | Question lists (topic, subject, paper, bank): filter to the questions without a correct answer, or only those with one; Practice and Copy follow the filter |
 | 1.21.1 | While an AI writes: its name and seconds waited; after 15 s "Ask the next AI" / "Stop" (sheets, test analysis, next steps); Gemma on Google's API asked to think less (falls back if refused) |
