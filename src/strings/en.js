@@ -784,6 +784,7 @@ export default {
       orFree: "{n} of {of} free-model requests left today", orCredit: "credit left ${n}"
     },
     dragHint: "Hold ⠿ and drag to change the order. Tap it to move to the top or bottom.", moveTop: "Move to the top", moveBottom: "Move to the bottom", movedTo: "{name} is now number {n}.",
+    badge: { limit: "⛔ Limit reached · ~{m} min", webLimit: "🌐 Web search limit · ~{m} min" },
     thinking: "Thinking…",
     thinkingWith: "{name} is writing… {s} s", slow: "Some AIs think for a long time before they write. You can wait, or ask your next AI preset instead.", stop: "Stop", askNext: "Ask the next AI",
     generating: "Writing questions…",

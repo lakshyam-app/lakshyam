@@ -300,3 +300,9 @@ Today screen with Quick 10 and daily goal · exam countdown · timetable (any da
 |---|---|---|
 | AI preset order: ↑ ↓ buttons replaced by a ⠿ handle — hold and drag up or down (the list scrolls near its top/bottom; your place is kept after the drop); tap it for Move to the top / up / down / to the bottom | Settings → AI | ✅ |
 
+## Changed in 1.22.3
+
+| Change | Where | Status |
+|---|---|---|
+| A preset that hit its limit shows a red "⛔ Limit reached · ~n min" label (it is tried last for about an hour); one whose web-search limit was hit shows an amber "🌐 Web search limit · ~n min" | Settings → AI, 🤖 switch at the top | ✅ |
+

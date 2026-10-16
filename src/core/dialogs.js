@@ -28,7 +28,7 @@ export function chooseAction({ title, sub = "", items }) {
     show(html`<h2>${title}</h2>${sub ? html`<p class="hint">${sub}</p>` : ""}
       <div class="menu">${items.filter(Boolean).map((it) => (it.heading ? html`<p class="menu-head">${it.heading}</p>` : html`
         <button type="button" class="menu-item ${it.danger ? "danger" : ""} ${it.current ? "is-current" : ""}" data-action="pick" data-id="${it.id}">
-          <span class="row-main"><span>${it.label}</span>${it.sub ? html`<span class="row-sub">${it.sub}</span>` : ""}</span>
+          <span class="row-main"><span>${it.label}${it.badges?.length ? html` ${it.badges.map((b) => html`<span class="badge ${b.kind || ""}">${b.text}</span>`)}` : ""}</span>${it.sub ? html`<span class="row-sub">${it.sub}</span>` : ""}</span>
           ${it.current ? html`<span class="tick">✓</span>` : ""}
         </button>`))}</div>`,
     { pick: (el) => finish(el.dataset.id) }, title, finish);

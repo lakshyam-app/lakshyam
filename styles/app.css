@@ -1376,3 +1376,6 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .preset .drag-handle { touch-action: none; cursor: grab; color: var(--muted); }
 .preset.dragging { position: relative; z-index: 3; background: var(--bg); box-shadow: 0 6px 18px rgb(0 0 0 / 0.18); border-radius: 12px; }
 .preset.dragging .drag-handle { cursor: grabbing; color: var(--brand); }
+.preset .badges, .menu-item .badge { margin: 3px 0 2px; }
+.menu-item .badge { font-size: 0.75rem; vertical-align: middle; }
+.badge.bad { background: color-mix(in srgb, var(--danger) 10%, transparent); }

@@ -38,13 +38,22 @@ export async function aiTopLabel() {
 
 /** Choose the preset to use first and the AI's language (the same setting as Settings → AI). True if something changed.
     Uses the open sheet; the caller draws its own screen again afterwards. */
+/** Coloured labels for a preset: limit reached (red, tried last for about an hour), web-search limit (amber). */
+export function statusBadges(p, now = Date.now()) {
+  const left = (at) => Math.max(1, 60 - Math.floor((now - at) / 60000));
+  return [
+    p.limitHitAt && now - p.limitHitAt < 3600000 ? { kind: "bad", text: t("ai.badge.limit", { m: left(p.limitHitAt) }) } : null,
+    p.webLimitAt && now - p.webLimitAt < 3600000 ? { kind: "warn", text: t("ai.badge.webLimit", { m: left(p.webLimitAt) }) } : null
+  ].filter(Boolean);
+}
+
 export async function chooseAiSetup({ withLang = true } = {}) {
   const [list, cfg] = await Promise.all([presets.getPresets(), presets.getConfig()]);
   const usable = list.filter((p) => p.apiKey && p.model && p.baseUrl && !presets.isPaused(p));
   const first = presets.tryOrder(list, cfg)[0];
   const id = await chooseAction({ title: t("ai.switchTitle"), sub: t("ai.switchSub"), items: [
     { heading: t("ai.switchPreset") },
-    ...usable.map((p) => { const n = presetFlags(p); const u = usageView(p); return { id: `p:${p.id}`, label: p.name, sub: [p.model, t("ai.usage.todayShort", { r: u.dayReq }), n ? t("flag.count", { n }) : ""].filter(Boolean).join(" · "), current: first?.id === p.id }; }),
+    ...usable.map((p) => { const n = presetFlags(p); const u = usageView(p); return { id: `p:${p.id}`, label: p.name, badges: statusBadges(p), sub: [p.model, t("ai.usage.todayShort", { r: u.dayReq }), n ? t("flag.count", { n }) : ""].filter(Boolean).join(" · "), current: first?.id === p.id }; }),
     ...(withLang ? [{ heading: t("ai.lang") }, ...presets.LANGS.map((l) => ({ id: `l:${l}`, label: t(`ai.langs.${l}`), current: (cfg.lang || "en") === l }))] : []),
     { id: "settings", label: `⚙ ${t("ai.allSettings")}` }
   ] });

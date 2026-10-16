@@ -9,7 +9,7 @@ import * as presets from "../../ai/presets.js";
 import * as store from "../../data/store.js";
 import { request } from "../../ai/client.js";
 import { TEST_PROMPT } from "../../ai/prompts.js";
-import { errorText } from "./ai-ui.js";
+import { errorText, statusBadges } from "./ai-ui.js";
 import { openFlags } from "./flag-ui.js";
 import { presetFlags, flagList } from "../../ai/flags.js";
 import { usageView, openRouterKey } from "../../ai/usage.js";
@@ -75,13 +75,13 @@ export async function openAiSettings() {
     <p class="hint">${t("ai.privacy")}</p>
     ${list.length ? html`<p class="hint">${t("ai.usage.about")}</p>` : ""}
     ${list.length ? html`<div class="menu">${list.map((p, i) => {
-      const limited = p.limitHitAt && now - p.limitHitAt < 3600000;
       const paused = presets.isPaused(p, now);
       return html`<div class="preset ${p.id === cfg.activeId ? "is-current" : ""} ${paused ? "is-paused" : ""}">
         <button type="button" class="preset-main" data-action="activate" data-id="${p.id}" aria-pressed="${String(p.id === cfg.activeId)}">
           <span class="radio">${p.id === cfg.activeId ? "●" : "○"}</span>
           <span class="row-main"><span class="row-title">${i + 1}. ${p.name}</span>
-          <span class="row-sub">${[p.model || t("ai.noModel"), mask(p.apiKey), presetFlags(p) ? t("flag.count", { n: presetFlags(p) }) : null, limited ? t("ai.limited", { m: Math.max(1, 60 - Math.floor((now - p.limitHitAt) / 60000)) }) : null].filter(Boolean).join(" · ")}</span>
+          ${statusBadges(p, now).length ? html`<span class="badges">${statusBadges(p, now).map((b) => html`<span class="badge ${b.kind}">${b.text}</span>`)}</span>` : ""}
+          <span class="row-sub">${[p.model || t("ai.noModel"), mask(p.apiKey), presetFlags(p) ? t("flag.count", { n: presetFlags(p) }) : null].filter(Boolean).join(" · ")}</span>
           <span class="row-sub usage-line">${usageLines(p, now).map((l) => html`<span>${l}</span>`)}${/openrouter\.ai/i.test(p.baseUrl || "") && p.apiKey ? html`<span data-or="${p.id}"></span>` : ""}</span>
           ${paused ? html`<span class="row-sub paused-note">${p.pausedUntil >= presets.FOREVER ? t("ai.pausedOff") : t("ai.pausedUntil", { when: pauseWhen(p.pausedUntil) })}</span>` : ""}</span>
         </button>
