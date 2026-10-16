@@ -306,3 +306,9 @@ Today screen with Quick 10 and daily goal · exam countdown · timetable (any da
 |---|---|---|
 | A preset that hit its limit shows a red "⛔ Limit reached · ~n min" label (it is tried last for about an hour); one whose web-search limit was hit shows an amber "🌐 Web search limit · ~n min" | Settings → AI, 🤖 switch at the top | ✅ |
 
+## Added in 1.22.4
+
+| Feature | Where | Status |
+|---|---|---|
+| Swipe left / right to the next / previous tab (Subjects ⇄ Topics ⇄ Papers ⇄ Banks); not from the screen edges (Android back gesture), the search box or sideways-scrolling rows; up-and-down scrolling and slow drags are not swipes; tabs don't add Back steps | Library | ✅ |
+

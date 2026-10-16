@@ -169,6 +169,7 @@ and [`docs/feature-check.md`](docs/feature-check.md) for where every old-app fea
 | 1.3 | Up to 20 exam countdowns, with a choice of which and how Today shows them |
 | 1.6 | Automatic Drive backup without sign-in, through your own Google Apps Script (docs/apps-script); background backup on installed app |
 | 1.5 | How to use Lakshyam: illustrated demo + PDF (English, മലയാളം) in Settings |
+| 1.22.4 | Library: swipe left / right to move between Subjects, Topics, Papers and Banks |
 | 1.22.3 | Coloured labels on AI presets: ⛔ Limit reached (red) and 🌐 Web search limit (amber), with minutes left, in Settings → AI and the 🤖 switch |
 | 1.22.2 | Settings → AI: hold ⠿ and drag a preset to change the order (the list scrolls while dragging); tap ⠿ for Move to top / up / down / to bottom |
 | 1.22.1 | OpenRouter routers (e.g. openrouter/free): the model that actually answered is shown, saved as "made by" and flagged, instead of the router's name |

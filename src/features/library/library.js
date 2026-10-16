@@ -28,6 +28,7 @@ import { testsFor } from "../progress/progress.js";
 import { pdfMenuItem } from "../pdfs/pdfs.js";
 import { can } from "../../core/entitlements.js";
 import { nameHtml, label as nameLabel } from "../../core/names.js";
+import { onSwipe } from "../../core/swipe.js";
 
 /** ▶ Practice from a listing: the questions as shown (exam filter and sort applied). */
 export function practice(key, questions, scope, keepOrder = false) {
@@ -36,6 +37,7 @@ export function practice(key, questions, scope, keepOrder = false) {
 const playIcon = "▶";
 
 const VIEWS = ["subjects", "topics", "papers", "banks"];
+let swipeIn = ""; // "next" | "prev": the tab just reached by a swipe slides in from that side
 let lastView = "subjects";
 const filterText = { subjects: "", topics: "", papers: "", banks: "" };
 // Topics view: chip ("all" or a list ID), sort, studied filter, label filter
@@ -246,7 +248,8 @@ export const libraryScreen = {
     if (params.list && store.byId("topicLists", params.list)) topicView.chip = params.list;
     const syllabus = store.currentSyllabus();
 
-    container.innerHTML = html`<section class="library">
+    const slide = swipeIn; swipeIn = "";
+    container.innerHTML = html`<section class="library${slide ? ` swipe-in-${slide}` : ""}">
       <div class="segmented four" role="tablist">${VIEWS.map((v) => html`
         <button type="button" role="tab" aria-selected="${String(v === view)}" class="${v === view ? "on" : ""}"
           data-action="view" data-view="${v}">${t(`library.views.${v}`)}</button>`)}</div>
@@ -258,6 +261,11 @@ export const libraryScreen = {
       <div class="rows" id="libRows"></div>
       ${view === "topics" ? html`<p class="hint pad">${t("topics.tip")}</p>` : ""}
     </section>`;
+
+    // Swipe left / right to the next / previous tab (Subjects ⇄ Topics ⇄ Papers ⇄ Banks).
+    const at = VIEWS.indexOf(view);
+    const toView = (i, dir) => { if (i < 0 || i >= VIEWS.length) return; swipeIn = dir; go("library", { view: VIEWS[i] }, { replace: true }); };
+    onSwipe(container.querySelector(".library"), { left: () => toView(at + 1, "next"), right: () => toView(at - 1, "prev") });
 
     const rowsEl = container.querySelector("#libRows");
     const drawRows = () => {

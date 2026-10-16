@@ -1379,3 +1379,10 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .preset .badges, .menu-item .badge { margin: 3px 0 2px; }
 .menu-item .badge { font-size: 0.75rem; vertical-align: middle; }
 .badge.bad { background: color-mix(in srgb, var(--danger) 10%, transparent); }
+/* 1.22.4: swipe between Library tabs */
+@keyframes swipe-in-next { from { transform: translateX(28px); opacity: 0.4; } to { transform: none; opacity: 1; } }
+@keyframes swipe-in-prev { from { transform: translateX(-28px); opacity: 0.4; } to { transform: none; opacity: 1; } }
+.swipe-in-next { animation: swipe-in-next 160ms ease-out; }
+.swipe-in-prev { animation: swipe-in-prev 160ms ease-out; }
+@media (prefers-reduced-motion: reduce) { .swipe-in-next, .swipe-in-prev { animation: none; } }
+.library { min-height: calc(100dvh - 190px); } /* the whole area below the tabs takes a swipe */
