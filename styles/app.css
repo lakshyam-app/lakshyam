@@ -1385,4 +1385,4 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .swipe-in-next { animation: swipe-in-next 160ms ease-out; }
 .swipe-in-prev { animation: swipe-in-prev 160ms ease-out; }
 @media (prefers-reduced-motion: reduce) { .swipe-in-next, .swipe-in-prev { animation: none; } }
-.library { min-height: calc(100dvh - 190px); } /* the whole area below the tabs takes a swipe */
+.library { min-height: calc(100dvh - 190px); align-content: start; } /* the whole area below the tabs takes a swipe; its parts keep their own height */

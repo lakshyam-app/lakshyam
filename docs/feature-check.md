@@ -312,3 +312,9 @@ Today screen with Quick 10 and daily goal · exam countdown · timetable (any da
 |---|---|---|
 | Swipe left / right to the next / previous tab (Subjects ⇄ Topics ⇄ Papers ⇄ Banks); not from the screen edges (Android back gesture), the search box or sideways-scrolling rows; up-and-down scrolling and slow drags are not swipes; tabs don't add Back steps | Library | ✅ |
 
+## Fixed in 1.22.5
+
+| Fix | Where | Status |
+|---|---|---|
+| Tabs, search box and "+ New bank" / "Add a paper" buttons were stretched tall on short tabs since 1.22.4 | Library | ✅ |
+
