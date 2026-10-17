@@ -137,7 +137,7 @@ async function groqSearch(p, system, user, maxTokens, signal) {
  */
 export async function askWeb(system, user, maxTokens = 3000, { onTry, control = null } = {}) {
   const order = await webOrder();
-  if (!order.length) throw new AiError("no-web", { noWeb: true });
+  if (!order.length) { const e = new AiError("no-web"); e.noWeb = true; throw e; }
   const errors = []; let allLimit = true;
   for (const [i, p] of order.entries()) {
     if (control?.cancelled) throw new AiError("cancelled", { cancelled: true });

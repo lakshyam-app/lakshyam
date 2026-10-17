@@ -12,9 +12,9 @@ import { stepsBlock, stepsOf, stripTags, runStep } from "./next-steps.js";
 import { maxScore } from "../../domain/testing.js";
 import * as store from "../../data/store.js";
 import * as presets from "../../ai/presets.js";
-import { ask, aiControl } from "../../ai/client.js";
+import { aiControl } from "../../ai/client.js";
 import * as P from "../../ai/prompts.js";
-import { errorText, waitingBox, paintWaiting } from "../ai/ai-ui.js";
+import { errorText, waitingBox, paintWaiting, askFresh, withSourcesLine } from "../ai/ai-ui.js";
 import { flagChip } from "../ai/flag-ui.js";
 
 const MIN_ANSWERS = 3;   // a 1–2 question test (e.g. from a reminder) isn't worth an analysis
@@ -42,7 +42,7 @@ export function autoAnalyse(a) {
 }
 
 /** Writes (or writes again) the analysis and keeps it with the test. quiet: no setup prompt (automatic run). */
-export async function makeAnalysis(attempt, { quiet = false } = {}) {
+export async function makeAnalysis(attempt, { quiet = false, web = false } = {}) {
   if (!attempt || running.has(attempt.id) && !running.get(attempt.id).error) return;
   if (!can("ai") || !(await presets.hasPreset())) { if (!quiet) toast(t("ai.err.noPreset")); return; }
   // Which AI is writing and for how long; "Ask the next AI" / "Stop" after a while (see ai-ui waitingBox).
@@ -55,9 +55,11 @@ export async function makeAnalysis(attempt, { quiet = false } = {}) {
     const lang = (await presets.getConfig()).lang || "en";
     const topicName = (id) => store.topic(id)?.name || "";
     const { facts, lines } = analysisInput(attempt, { questionOf: (id) => store.question(id), topicOf: topicName, earlier: earlierTries(attempt) });
-    const { text, preset } = await ask(P.tutorSystem(lang, P.SECTIONED), P.inLang(P.testAnalysisTask(facts, lines), lang), lang === "en" ? 2600 : 5500, { control });
+    // 🌐 "Recheck with the web": the facts to fix are looked up (current affairs and other facts that change).
+    const { text, preset, sources, webNote } = await askFresh(P.tutorSystem(lang, P.SECTIONED), P.inLang(P.testAnalysisTask(facts, lines), lang), lang === "en" ? 2600 : 5500, { web, control });
     const fresh = store.byId("attempts", attempt.id);
-    if (fresh) await store.quietly(() => store.apply({ attempts: { put: [{ ...fresh, analysis: { text: text.trim().slice(0, 12000), by: preset?.model || preset?.name || "", at: Date.now(), lang } }] } }));
+    if (fresh) await store.quietly(() => store.apply({ attempts: { put: [{ ...fresh, analysis: { text: withSourcesLine(text, sources).trim().slice(0, 12000), by: preset?.model || preset?.name || "", at: Date.now(), lang, web: Boolean(sources?.length) } }] } }));
+    if (webNote && !quiet) toast(t("ai.web.notSearched", { why: webNote }), { duration: 6000 });
     running.delete(attempt.id);
   } catch (e) {
     if (e.cancelled) running.delete(attempt.id); else running.set(attempt.id, { error: errorText(e) });
@@ -83,11 +85,11 @@ export async function analysisBlock(a) {
         <button type="button" class="an-toggle" data-action="an-toggle" aria-expanded="${String(!shut)}">${shut ? `▼ ${t("analysis.show")}` : `▲ ${t("analysis.hide")}`}</button></div>
       <div class="an-body" ${shut ? "hidden" : ""}>
       <div class="ai-answer">${aiText(stripTags(an.text))}</div>
-      <p class="hint made-by">${[an.by ? `🤖 ${an.by}` : "", new Date(an.at).toLocaleString(dateLocale(), { dateStyle: "medium", timeStyle: "short" })].filter(Boolean).join(" · ")} · ${t("ai.verify")} ${an.by ? flagChip({ ref: `an:${a.id}:${an.at}`, by: an.by, kind: "analysis" }) : ""}</p>
+      <p class="hint made-by">${[an.web ? `🌐 ${t("ai.web.looked")}` : "", an.by ? `🤖 ${an.by}` : "", new Date(an.at).toLocaleString(dateLocale(), { dateStyle: "medium", timeStyle: "short" })].filter(Boolean).join(" · ")} · ${t("ai.verify")} ${an.by ? flagChip({ ref: `an:${a.id}:${an.at}`, by: an.by, kind: "analysis" }) : ""}</p>
       ${st?.error ? html`<p class="warn-box pre">${st.error}</p>` : ""}
       <div class="row-actions">
         <button type="button" class="link" data-action="an-copy">${t("question.copy")}</button>
-        ${can("ai") ? html`<button type="button" class="link" data-action="an-make">${t("analysis.again")}</button>` : ""}
+        ${can("ai") ? html`<button type="button" class="link" data-action="an-make">${t("analysis.again")}</button><button type="button" class="link" data-action="an-web">🌐 ${t("ai.web.recheck")}</button>` : ""}
         <button type="button" class="link danger" data-action="an-clear">${t("common.clear")}</button>
       </div>${can("ai") ? stepsBlock(a) : ""}
       <button type="button" class="btn btn-quiet wide an-fold" data-action="an-toggle" data-from="end">▲ ${t("analysis.hideToQs")}</button></div></section>`;
@@ -102,6 +104,7 @@ export function analysisHandlers(id) {
   const att = () => store.byId("attempts", id);
   return {
     "an-make": () => makeAnalysis(att()),
+    "an-web": () => makeAnalysis(att(), { web: true }),
     "an-skip": () => analysisState(id)?.control?.skip(),
     "an-stop": () => analysisState(id)?.control?.cancel(),
     "an-toggle": (el) => {

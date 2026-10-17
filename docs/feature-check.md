@@ -330,3 +330,12 @@ Today screen with Quick 10 and daily goal · exam countdown · timetable (any da
 | 📖 All daily entries: by week or by month (‹ › to move), "List" (scroll) or "One day" (swipe or ‹ ›); each day shows score, mood, tags, note, questions, topics, screen time; tap to open the day | Study diary, below the calendar | ✅ |
 | Fix: on Today at 360 px in Malayalam the goal and habits rows were a little too wide | Today | ✅ |
 
+## Added in 1.24
+
+| Feature | Where | Status |
+|---|---|---|
+| Every tutor answer (explain, facts, chat, analysis, tricks, strategy, reports…) is told today's date and that facts which change (office holders, records, latest figures, recent schemes) may be out of date: they are marked "⚠ verify: as of <year>"; a past PSC answer may be "correct at the time of the exam; may have changed since". The paper's year is given with each question. AI question writers avoid answers that change over time unless looked up | All AI | ✅ |
+| Questions about things that change (subject/topic "Current affairs", words like present / current / latest / appointed / നിലവിലെ / ഇപ്പോഴത്തെ, or a recent year) are looked up on trusted websites first (Gemini Google Search or Groq gpt-oss browser search) for Explain, Related facts and Ask AI; the answer says what was correct at the exam and what is true now; sources with ✓ ≈ ⚠; saved with a "🌐 Sources" line. If searching isn't possible (no such preset, limit used up), it answers from memory and says so | Question cards | ✅ |
+| 🌐 Check on the web: on every AI answer sheet not already from the web; chat has a "Search the web for this reply" switch (on by itself for current-affairs questions); test analysis has "🌐 Recheck with the web" | AI sheets, chat, test result | ✅ |
+| Switch: "Look up current affairs on the web" (on by default) | Settings → AI | ✅ |
+

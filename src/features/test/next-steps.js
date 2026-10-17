@@ -21,7 +21,7 @@ import { askWeb, webPreset, domainOf, trustOf } from "../../ai/web.js";
 import { flagChip, answerRef } from "../ai/flag-ui.js";
 import * as P from "../../ai/prompts.js";
 import { applyAnswerCheck } from "../../pdf/pdf-tools.js";
-import { ensureAi, errorText, waitingBox, paintWaiting, watchWaiting } from "../ai/ai-ui.js";
+import { ensureAi, errorText, waitingBox, paintWaiting, watchWaiting, sourceChip, sourcesList } from "../ai/ai-ui.js";
 import { openStartTest } from "./start-sheet.js";
 
 const FLAG_KIND = { facts: "factSheet", questions: "questions", cards: "cards" }; // what a 🚩 counts as
@@ -76,11 +76,6 @@ export function contextOf(a, { questionOf = (id) => store.question(id), topicOf 
   const missed = wrong.slice(0, 25).map(({ q, r }) => `- [${keyOf.get(q.topicId) || "?"}] ${String(q.text).replace(/\s+/g, " ").slice(0, 200)} → right answer: ${q.options[r.correct ?? q.answerIndex] ?? "?"}${r.selected === null || r.selected === undefined ? " (left blank)" : ""}`);
   return { topics, missed };
 }
-
-const sourceChip = (s) => html`<span class="src-chip src-${s.trust}" title="${s.domain}">${s.trust === "trusted" ? "✓" : s.trust === "fair" ? "≈" : "⚠"} ${s.domain}</span>`;
-const sourcesList = (sources) => (sources.length ? html`<details class="explain ns-sources" open><summary>🌐 ${t("ns.sources", { n: sources.length, ok: sources.filter((s) => s.trust === "trusted").length })}</summary>
-  <ul class="ns-src-list">${sources.map((s) => html`<li><a href="${s.url}" target="_blank" rel="noopener noreferrer">${s.title || s.domain}</a> ${sourceChip(s)}</li>`)}</ul>
-  <p class="hint">${t("ns.trustHint")}</p></details>` : "");
 
 const langOf = async () => (await presets.getConfig()).lang || "en";
 const jsonLang = (user, lang) => (lang === "ml" ? `${user}\n\nLANGUAGE: write the text in Malayalam (keep names, Acts and years accurate). Keep the JSON keys in English.` : user);

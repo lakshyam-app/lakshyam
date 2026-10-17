@@ -18,7 +18,8 @@ import * as mut from "../../data/mutations.js";
 import * as presets from "../../ai/presets.js";
 import { ask, parseJsonLoose } from "../../ai/client.js";
 import * as P from "../../ai/prompts.js";
-import { ensureAi, askInSheet, errorText } from "./ai-ui.js";
+import { ensureAi, askInSheet, errorText, askFresh, withSourcesLine } from "./ai-ui.js";
+import { timeSensitive, asksAboutNow, examYear } from "../../domain/current.js";
 import { flagChip, answerRef } from "./flag-ui.js";
 import { topicFacts, questionLines } from "../../domain/topic-pattern.js";
 import { saveStrategy, strategyFor, patternFrom, clearStrategy, restoreStrategy, noteHasStrategy } from "../../data/strategy.js";
@@ -30,8 +31,14 @@ const lang = async () => (await presets.getConfig()).lang || "en";
 
 /** The question as the AI sees it (names, not IDs). */
 export function plainQuestion(q) {
-  return { text: q.text, options: q.options, answerIndex: q.answerIndex, status: q.status, subject: store.subject(q.subjectId)?.name, topic: store.topic(q.topicId)?.name };
+  const paper = q.source !== "ai" ? store.paper(q.paperId) : null;
+  return { text: q.text, options: q.options, answerIndex: q.answerIndex, status: q.status, subject: store.subject(q.subjectId)?.name, topic: store.topic(q.topicId)?.name,
+    exam: paper ? `${paper.name}${examYear(paper.name) ? ` (${examYear(paper.name)})` : ""}` : "" };
 }
+
+/** Look this question up on the web? (Setting on, and it is about something that changes over time.) */
+export const webFor = (q, message = "") => store.setting("aiWebCurrent", true) !== false
+  && Boolean(timeSensitive(q, { subject: store.subject(q.subjectId)?.name, topic: store.topic(q.topicId)?.name }) || (message && asksAboutNow(message)));
 
 /* ---------- one question ---------- */
 
@@ -56,6 +63,7 @@ export async function aiHelp(q, { selected, mode: preset = null, onSaved = null 
   let model = "";
   await askInSheet({
     flagKind: kind,
+    web: webFor(q), // current affairs / "who is it now" questions are looked up on the web
     title: kind === "facts" ? `📚 ${t("ai.facts")}` : mistake ? t("ai.explainMistake") : t("ai.explain"), sub: q.text.slice(0, 100),
     system: (l) => P.tutorSystem(l), user: (l) => P.inLang(kind === "explain" ? P.tasks.explain(pq, selected) : P.tasks.facts(pq), l),
     onModel: (m) => { model = m || ""; },
@@ -90,6 +98,7 @@ export async function questionChat(q, { onSaved = null } = {}) {
   const history = () => store.questionState(q.id)?.ai?.chat || [];
   const keep = (chat) => store.quietly(() => mut.setQuestionAi(q.id, { chat: chat.length ? chat.slice(-40) : null }));
   let busy = false;
+  let webOn = webFor(q); // 🌐 search the web for replies (on by itself for current-affairs questions)
   let mine = null; // this chat's sheet content (another sheet opened since → don't draw over it)
   const ours = () => Boolean(mine?.isConnected);
   const draw = (status = "", draft = "") => {
@@ -102,6 +111,7 @@ export async function questionChat(q, { onSaved = null } = {}) {
         ${status ? html`<p class="chat-status">${status}</p>` : ""}</div>
       <p class="hint">${t("ai.verify")}</p>
       <label class="field-label">${t("ai.chatAsk")}<textarea class="field" id="chatIn" rows="2" maxlength="2000" placeholder="${t("ai.chatPlaceholder")}">${draft}</textarea></label>
+      <label class="switch-row small"><input type="checkbox" id="chatWeb" ${webOn ? "checked" : ""}><span>🌐 ${t("ai.web.chatToggle")}</span></label>
       <div class="sheet-actions sticky-in">
         ${msgs.length && !busy ? html`<button type="button" class="btn btn-quiet push-left" data-action="clear">🗑 ${t("ai.chatClear")}</button>` : ""}
         <button type="button" class="btn btn-quiet" data-action="close">${t("common.done")}</button>
@@ -117,14 +127,18 @@ export async function questionChat(q, { onSaved = null } = {}) {
         const box = sheetBody().querySelector("#chatIn");
         const message = box.value.trim().slice(0, 2000);
         if (!message || busy) return;
+        webOn = sheetBody().querySelector("#chatWeb")?.checked ?? webOn;
         busy = true;
         const before = history();
         const mine = { role: "user", text: message, at: Date.now() };
         await keep([...before, mine]);
         draw(t("ai.thinking"));
         try {
-          const { text, preset } = await ask(P.tutorSystem(await lang()), P.inLang(P.chatTask(pq, store.question(q.id)?.explanation, before, message), await lang()), 1800);
-          await keep([...history(), { role: "ai", text: text.trim().slice(0, 6000), by: modelOf(preset), at: Date.now() }]);
+          const useWeb = sheetBody()?.querySelector("#chatWeb")?.checked ?? webFor(q, message);
+          webOn = useWeb;
+          const { text, preset, sources, webNote } = await askFresh(P.tutorSystem(await lang()), P.inLang(P.chatTask(pq, store.question(q.id)?.explanation, before, message), await lang()), 1800, { web: useWeb });
+          await keep([...history(), { role: "ai", text: withSourcesLine(text, sources).trim().slice(0, 6000), by: modelOf(preset), at: Date.now(), web: Boolean(sources?.length) }]);
+          if (webNote) toast(t("ai.web.notSearched", { why: webNote }), { duration: 6000 });
           busy = false;
           if (ours()) draw(); else saved();
         } catch (e) {

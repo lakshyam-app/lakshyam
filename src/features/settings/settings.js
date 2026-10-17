@@ -254,7 +254,8 @@ const PAGES = {
   ai() {
     return html`<div class="group" data-set="presets aiLang fallback pause removeKeys"><div id="aiBlock"></div></div>
       <div class="group">${sw("aiOnCards", "aiOnCards", t("ai.onCards"), t("ai.onCardsHint"))}
-        ${sw("aiAutoAnalysis", "aiAutoAnalysis", t("ai.autoAnalysis"), t("ai.autoAnalysisHint"))}</div>`;
+        ${sw("aiAutoAnalysis", "aiAutoAnalysis", t("ai.autoAnalysis"), t("ai.autoAnalysisHint"))}
+        ${sw("aiWebCurrent", "aiWebCurrent", t("ai.webCurrent"), t("ai.webCurrentHint"))}</div>`;
   },
 
   data() {

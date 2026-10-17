@@ -22,8 +22,15 @@ export function inLang(user, lang) {
   return user;
 }
 
+/* Every AI request is told today's date, and that facts which change over time may be out of date in its memory:
+   such facts are marked "⚠ verify" (unless they were looked up on the web just now). */
+const isoToday = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+export function timeRules(today = isoToday()) {
+  return `Today is ${today}. Your training data ends before today, so facts that change over time (who holds an office or post — chairpersons, CEOs, ministers, governors, judges, heads of bodies — records, rankings, latest figures, recent schemes, laws, awards or events) may be out of date in your memory. Unless such a fact is given to you in this message or you looked it up on the web just now, never state it as current: write it with the year you know it for and the mark "⚠ verify", e.g. "X (⚠ verify: as of 2024)". For a past PSC question, the marked answer was correct when that exam was held; if it may have changed since, say "correct at the time of the exam; may have changed since".`;
+}
+
 export function tutorSystem(lang, extra = "") {
-  return `You are an expert tutor for Kerala PSC (Public Service Commission) competitive exams, helping a student revise. Be accurate; if you are unsure of a fact, say so instead of guessing. ${STYLE} ${langInstruction(lang)} ${extra}`.trim();
+  return `You are an expert tutor for Kerala PSC (Public Service Commission) competitive exams, helping a student revise. Be accurate; if you are unsure of a fact, say so instead of guessing. ${timeRules()} ${STYLE} ${langInstruction(lang)} ${extra}`.trim();
 }
 
 /** q: { text, options, answerIndex, status, subject, topic }; selected: index, "none" or undefined. */
@@ -36,7 +43,7 @@ export function questionBlock(q, selected) {
   let chosen = "";
   if (Number.isInteger(selected)) chosen = `\nStudent chose: ${L(selected)}) ${q.options[selected]}`;
   else if (selected === "none") chosen = "\nStudent left it unanswered.";
-  return `Subject: ${q.subject || "?"} | Topic: ${q.topic || "?"}\nQuestion: ${q.text}\nOptions:\n${opts}\n${correct}${chosen}`;
+  return `Subject: ${q.subject || "?"} | Topic: ${q.topic || "?"}${q.exam ? ` | Exam: ${q.exam}` : ""}\nQuestion: ${q.text}\nOptions:\n${opts}\n${correct}${chosen}`;
 }
 
 /** How a memory trick should feel: made by a person, not a dictionary. */
@@ -66,7 +73,7 @@ export const tasks = {
   note: (q) => `${questionBlock(q)}\n\nTask: Write a compact revision note (4-6 bullet points) on the topic behind this question — the key facts a student must remember for similar questions. Only include facts you are confident about.`
 };
 
-export const GENERATE_SYSTEM = "You write multiple-choice questions for Kerala PSC exams in the style of past papers. Accuracy matters more than cleverness: every question must have exactly one unambiguously correct option you are certain about. Output ONLY a JSON array, no commentary.";
+export const GENERATE_SYSTEM = "You write multiple-choice questions for Kerala PSC exams in the style of past papers. Accuracy matters more than cleverness: every question must have exactly one unambiguously correct option you are certain about. Do not write questions whose answer changes over time (who holds a post now, the latest record or figure) unless those facts are given to you or you looked them up on the web just now: from memory they may be out of date. Output ONLY a JSON array, no commentary.";
 
 /** examples: [{ text, options }] */
 export function generateTask({ subject, topic, n, lang, difficulty, examples, pattern = "" }) {
@@ -179,6 +186,9 @@ Do not use outside knowledge to fill a gap; if the notes don't have it, say so p
 /** How to use the web: only sources a PSC aspirant can trust. */
 export const WEB_RULES = "Look the facts up on the web before you write. Use ONLY trustworthy sources: official Government of India and Kerala government sites (gov.in, nic.in, kerala.gov.in, keralapsc.gov.in, pib.gov.in, prsindia.org), NCERT and SCERT textbooks, universities (ac.in), Encyclopaedia Britannica, The Hindu or The Indian Express; Wikipedia only to cross-check another source. Never use quiz, coaching-centre, blog, video or forum sites. If trustworthy sources disagree or you cannot confirm a fact, leave it out. Keep names, dates and numbers exactly as the source gives them.";
 const SOURCES_END = "End with a line 'SOURCES:' and then one line per source you used: '- [n] title — full URL' (n as cited above).";
+
+/** For an explanation, related facts or a chat answer looked up on the web (current affairs and other facts that change). */
+export const WEB_ANSWER = `Before you answer, search the web for every fact in this question that can change over time (who holds a post now, latest figures, recent events). ${WEB_RULES} What you find overrides your memory. If it shows that the answer marked in the question has changed since that exam, say so plainly: what was correct at the time of the exam, and what is true now (with the date it changed). Cite facts you found as [n]. ${SOURCES_END}`;
 
 const missedBlock = (missed) => (missed.length ? `\n\nQUESTIONS THE STUDENT GOT WRONG OR LEFT (the facts behind these matter most):\n${missed.join("\n")}` : "");
 const topicBlock = (topics) => topics.map((x) => `${x.key}: ${x.path}`).join("\n");

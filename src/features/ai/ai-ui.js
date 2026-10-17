@@ -10,6 +10,8 @@ import { can } from "../../core/entitlements.js";
 import { aiText } from "../../domain/text.js";
 import * as presets from "../../ai/presets.js";
 import { ask, aiControl } from "../../ai/client.js";
+import { askWeb } from "../../ai/web.js";
+import { WEB_ANSWER } from "../../ai/prompts.js";
 import { chooseAction } from "../../core/dialogs.js";
 import { flagChip, answerRef } from "./flag-ui.js";
 import { presetFlags } from "../../ai/flags.js";
@@ -77,6 +79,34 @@ export async function ensureAi() {
   return false;
 }
 
+/* 🌐 Where a web answer came from, each site marked ✓ trusted · ≈ fair · ⚠ check yourself. */
+export const sourceChip = (s) => html`<span class="src-chip src-${s.trust}" title="${s.domain}">${s.trust === "trusted" ? "✓" : s.trust === "fair" ? "≈" : "⚠"} ${s.domain}</span>`;
+export const sourcesList = (sources) => (sources?.length ? html`<details class="explain ns-sources" open><summary>🌐 ${t("ns.sources", { n: sources.length, ok: sources.filter((s) => s.trust === "trusted").length })}</summary>
+  <ul class="ns-src-list">${sources.map((s) => html`<li><a href="${s.url}" target="_blank" rel="noopener noreferrer">${s.title || s.domain}</a> ${sourceChip(s)}</li>`)}</ul>
+  <p class="hint">${t("ns.trustHint")}</p></details>` : "");
+/** The text kept when you save a web answer: the answer and one line naming its sources. */
+export const withSourcesLine = (text, sources) => (sources?.length ? `${text.trim()}\n\n🌐 ${t("ai.web.sourcesLine")}: ${sources.map((s) => `${s.domain}${s.trust === "trusted" ? " ✓" : s.trust === "fair" ? " ≈" : " ⚠"}`).join(", ")}` : text);
+
+/**
+ * Asks with a web search first when web is true (Google Search with Gemini, browser search with Groq gpt-oss),
+ * else, or when searching isn't possible (no such preset, limit reached), from the AI's own knowledge
+ * — then webNote says why. → { text, preset, switched, sources, web, webNote }
+ */
+export async function askFresh(system, user, maxTokens, { web = false, control = null } = {}) {
+  let webNote = "";
+  if (web) {
+    try {
+      const r = await askWeb(`${system} ${WEB_ANSWER}`, user, Math.max(maxTokens, 3000), { control });
+      return { text: r.text, preset: r.preset, switched: false, sources: r.sources || [], web: true, webNote: "" };
+    } catch (e) {
+      if (e.cancelled) throw e;
+      webNote = e.noWeb ? t("ai.web.noWeb") : e.limit ? t("ai.web.limit") : t("ai.web.failed");
+    }
+  }
+  const x = await ask(system, user, maxTokens, { control });
+  return { ...x, sources: [], web: false, webNote };
+}
+
 /* While an AI is answering: which one, how long so far, and (after a while) "Ask the next AI" / "Stop".
    Some models think for minutes before writing; you never have to sit and wait for one. */
 const SLOW_S = 15;
@@ -110,7 +140,7 @@ export function watchWaiting(root, getControl) {
  * Returns the first answer's text (or null on error).
  */
 export async function askInSheet(opts) {
-  const { title, sub = "", maxTokens = 2500, actions = [], keepOpen = false, onModel = null, onAnswer = null, flagKind = "answer" } = opts;
+  const { title, sub = "", maxTokens = 2500, actions = [], keepOpen = false, onModel = null, onAnswer = null, flagKind = "answer", web = false } = opts;
   let mine = null; // this flow's sheet content: another sheet opened meanwhile is never drawn over
   let run = 0;
   let state = { kind: "thinking" };
@@ -127,17 +157,20 @@ export async function askInSheet(opts) {
     }
     else if (state.kind === "answer") {
       showAnswer({ head: head(), text: state.text, actions, presetName: state.preset.name, keepOpen, model: state.preset.model || "", done: state.done,
-        flag: { ref: state.ref, kind: flagKind, presetId: state.preset.id }, onDraw: (b) => { mine = b; } });
+        flag: { ref: state.ref, kind: flagKind, presetId: state.preset.id }, onDraw: (b) => { mine = b; },
+        web: { sources: state.sources, isWeb: state.web, note: state.webNote, check: state.web ? null : () => start(true) } });
     } else {
       mine = openSheet(html`${head()}<p class="warn-box pre">${errorText(state.error)}</p>
         <p class="hint">${t("ai.checkPreset")}</p>
         <div class="sheet-actions"><button type="button" class="btn btn-quiet" data-action="settings">${t("ai.title")}</button>
           <button type="button" class="btn btn-quiet" data-action="again">${t("ai.tryAgain")}</button>
           <button type="button" class="btn" data-action="close">${t("common.close")}</button></div>`,
-      { close: () => closeSheet(), again: () => start(), settings: () => go("settings", { section: "ai", open: "1" }) });
+      { close: () => closeSheet(), again: () => start(lastWeb), settings: () => go("settings", { section: "ai", open: "1" }) });
     }
   };
-  const start = async () => {
+  let lastWeb = web;
+  const start = async (webNow = web) => {
+    lastWeb = webNow;
     const me = ++run;
     state = { kind: "thinking" };
     draw();
@@ -145,12 +178,12 @@ export async function askInSheet(opts) {
     const val = (x) => (typeof x === "function" ? x(lang) : x);
     try {
       control = aiControl(() => { if (ours()) paintWaiting(mine, control); });
-      const { text, preset, switched } = await ask(val(opts.system), val(opts.user), val(maxTokens), { control });
+      const { text, preset, switched, sources, web: isWeb, webNote } = await askFresh(val(opts.system), val(opts.user), val(maxTokens), { web: webNow, control });
       if (me !== run) return text; // asked again meanwhile: the newer answer is the one shown
       const model = preset?.model || preset?.name || "";
       if (onModel) onModel(model);
-      state = { kind: "answer", text, preset, done: new Set(), ref: answerRef(flagKind) };
-      if (onAnswer) await onAnswer(text, model);
+      state = { kind: "answer", text, preset, done: new Set(), ref: answerRef(flagKind), sources, web: isWeb, webNote };
+      if (onAnswer) await onAnswer(withSourcesLine(text, sources), model);
       if (ours()) { if (switched) toast(t("ai.switched", { name: preset.name })); draw(); }
       return text;
     } catch (e) {
@@ -164,22 +197,27 @@ export async function askInSheet(opts) {
 }
 
 /** done: ids of actions already carried out (shown ticked). extra: more handlers (e.g. the 🤖 switch). */
-export function showAnswer({ head, text, actions, presetName, keepOpen, model = "", done = new Set(), extra = {}, onDraw = null, flag = null }) {
+export function showAnswer({ head, text, actions, presetName, keepOpen, model = "", done = new Set(), extra = {}, onDraw = null, flag = null, web = null }) {
   const fl = flag || { ref: answerRef("answer"), kind: "answer" };
-  const again = () => showAnswer({ head, text, actions, presetName, keepOpen, model, done, extra, onDraw, flag: fl });
+  const again = () => showAnswer({ head, text, actions, presetName, keepOpen, model, done, extra, onDraw, flag: fl, web });
+  const keepText = withSourcesLine(text, web?.sources); // what is copied / saved: with its sources
   const body = openSheet(html`${head}
+    ${web?.note ? html`<p class="warn-box">${t("ai.web.notSearched", { why: web.note })}</p>` : ""}
     <div class="ai-answer">${aiText(text)}</div>
-    <p class="hint">${t("ai.byPreset", { name: presetName })}${model && model !== presetName ? ` (${model})` : ""} · ${t("ai.verify")} ${flagChip({ ...fl, by: model || presetName })}</p>
+    ${web?.isWeb ? sourcesList(web.sources) : ""}
+    <p class="hint">${web?.isWeb ? `🌐 ${t("ai.web.looked")} · ` : ""}${t("ai.byPreset", { name: presetName })}${model && model !== presetName ? ` (${model})` : ""} · ${t("ai.verify")} ${flagChip({ ...fl, by: model || presetName })}</p>
     <div class="ai-actions">
+      ${web?.check ? html`<button type="button" class="btn btn-quiet btn-small" data-action="webcheck">🌐 ${t("ai.web.check")}</button>` : ""}
       <button type="button" class="btn btn-quiet btn-small" data-action="copy">${t("question.copy")}</button>
       ${actions.map((a) => html`<button type="button" class="btn btn-quiet btn-small" data-action="act" data-id="${a.id}" ${done.has(a.id) ? "disabled" : ""}>${done.has(a.id) ? "✓ " : ""}${a.label}</button>`)}
     </div>
     <div class="sheet-actions"><button type="button" class="btn" data-action="close">${t("common.done")}</button></div>`, {
     ...extra,
-    copy: async () => { try { await navigator.clipboard.writeText(text); toast(t("common.copied")); } catch { toast(t("common.copyFailed")); } },
+    copy: async () => { try { await navigator.clipboard.writeText(keepText); toast(t("common.copied")); } catch { toast(t("common.copyFailed")); } },
+    webcheck: () => web?.check?.(),
     act: async (el) => {
       const a = actions.find((x) => x.id === el.dataset.id);
-      const ok = await a.run(text);
+      const ok = await a.run(keepText);
       if (ok !== false) done.add(a.id);
       if (!keepOpen && a.closes) { closeSheet(); return; }
       // An action that asked something first (e.g. "Replace the explanation?") used this sheet: show the answer again.
