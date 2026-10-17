@@ -339,3 +339,13 @@ Today screen with Quick 10 and daily goal · exam countdown · timetable (any da
 | 🌐 Check on the web: on every AI answer sheet not already from the web; chat has a "Search the web for this reply" switch (on by itself for current-affairs questions); test analysis has "🌐 Recheck with the web" | AI sheets, chat, test result | ✅ |
 | Switch: "Look up current affairs on the web" (on by default) | Settings → AI | ✅ |
 
+## Added in 1.25
+
+| Feature | Where | Status |
+|---|---|---|
+| Malayalam style guide for every Malayalam answer: standard Malayalam as in PSC papers / SCERT textbooks, Malayalam script only, names as newspapers write them with English in brackets, and a list of standard terms (ഭരണഘടന, അനുച്ഛേദം, നിർദ്ദേശക തത്വങ്ങൾ, പ്രക്ഷോഭം, ജീവകം…) | All AI | ✅ |
+| Malayalam answers are asked of the best Malayalam AI first (Gemini, then Claude / GPT, Gemma, then Groq / OpenRouter); your 🤖 choice is kept for English answers and is not changed by this (switch: "Malayalam answers: use the best Malayalam AI first", on) | Settings → AI | ✅ |
+| Factual answers at low creativity (0.2); memory tricks and motivational lines 0.7; reading pages 0. Explanations start from the marked answer and say "not sure" instead of guessing | All AI | ✅ |
+| Presets you have flagged 🚩 often (3+ flags and ≥1 in 20 answers) are tried after the others when your 🤖 preset can't answer | All AI | ✅ |
+| Second opinion on facts (switch, off by default): when a less reliable AI (Groq, OpenRouter…) answers, a stronger preset you have (Gemini first) checks the facts; "✓ no mistakes found" or "⚠ corrections" shown under the answer and kept with it when saved | AI answer sheets (explain, facts, strategy, coach…) | ✅ |
+

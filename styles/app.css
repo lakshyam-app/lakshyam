@@ -1442,3 +1442,9 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .entries { display: flex; flex-direction: column; gap: 10px; }
 .entry-card { align-content: start; }
 .sc-week .fact-n { white-space: nowrap; }
+/* 1.25: second opinion on facts */
+.check-box { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; margin: 4px 0; font-size: 0.9375rem; }
+.check-box.ok { border-color: var(--ok); color: var(--ok); }
+.check-box.bad { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, transparent); }
+.check-box.bad p { margin: 0 0 4px; color: var(--danger); font-weight: 600; }
+.check-box ul { margin: 0; padding-left: 18px; }

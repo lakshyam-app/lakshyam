@@ -78,7 +78,7 @@ export function contextOf(a, { questionOf = (id) => store.question(id), topicOf 
 }
 
 const langOf = async () => (await presets.getConfig()).lang || "en";
-const jsonLang = (user, lang) => (lang === "ml" ? `${user}\n\nLANGUAGE: write the text in Malayalam (keep names, Acts and years accurate). Keep the JSON keys in English.` : user);
+const jsonLang = (user, lang) => (lang === "ml" ? `${user}\n\nLANGUAGE: write the text in Malayalam (keep names, Acts and years accurate). Keep the JSON keys in English.\n${P.ML_GUIDE}` : user);
 
 /** One item's source: kept only when it is one of the pages actually found (or, without that list, as given). */
 function itemSource(url, found) {

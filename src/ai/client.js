@@ -20,6 +20,36 @@ function dataUrlParts(url) {
   return { mediaType: m[1], data: m[2] };
 }
 
+export const creativeTask = (system, user) => /memory trick|mnemonic|motivational line|funny rhyme/i.test(`${system}\n${typeof user === "string" ? user : ""}`);
+
+/* Which presets write Malayalam best: Gemini first, then Claude / GPT, then Gemma, then the rest (Groq, OpenRouter…). */
+export function malayalamRank(p) {
+  const base = String(p.baseUrl || ""); const model = String(p.model || "");
+  if (/generativelanguage\.googleapis/i.test(base) && /gemini/i.test(model)) return 0;
+  if (p.format === "anthropic" || /api\.openai\.com/i.test(base)) return 1;
+  if (/gemma/i.test(model)) return 2;
+  return 3;
+}
+/** A request whose answer is to be written in Malayalam (the app's Malayalam instructions are in it). */
+export const writesMalayalam = (system, user) => /in Malayalam|മലയാളം:/.test(`${system}\n${typeof user === "string" ? user : ""}`);
+
+/**
+ * The order to ask presets in, after the usual one (your 🤖 preset first, then by priority, recently limited last):
+ * - a Malayalam answer goes first to the presets that write Malayalam best (your choice stays first among equals);
+ * - presets you have flagged 🚩 often (3+ flags and 1 in 20 of their answers) are tried after the others.
+ * flagsOf(p) → number of flags. Pure, so it can be tested.
+ */
+export function smartOrder(order, { malayalam = false, flagsOf = () => 0, limitedIds = new Set() } = {}) {
+  const often = (p) => { const f = flagsOf(p); return f >= 3 && f / Math.max(1, p.uses || 0) >= 0.05; };
+  const first = order[0];
+  return order.map((p, i) => ({ p, i })).sort((a, b) =>
+    (limitedIds.has(a.p.id) - limitedIds.has(b.p.id))
+    || (malayalam ? malayalamRank(a.p) - malayalamRank(b.p) : 0)
+    || (!malayalam ? (b.p === first) - (a.p === first) : 0) // your 🤖 preset stays first (flags only reorder the others)
+    || (often(a.p) - often(b.p))
+    || a.i - b.i).map((x) => x.p);
+}
+
 /** Builds the HTTP request (pure, so it can be tested).
     images: page pictures as data: URLs (for reading scanned pages). */
 export function buildRequest(preset, system, user, maxTokens = 2500, images = []) {
@@ -36,7 +66,8 @@ export function buildRequest(preset, system, user, maxTokens = 2500, images = []
   }
   const content = images.length ? [{ type: "text", text: user }, ...images.map((u) => { dataUrlParts(u); return { type: "image_url", image_url: { url: u } }; })] : user;
   // Reading a page must be faithful, so no creativity for images.
-  const body = { model: preset.model, max_tokens: maxTokens, temperature: images.length ? 0 : 0.4, messages: [{ role: "system", content: system }, { role: "user", content }] };
+  // Facts: low creativity (fewer made-up details). Memory tricks and motivational lines: more. Reading a page: none.
+  const body = { model: preset.model, max_tokens: maxTokens, temperature: images.length ? 0 : creativeTask(system, user) ? 0.7 : 0.2, messages: [{ role: "system", content: system }, { role: "user", content }] };
   if (/openrouter\.ai/i.test(base)) body.reasoning = { exclude: true };
   // Gemma on Google's API thinks at length before it answers (minutes for Malayalam): thinking is turned
   // down so answers come quickly. If a model doesn't take this setting, it is asked without it (see request).
@@ -149,6 +180,7 @@ export function aiControl(onTry = null) {
 }
 
 export async function ask(system, user, maxTokens = 2500, { images = [], control = null } = {}) {
+  let routed = false;
   const list = await presets.getPresets();
   const config = await presets.getConfig();
   let order = presets.tryOrder(list, config);
@@ -157,6 +189,15 @@ export async function ask(system, user, maxTokens = 2500, { images = [], control
     throw new AiError(allPaused ? "all-paused" : "no-preset", { noPreset: true, allPaused });
   }
   if (images.length) order = visionOrder(order);
+  else {
+    const now = Date.now();
+    const { presetFlags } = await import("./flags.js");
+    const usual = order[0];
+    const { setting } = await import("../data/store.js");
+    order = smartOrder(order, { malayalam: setting("aiMlBest", true) !== false && writesMalayalam(system, user), flagsOf: (p) => { try { return presetFlags(p); } catch { return 0; } },
+      limitedIds: new Set(order.filter((p) => p.limitHitAt && now - p.limitHitAt < 3600000).map((p) => p.id)) });
+    routed = order[0] !== usual; // chosen for this request only: your 🤖 preset stays your choice
+  }
   const errors = [];
   for (const [i, p] of order.entries()) {
     if (control?.cancelled) throw new AiError("cancelled", { cancelled: true });
@@ -176,7 +217,7 @@ export async function ask(system, user, maxTokens = 2500, { images = [], control
       if (images.length) return { text, preset: used, switched: false };
       // A paused active preset stays your choice: it is used again once the pause ends.
       const activePaused = list.some((x) => x.id === config.activeId && presets.isPaused(x));
-      const switched = config.activeId !== p.id && !activePaused;
+      const switched = config.activeId !== p.id && !activePaused && !routed;
       if (switched) await presets.saveConfig({ activeId: p.id });
       return { text, preset: used, switched };
     } catch (e) {

@@ -51,6 +51,8 @@ export const SETTINGS_INDEX = [
   item("aiOnCards", "ai", "ai.onCards"),
   item("aiAutoAnalysis", "ai", "ai.autoAnalysis"),
   item("aiWebCurrent", "ai", "ai.webCurrent"),
+  item("aiMlBest", "ai", "ai.mlBest"),
+  item("aiDoubleCheck", "ai", "ai.doubleCheck"),
   item("removeKeys", "ai", "ai.removeAll", "ai-settings"),
 
   item("drive", "data", "drive.title"),

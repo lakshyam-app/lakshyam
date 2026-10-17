@@ -9,9 +9,10 @@ import { go } from "../../core/router.js";
 import { can } from "../../core/entitlements.js";
 import { aiText } from "../../domain/text.js";
 import * as presets from "../../ai/presets.js";
-import { ask, aiControl } from "../../ai/client.js";
+import { ask, aiControl, request, malayalamRank } from "../../ai/client.js";
 import { askWeb } from "../../ai/web.js";
-import { WEB_ANSWER } from "../../ai/prompts.js";
+import { WEB_ANSWER, CHECK_SYSTEM, checkTask, readCheck } from "../../ai/prompts.js";
+import * as store from "../../data/store.js";
 import { chooseAction } from "../../core/dialogs.js";
 import { flagChip, answerRef } from "./flag-ui.js";
 import { presetFlags } from "../../ai/flags.js";
@@ -107,6 +108,29 @@ export async function askFresh(system, user, maxTokens, { web = false, control =
   return { ...x, sources: [], web: false, webNote };
 }
 
+/* 🔎 Second opinion (Settings → AI, off by default): an answer from a less reliable AI (Groq, OpenRouter…)
+   is checked by a stronger one you have (Gemini first). Shown under the answer; corrections are kept with it. */
+export const doubleCheckOn = () => store.setting("aiDoubleCheck", false) === true;
+export async function checkerFor(writer) {
+  if (!writer || malayalamRank(writer) < 3) return null;
+  const [list, cfg] = await Promise.all([presets.getPresets(), presets.getConfig()]);
+  return presets.tryOrder(list, { ...cfg, fallback: true }).filter((p) => p.id !== writer.id && malayalamRank(p) < 3).sort((a, b) => malayalamRank(a) - malayalamRank(b))[0] || null;
+}
+export async function secondOpinion(writer, context, answer) {
+  const checker = await checkerFor(writer);
+  if (!checker) return null;
+  try {
+    const reply = await request(checker, CHECK_SYSTEM(), checkTask(context, answer), 900);
+    const r = readCheck(reply);
+    return r ? { ...r, by: checker.model || checker.name } : { ok: null, by: checker.model || checker.name };
+  } catch (e) { return { ok: null, by: checker.model || checker.name, error: errorText(e) }; }
+}
+const checkHtml = (c) => (!c ? "" : c.running ? html`<p class="check-box">🔎 ${t("ai.check.running", { name: c.by })}</p>`
+  : c.ok === true ? html`<p class="check-box ok">✓ ${t("ai.check.ok", { name: c.by })}</p>`
+    : c.ok === false ? html`<div class="check-box bad"><p>⚠ ${t("ai.check.fixes", { name: c.by })}</p><ul>${c.fixes.map((f) => html`<li>${f}</li>`)}</ul></div>`
+      : html`<p class="check-box">${t("ai.check.unclear", { name: c.by })}</p>`);
+export const withCheck = (text, c) => (c?.ok === false ? `${text.trim()}\n\n⚠ ${t("ai.check.fixes", { name: c.by })}\n${c.fixes.map((f) => `- ${f}`).join("\n")}` : text);
+
 /* While an AI is answering: which one, how long so far, and (after a while) "Ask the next AI" / "Stop".
    Some models think for minutes before writing; you never have to sit and wait for one. */
 const SLOW_S = 15;
@@ -158,7 +182,7 @@ export async function askInSheet(opts) {
     else if (state.kind === "answer") {
       showAnswer({ head: head(), text: state.text, actions, presetName: state.preset.name, keepOpen, model: state.preset.model || "", done: state.done,
         flag: { ref: state.ref, kind: flagKind, presetId: state.preset.id }, onDraw: (b) => { mine = b; },
-        web: { sources: state.sources, isWeb: state.web, note: state.webNote, check: state.web ? null : () => start(true) } });
+        web: { sources: state.sources, isWeb: state.web, note: state.webNote, check: state.web ? null : () => start(true) }, check: state.check });
     } else {
       mine = openSheet(html`${head()}<p class="warn-box pre">${errorText(state.error)}</p>
         <p class="hint">${t("ai.checkPreset")}</p>
@@ -185,6 +209,18 @@ export async function askInSheet(opts) {
       state = { kind: "answer", text, preset, done: new Set(), ref: answerRef(flagKind), sources, web: isWeb, webNote };
       if (onAnswer) await onAnswer(withSourcesLine(text, sources), model);
       if (ours()) { if (switched) toast(t("ai.switched", { name: preset.name })); draw(); }
+      // 🔎 Second opinion for a less reliable AI (when switched on in Settings → AI).
+      if (doubleCheckOn() && !isWeb) {
+        const checker = await checkerFor(preset);
+        if (checker && me === run) {
+          state.check = { running: true, by: checker.model || checker.name };
+          if (ours()) draw();
+          const c = await secondOpinion(preset, val(opts.user), text);
+          if (me !== run) return text;
+          state.check = c;
+          if (ours()) draw();
+        }
+      }
       return text;
     } catch (e) {
       if (me !== run || e.cancelled) return null;
@@ -197,14 +233,15 @@ export async function askInSheet(opts) {
 }
 
 /** done: ids of actions already carried out (shown ticked). extra: more handlers (e.g. the 🤖 switch). */
-export function showAnswer({ head, text, actions, presetName, keepOpen, model = "", done = new Set(), extra = {}, onDraw = null, flag = null, web = null }) {
+export function showAnswer({ head, text, actions, presetName, keepOpen, model = "", done = new Set(), extra = {}, onDraw = null, flag = null, web = null, check = null }) {
   const fl = flag || { ref: answerRef("answer"), kind: "answer" };
-  const again = () => showAnswer({ head, text, actions, presetName, keepOpen, model, done, extra, onDraw, flag: fl, web });
-  const keepText = withSourcesLine(text, web?.sources); // what is copied / saved: with its sources
+  const again = () => showAnswer({ head, text, actions, presetName, keepOpen, model, done, extra, onDraw, flag: fl, web, check });
+  const keepText = withCheck(withSourcesLine(text, web?.sources), check); // what is copied / saved: with its sources and any corrections
   const body = openSheet(html`${head}
     ${web?.note ? html`<p class="warn-box">${t("ai.web.notSearched", { why: web.note })}</p>` : ""}
     <div class="ai-answer">${aiText(text)}</div>
     ${web?.isWeb ? sourcesList(web.sources) : ""}
+    ${checkHtml(check)}
     <p class="hint">${web?.isWeb ? `🌐 ${t("ai.web.looked")} · ` : ""}${t("ai.byPreset", { name: presetName })}${model && model !== presetName ? ` (${model})` : ""} · ${t("ai.verify")} ${flagChip({ ...fl, by: model || presetName })}</p>
     <div class="ai-actions">
       ${web?.check ? html`<button type="button" class="btn btn-quiet btn-small" data-action="webcheck">🌐 ${t("ai.web.check")}</button>` : ""}

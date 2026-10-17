@@ -8,6 +8,10 @@ const STYLE = "Formatting rules: plain text only. Use '-' for bullet points. No 
 /** For long, multi-part answers: the app turns these into section cards and bullet lists. */
 export const SECTIONED = "For this answer, ignore the no-headings rule: start each part on its own line as '## <number>. <short title>'. Under it use '- ' bullets (sub-points indented with two spaces and '- '). Begin each bullet with a short key phrase in **double asterisks**, then a colon, then the detail. Keep bullets to one or two lines. Use numbered lines ('1.', '2.') only for steps of a plan.";
 
+/* Malayalam as in Kerala PSC papers and SCERT textbooks. Smaller models (Groq, OpenRouter) write weaker Malayalam;
+   a fixed style and the standard terms make their answers far more consistent. */
+export const ML_GUIDE = `MALAYALAM STYLE: write natural, standard Malayalam as in Kerala PSC question papers and SCERT textbooks, in Malayalam script (never Manglish or transliteration). Short, clear sentences. Write names of people and places as Malayalam newspapers do, with the English in brackets the first time (e.g. സുമൻ ബെറി (Suman Bery)). Use these standard terms: Constitution ഭരണഘടന · Article അനുച്ഛേദം · Schedule പട്ടിക · Amendment ഭേദഗതി · Fundamental Rights മൗലികാവകാശങ്ങൾ · Fundamental Duties മൗലിക കടമകൾ · Directive Principles നിർദ്ദേശക തത്വങ്ങൾ · Parliament പാർലമെന്റ് · Legislative Assembly നിയമസഭ · Governor ഗവർണർ · Chief Minister മുഖ്യമന്ത്രി · Prime Minister പ്രധാനമന്ത്രി · President രാഷ്ട്രപതി · Supreme Court സുപ്രീം കോടതി · High Court ഹൈക്കോടതി · Election Commission തിരഞ്ഞെടുപ്പ് കമ്മീഷൻ · Renaissance നവോത്ഥാനം · freedom struggle സ്വാതന്ത്ര്യസമരം · agitation പ്രക്ഷോഭം · revolt കലാപം · treaty ഉടമ്പടി · dynasty രാജവംശം · district ജില്ല · river നദി · census സെൻസസ് · inflation പണപ്പെരുപ്പം · Five-Year Plan പഞ്ചവത്സര പദ്ധതി · element മൂലകം · compound സംയുക്തം · vitamin ജീവകം · deficiency disease അപര്യാപ്തതാ രോഗം · photosynthesis പ്രകാശസംശ്ലേഷണം · award പുരസ്കാരം. Keep numbers, years and abbreviations (GDP, ISRO, RBI) as they are.`;
+
 export function langInstruction(lang) {
   if (lang === "ml") return "Write your answer in Malayalam (keep proper nouns, dates and technical terms accurate; English terms in brackets where helpful).";
   if (lang === "both") return "Write the answer in English first, then a Malayalam version under a line saying 'മലയാളം:'.";
@@ -17,8 +21,8 @@ export function langInstruction(lang) {
 /** The answer language, said once more at the very end of the request: with long English
     material (questions, figures) models otherwise drift back to English. */
 export function inLang(user, lang) {
-  if (lang === "ml") return `${user}\n\nLANGUAGE: write your whole answer in Malayalam (മലയാളം), including all titles and headings. The material above is in English, but your answer must be in Malayalam. Keep names, Acts, years and technical terms accurate, with the English term in brackets where it helps. Keep the same layout markers (## , - , **) and any English marker words asked for above (such as "Quote:").`;
-  if (lang === "both") return `${user}\n\nLANGUAGE: write the whole answer in English first, then the same answer in Malayalam under a line saying 'മലയാളം:'.`;
+  if (lang === "ml") return `${user}\n\nLANGUAGE: write your whole answer in Malayalam (മലയാളം), including all titles and headings. The material above is in English, but your answer must be in Malayalam. Keep names, Acts, years and technical terms accurate, with the English term in brackets where it helps. Keep the same layout markers (## , - , **) and any English marker words asked for above (such as "Quote:").\n${ML_GUIDE}`;
+  if (lang === "both") return `${user}\n\nLANGUAGE: write the whole answer in English first, then the same answer in Malayalam under a line saying 'മലയാളം:'.\n${ML_GUIDE}`;
   return user;
 }
 
@@ -65,7 +69,7 @@ export const tasks = {
     const mistake = Number.isInteger(selected) && selected !== q.answerIndex;
     return `${questionBlock(q, selected)}\n\nTask: ${mistake
       ? "Explain why the student's choice is wrong, why the correct answer is right, and give one short tip to avoid this mistake next time."
-      : "Explain why the correct answer is right and why each other option is wrong, briefly."}`;
+      : "Explain why the correct answer is right and why each other option is wrong, briefly."} Start from the marked correct answer (never contradict it unless you are certain it is wrong; then say so plainly). Only state facts you are sure of; if you are not sure of one, say "not sure" rather than guessing.`;
   },
   mnemonic: (q) => `${questionBlock(q)}\n\nTask: ${MNEMONIC_STYLE} Make 1-2 for the key fact(s) tested here.`,
   /** Facts around the question that PSC also asks: saved under the question as "Related facts". */
@@ -186,6 +190,19 @@ Do not use outside knowledge to fill a gap; if the notes don't have it, say so p
 /** How to use the web: only sources a PSC aspirant can trust. */
 export const WEB_RULES = "Look the facts up on the web before you write. Use ONLY trustworthy sources: official Government of India and Kerala government sites (gov.in, nic.in, kerala.gov.in, keralapsc.gov.in, pib.gov.in, prsindia.org), NCERT and SCERT textbooks, universities (ac.in), Encyclopaedia Britannica, The Hindu or The Indian Express; Wikipedia only to cross-check another source. Never use quiz, coaching-centre, blog, video or forum sites. If trustworthy sources disagree or you cannot confirm a fact, leave it out. Keep names, dates and numbers exactly as the source gives them.";
 const SOURCES_END = "End with a line 'SOURCES:' and then one line per source you used: '- [n] title — full URL' (n as cited above).";
+
+/** 🔎 Second opinion: a stronger AI checks the facts in another AI's answer. */
+export const CHECK_SYSTEM = () => `You are a strict fact-checker for Kerala PSC study material. ${timeRules()} Check only facts (names, dates, numbers, places, which option is correct, definitions); ignore style.`;
+export function checkTask(context, answer) {
+  return `MATERIAL THE ANSWER WAS WRITTEN FOR:\n${String(context).slice(0, 3000)}\n\nANSWER TO CHECK:\n${String(answer).slice(0, 6000)}\n\nIf every fact in the answer is correct, reply with exactly: OK\nOtherwise reply only with up to 6 lines, one per mistake: '- <what the answer says> → <the correct fact>'. Write them in the same language as the answer. Nothing else. A fact that may have changed since your training is not a mistake unless you are sure; mark such a line with ⚠.`;
+}
+/** The checker's reply → { ok: true } or { ok: false, fixes: ["…→…"] } (null if it can't be read). */
+export function readCheck(text) {
+  const s = String(text || "").trim();
+  if (/^\**\s*OK\b[.!]?\s*\**$/i.test(s)) return { ok: true, fixes: [] };
+  const fixes = s.split("\n").map((l) => l.replace(/^\s*[-•*\d.)]+\s*/, "").trim()).filter((l) => /→|->/.test(l)).slice(0, 6);
+  return fixes.length ? { ok: false, fixes } : (/\bOK\b/.test(s) && s.length < 40 ? { ok: true, fixes: [] } : null);
+}
 
 /** For an explanation, related facts or a chat answer looked up on the web (current affairs and other facts that change). */
 export const WEB_ANSWER = `Before you answer, search the web for every fact in this question that can change over time (who holds a post now, latest figures, recent events). ${WEB_RULES} What you find overrides your memory. If it shows that the answer marked in the question has changed since that exam, say so plainly: what was correct at the time of the exam, and what is true now (with the date it changed). Cite facts you found as [n]. ${SOURCES_END}`;

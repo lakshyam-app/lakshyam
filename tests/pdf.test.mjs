@@ -144,7 +144,7 @@ test("image requests: Anthropic base64 blocks, OpenAI image_url, temperature 0",
   const o = buildRequest(p, "sys", "read", 100, [img]);
   assert.equal(o.body.temperature, 0);
   assert.deepEqual(o.body.messages[1].content[1], { type: "image_url", image_url: { url: img } });
-  assert.equal(buildRequest(p, "s", "u", 100).body.temperature, 0.4);
+  assert.equal(buildRequest(p, "s", "u", 100).body.temperature, 0.2); // facts: low creativity (1.25)
   const a = buildRequest({ ...p, format: "anthropic", baseUrl: "https://api.anthropic.com" }, "sys", "read", 100, [img]);
   assert.deepEqual(a.body.messages[0].content[0], { type: "image", source: { type: "base64", media_type: "image/jpeg", data: "QUJD" } });
   assert.equal(a.body.messages[0].content[1].text, "read");

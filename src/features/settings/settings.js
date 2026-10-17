@@ -255,7 +255,9 @@ const PAGES = {
     return html`<div class="group" data-set="presets aiLang fallback pause removeKeys"><div id="aiBlock"></div></div>
       <div class="group">${sw("aiOnCards", "aiOnCards", t("ai.onCards"), t("ai.onCardsHint"))}
         ${sw("aiAutoAnalysis", "aiAutoAnalysis", t("ai.autoAnalysis"), t("ai.autoAnalysisHint"))}
-        ${sw("aiWebCurrent", "aiWebCurrent", t("ai.webCurrent"), t("ai.webCurrentHint"))}</div>`;
+        ${sw("aiWebCurrent", "aiWebCurrent", t("ai.webCurrent"), t("ai.webCurrentHint"))}
+        ${sw("aiMlBest", "aiMlBest", t("ai.mlBest"), t("ai.mlBestHint"))}
+        <label class="switch-row" data-set="aiDoubleCheck"><input type="checkbox" data-switch="aiDoubleCheck" ${store.setting("aiDoubleCheck", false) === true ? "checked" : ""}><span>${t("ai.doubleCheck")}<span class="row-sub">${t("ai.doubleCheckHint")}</span></span></label></div>`;
   },
 
   data() {
