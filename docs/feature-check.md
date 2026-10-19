@@ -91,7 +91,7 @@ imported, in English and Malayalam.
 | Old feature | In Lakshyam | |
 |---|---|---|
 | "My note" per listing | Collapsed note on each listing | ✅ |
-| Notes tab | Notes tab | ✅ |
+| Notes tab | Revise tab → 📝 Notes (1.26: the bottom tab became Revise; Notes is unchanged inside it, and #/notes still works) | ↪ moved |
 | Older per-question notes | Imported as notes linked to their question | ✅ |
 | Global search, scope, preview, view as list | 🔍; also finds subjects / topics in both languages | ✅ |
 | Line breaks, bold / italic, maths, Malayalam | Same syntax; KaTeX stored locally (offline) | ✅ |
@@ -249,7 +249,7 @@ Today screen with Quick 10 and daily goal · exam countdown · timetable (any da
 | Fact sheet / practice questions / flashcards made with a web search: Gemini presets use Google Search grounding, Groq gpt-oss presets their browser search; the AI is told to use only trustworthy sources (government, NCERT/SCERT, universities, Britannica, The Hindu, Indian Express; Wikipedia only to cross-check; no quiz, coaching, blog or forum sites); each source marked ✓ trusted / ≈ fair / ⚠ check; with Gemini only pages Google really found are kept | Same | ✅ (real web search not testable here) |
 | Without a web-capable preset: says so; can use the AI's own knowledge instead, marked "not checked on the web" | Same | ✅ |
 | Questions: second independent answer check (disagreements unticked), reviewed, saved to the right topic with their sources, "Practise these now"; flashcards reviewed and saved to the topic; fact sheet saved to Notes with the test and its sources; Revise practises the wrong ones (no AI) | Same | ✅ |
-| Notes: only the chosen syllabus's notes (its topics, subjects, papers, questions, tests) and general notes by default; "All syllabi" shows every note | Notes tab | ✅ |
+| Notes: only the chosen syllabus's notes (its topics, subjects, papers, questions, tests) and general notes by default; "All syllabi" shows every note | Revise → Notes | ✅ |
 
 ## Changed in 1.20.1
 
@@ -348,4 +348,49 @@ Today screen with Quick 10 and daily goal · exam countdown · timetable (any da
 | Factual answers at low creativity (0.2); memory tricks and motivational lines 0.7; reading pages 0. Explanations start from the marked answer and say "not sure" instead of guessing | All AI | ✅ |
 | Presets you have flagged 🚩 often (3+ flags and ≥1 in 20 answers) are tried after the others when your 🤖 preset can't answer | All AI | ✅ |
 | Second opinion on facts (switch, off by default): when a less reliable AI (Groq, OpenRouter…) answers, a stronger preset you have (Gemini first) checks the facts; "✓ no mistakes found" or "⚠ corrections" shown under the answer and kept with it when saved | AI answer sheets (explain, facts, strategy, coach…) | ✅ |
+
+## Changed and added in 1.26 (from the UX review)
+
+Nothing was removed: every change below moved or merged something, and the numbers are recounted without editing
+any saved record. (Review items 16 and the APK items were left for later, as asked.)
+
+| Change | Where | Status |
+|---|---|---|
+| Fix: Malayalam on 360-px phones, the test header fits (icon-only Pause, shorter count); Submit stays on screen | Test | ✅ |
+| Questions you never opened in a test (stopped early) don't count anywhere: not "left", not "still wrong", not in stats, analysis or mistake patterns; past Lakshyam tests are recounted the same way (records unchanged; old-app tests stay as they were). Submit says how many weren't opened; the result has "Do the n you didn't open" and a "Not opened" filter | Test, result, Progress, banks, insights | ↪ counting |
+| Automatic AI analysis needs 3 answered questions (blanks no longer count) | Result | ✅ fixed |
+| "Where your marks go" has its colour key back (each style has its own name; 10 clashing style names fixed) | Progress | ✅ fixed |
+| Streak ring no longer clipped; best-day line above Screen time, written "day score n/100" | Today, Study diary | ✅ fixed |
+| Tests on a catch-all topic are named "Subject — Topic" | Results, history, notes | ✅ fixed |
+| Short Library tab names in Malayalam (വിഷയം · ടോപ്പിക് · പേപ്പർ · ബാങ്ക്); long names may break after "/" | Library, map | ✅ fixed |
+| "Not touched yet" now says "Not practised in a test yet" | Progress insights | ✅ fixed |
+| Today: one big button (today's session); one day card (goal ring, streak, checklist); quiet rows for Start a test, topics to revise and the timetable; the backup warning only at the top when a backup is overdue | Today | ↪ calmer |
+| Topic reviews: at most 3 due topics a day (asked most × most overdue); the rest wait their turn; the session's topic and the due list agree | Today, Revise | ➕ |
+| A test on a due topic with 8+ answers and 60% right counts as its revision automatically (toast with Undo) | Result | ➕ |
+| Top bar: just "🤖 EN" for AI, so the syllabus name fits | Top bar | ✅ |
+| Papers show the post, year, "done n× · best x/100" or "not done yet", and how many have no answer | Library → Papers | ➕ |
+| One 🤖 button on each card opens Explain, Facts, Ask AI, Similar and In my notes (switch to show all five) | Question cards; Settings → AI | ↪ merged |
+| Your tries on each card (✗ 5 Oct · ✓ 12 Oct); questions missed 3+ times marked, with a memory trick | Question cards | ➕ |
+| Test cards: one short line (Q n of m · Q74 · 2022 · post); the subject and topic aren't shown while you answer (they'd hint at the answer in a mixed test); the result shows everything | Test | ↪ shorter |
+| Results open on Wrong when there are wrong answers; Review mistakes / Retake wrong at the top | Result | ↪ |
+| Progress leads with how much you leave blank and when a guess pays off with your marking; trend needs 5+ answers per test; time by difficulty says "too few"; "about n in every 100"; accuracy and score labelled apart | Progress, history | ↪ honest numbers |
+| Weak spots shows practised topics by default (Not practised is its own filter); "no notes" said once | Smart insights | ↪ |
+| Smart insights and My timetable rows moved up | Progress | ↪ moved |
+| Diary colours easier to tell apart in dark mode; bigger tap targets on result chips and the 14-day strip | Diary, results | ✅ |
+| About: What's new after each update (and a one-time "updated" note), what leaves this phone, credits for KaTeX and pdf.js | Settings → About & updates | ➕ |
+| Question lists open in Self-test (answers hidden until you tap) unless you chose a view | Topic, subject, paper, bank lists | ↪ default |
+| "Mistakes due" and "Still wrong" each explain their rule where you pick them | Start a test | ✅ |
+| 🔁 "Asked in n papers" on repeated questions (tap for the papers) and a "Most repeated first" sort | Question cards, list sort | ➕ |
+| ⏳ "Answer as of 2023" on past questions about things that change (the present…, latest, recently), with "Check it now" | Question cards | ➕ |
+| 🤖 Sort "Other" into topics: AI suggests a topic for each question; you untick or change any and Apply (past answers move with them; Undo) | Topic page of an "Other" topic | ➕ |
+| 🔎 Look-alike subject and topic names, with Merge (asks first; safety copy) | Library → Subjects | ➕ |
+| First screen: Restore from Google Drive, Restore or import a file, or Start fresh | First run, empty Library | ➕ |
+| Papers for another phone: a file with papers, answer keys, explanations and topic names only; adding it only adds what's missing | Settings → Backup & data | ➕ |
+| Target marks per 100 per exam; Progress shows where you likely are (from your recent 300 answers) and the gap | Exams; Progress | ➕ |
+| "Why was it wrong?" on a wrong answer (didn't know · mixed up · misread · changed my answer); Smart insights → Why you lose marks | Result; Smart insights | ➕ |
+| 🗞 Current affairs quiz: pick a month (and Kerala / India / World, 10 or 20); made only from a web search (Gemini or Groq gpt-oss), never from memory; checked in code (date in the month, a real source page) and by a second web search; you review and save; kept with AI questions (Current Affairs subject), each with its month and source; saved quizzes listed by month | Library → Banks; Revise; Current Affairs ⋯ | ➕ |
+| Revise tab (took Notes' place in the bottom bar): due today (mistakes, flashcards, topics), Still wrong, Flagged, Notes, all flashcards as one deck, Study PDFs, AI questions, Current affairs quiz; screens opened from it go back to it | Bottom bar | ➕ |
+| Today's "n flashcards due" opens them as one deck across topics (By topic › for the old list) | Today, Revise | ↪ |
+| Next steps review lists no longer jump to the top on each tick | Test result → next steps | ✅ fixed |
+| Browser smoke test with made-up data, run by GitHub on every push | tests/e2e, CI | ➕ |
 

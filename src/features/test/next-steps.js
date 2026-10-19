@@ -17,12 +17,13 @@ import * as mut from "../../data/mutations.js";
 import * as tests from "../../data/tests.js";
 import * as presets from "../../ai/presets.js";
 import { ask, parseJsonLoose, aiControl } from "../../ai/client.js";
-import { askWeb, webPreset, domainOf, trustOf } from "../../ai/web.js";
+import { askWeb, webPreset, sourceFor } from "../../ai/web.js";
 import { flagChip, answerRef } from "../ai/flag-ui.js";
 import * as P from "../../ai/prompts.js";
 import { applyAnswerCheck } from "../../pdf/pdf-tools.js";
 import { ensureAi, errorText, waitingBox, paintWaiting, watchWaiting, sourceChip, sourcesList } from "../ai/ai-ui.js";
 import { openStartTest } from "./start-sheet.js";
+import { notOpened } from "../../domain/stats.js";
 
 const FLAG_KIND = { facts: "factSheet", questions: "questions", cards: "cards" }; // what a 🚩 counts as
 
@@ -57,7 +58,7 @@ export const stepsOf = (a) => { const s = parseSteps(a?.analysis?.text); return 
 /** The part of the analysis card with a "Do it" button for each step. */
 export function stepsBlock(a) {
   const steps = stepsOf(a);
-  const wrongN = a.answers.filter((r) => r.graded && !r.isCorrect).length;
+  const wrongN = a.answers.filter((r) => r.graded && !r.isCorrect && !notOpened(r, a)).length;
   return html`<div class="ns-block"><h3>🤖 ${t("ns.title")}</h3><p class="hint">${t("ns.hint")}</p>
     <div class="rows">${steps.map((s, i) => (s.kind === "revise" && !wrongN ? "" : html`<button type="button" class="row ns-row" data-action="ns-do" data-i="${i}">
       <span class="row-main"><span class="row-title">${ICON[s.kind]} ${t(`ns.kind.${s.kind}`)}</span>${s.text ? html`<span class="row-sub clamp">${s.text}</span>` : ""}</span><span class="chev-txt">›</span></button>`))}</div></div>`;
@@ -65,8 +66,10 @@ export function stepsBlock(a) {
 
 /** What the AI is told about the test: its weak topics (keys T1…) and the missed questions. */
 export function contextOf(a, { questionOf = (id) => store.question(id), topicOf = (id) => store.topic(id), subjectOf = (id) => store.subject(id) } = {}) {
-  const wrong = a.answers.filter((r) => r.graded && !r.isCorrect).map((r) => ({ r, q: questionOf(r.questionId) })).filter((x) => x.q);
-  const pool = wrong.length ? wrong : a.answers.map((r) => ({ r, q: questionOf(r.questionId) })).filter((x) => x.q);
+  // Blanks you never opened (a test ended early) aren't mistakes, and aren't what the test was about.
+  const counted = a.answers.filter((r) => !notOpened(r, a));
+  const wrong = counted.filter((r) => r.graded && !r.isCorrect).map((r) => ({ r, q: questionOf(r.questionId) })).filter((x) => x.q);
+  const pool = wrong.length ? wrong : counted.map((r) => ({ r, q: questionOf(r.questionId) })).filter((x) => x.q);
   const count = new Map(); pool.forEach(({ q }) => count.set(q.topicId, (count.get(q.topicId) || 0) + 1));
   const topics = [...count.entries()].sort((x, y) => y[1] - x[1]).slice(0, 6).map(([id], i) => {
     const tp = topicOf(id);
@@ -80,14 +83,13 @@ export function contextOf(a, { questionOf = (id) => store.question(id), topicOf 
 const langOf = async () => (await presets.getConfig()).lang || "en";
 const jsonLang = (user, lang) => (lang === "ml" ? `${user}\n\nLANGUAGE: write the text in Malayalam (keep names, Acts and years accurate). Keep the JSON keys in English.\n${P.ML_GUIDE}` : user);
 
-/** One item's source: kept only when it is one of the pages actually found (or, without that list, as given). */
-function itemSource(url, found) {
-  if (!url || !/^https?:\/\//.test(String(url))) return null;
-  const domain = domainOf(url);
-  if (!found.length) return { url: String(url).slice(0, 500), domain, trust: trustOf(domain) };
-  // With Google's list, the link kept is the page Google actually found on that site (the AI's own link could be made up).
-  const hit = found.find((s) => s.domain === domain);
-  return hit ? { url: hit.url, domain, trust: hit.trust } : null;
+const itemSource = sourceFor; // (moved to ai/web.js in 1.26, unchanged, so the current-affairs quiz uses the same rule)
+
+/** A tick changes the list in place (1.26: a full redraw jumped back to the top of the sheet). */
+function ticked(box, keep) {
+  box.closest(".ns-item")?.classList.toggle("off", !box.checked);
+  const save = document.querySelector('#sheetRoot [data-action="save"]');
+  if (save) { save.textContent = t("ai.saveN", { n: keep.size }); save.disabled = !keep.size; }
 }
 
 /** Does one next step (from the result screen). */
@@ -157,7 +159,7 @@ export async function runStep(a, step) {
           const date = new Date().toLocaleDateString(dateLocale());
           const src = r.sources.length ? `\n\n${t("ns.sourcesHead")}\n${r.sources.map((s) => `- ${s.title || s.domain} — ${s.url} (${s.trust === "trusted" ? "✓" : s.trust === "fair" ? "≈" : "⚠"})`).join("\n")}` : `\n\n⚠ ${t("ns.notWeb")}`;
           const text = `📄 ${t("ns.factSheet")} — ${date} · 🤖 ${r.by}${step.text ? `\n${step.text}` : ""}\n\n${body}${src}`;
-          await store.quietly(() => mut.appendNote({ type: "test", id: a.id }, a.scope?.label || t("test.title"), text));
+          await store.quietly(() => mut.appendNote({ type: "test", id: a.id }, tests.testLabel(a) || t("test.title"), text));
           const id = `note:test:${a.id}`;
           const note = store.all("notes").find((x) => x.target?.type === "test" && x.target.id === a.id);
           if (note) await store.quietly(() => mut.setNoteExtras(note.id || id, { syllabusId: a.syllabusId, ai: true }));
@@ -217,9 +219,9 @@ export async function runStep(a, step) {
           toast(t("ai.savedN", { n: savedQs.length }));
           draw();
         },
-        practise: () => { closeSheet(); setTimeout(() => openStartTest({ scope: { type: "ai", ref: a.id, label: t("ns.practiseLabel", { label: a.scope?.label || "" }) }, questions: savedQs, keepOrder: false }), 60); }
+        practise: () => { closeSheet(); setTimeout(() => openStartTest({ scope: { type: "ai", ref: a.id, label: t("ns.practiseLabel", { label: tests.testLabel(a) }) }, questions: savedQs, keepOrder: false }), 60); }
       }, { label: title });
-      document.querySelectorAll("#sheetRoot input[data-i]").forEach((c) => c.addEventListener("change", () => { const i = Number(c.dataset.i); if (c.checked) keep.add(i); else keep.delete(i); draw(); }));
+      document.querySelectorAll("#sheetRoot input[data-i]").forEach((c) => c.addEventListener("change", () => { const i = Number(c.dataset.i); if (c.checked) keep.add(i); else keep.delete(i); ticked(c, keep); }));
       typesetMath(document.querySelector("#sheetRoot .sheet-body"));
     };
     draw();
@@ -252,7 +254,7 @@ export async function runStep(a, step) {
           saved = true; toast(t("ns.savedCards", { n: chosen.length })); draw();
         }
       }, { label: title });
-      document.querySelectorAll("#sheetRoot input[data-i]").forEach((c) => c.addEventListener("change", () => { const i = Number(c.dataset.i); if (c.checked) keep.add(i); else keep.delete(i); draw(); }));
+      document.querySelectorAll("#sheetRoot input[data-i]").forEach((c) => c.addEventListener("change", () => { const i = Number(c.dataset.i); if (c.checked) keep.add(i); else keep.delete(i); ticked(c, keep); }));
     };
     draw();
   }
@@ -269,8 +271,8 @@ export async function runStep(a, step) {
 /** [REVISE]: the wrong and blank questions of this test again (no AI). */
 async function revise(a) {
   if (tests.activeTest()) return openStartTest();
-  const ids = a.answers.filter((r) => r.graded && !r.isCorrect).map((r) => r.questionId);
+  const ids = a.answers.filter((r) => r.graded && !r.isCorrect && !notOpened(r, a)).map((r) => r.questionId);
   if (!ids.length) return;
-  await tests.retake(a, { onlyIds: ids, label: t("results.wrongLabel", { label: a.scope?.label || "" }) });
+  await tests.retake(a, { onlyIds: ids, label: t("results.wrongLabel", { label: tests.testLabel(a) }) });
   go("test");
 }

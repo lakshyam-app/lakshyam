@@ -14,7 +14,9 @@ import { sparkline, marksBar, accBar } from "../../core/charts.js";
 import * as store from "../../data/store.js";
 import { nameHtml, label as nameLabel } from "../../core/names.js";
 import { takeSnapshot } from "../../data/snapshots.js";
-import { summarize, findInsights, accuracyBy, pickByBasis, testTrend, avgDifficulty, markingInfo, LOW_N } from "../../domain/stats.js";
+import { summarize, findInsights, accuracyBy, pickByBasis, testTrend, avgDifficulty, markingInfo, notOpened, ruleOutForGuess, likelyRange, TREND_MIN, LOW_N } from "../../domain/stats.js";
+import { allExams } from "../../data/exams.js";
+import { upcoming } from "../../domain/exams.js";
 import { formatDuration } from "../../domain/testing.js";
 import { scoreLine } from "../test/results.js";
 import { openStartTest, progressText } from "../test/start-sheet.js";
@@ -27,6 +29,7 @@ export { finishedTests };
 export const testsFor = (syllabusId, type, ref) => finishedTests(syllabusId).filter((a) => a.scope?.type === type && a.scope?.ref === ref);
 
 const pctText = (x) => (x === null || x === undefined ? "—" : `${Math.round(x * 100)}%`);
+const one = (x) => formatNumber(Math.round((x || 0) * 10) / 10); // marks to one decimal place
 const signed = (x) => `${x > 0 ? "+" : x < 0 ? "−" : ""}${formatNumber(Math.abs(Math.round(x * 10) / 10))}`;
 export const dateText = (ms) => new Date(ms).toLocaleDateString(dateLocale(), { day: "numeric", month: "short", year: "numeric" });
 const chev = html`<span class="chev-txt">›</span>`;
@@ -39,8 +42,15 @@ export function howBlock(ctx, records, { trendKeep = null, title = true } = {}) 
   if (!s.n) return html`<p class="hint pad">${t("stats.noAnswersYet")}</p>`;
   const prev = ctx.period !== "all" ? summarize(trendKeep ? ctx.prevRecords.filter(trendKeep) : ctx.prevRecords, ctx.marking, ctx.basis) : null;
   const delta = prev && prev.n ? s.per100 - prev.per100 : null;
-  const trend = testTrend(ctx.attempts, trendKeep || (() => true)).slice(-10)
+  // Tests with only a few answers (a 3-question try) would swing the line: they're left out of it.
+  const trend = testTrend(ctx.attempts, trendKeep || (() => true), { min: TREND_MIN }).slice(-10)
     .map((p) => ({ ...p, title: `${dateText(p.at)}: ${pctText(p.value)}` }));
+  // The biggest lever under negative marking: how much you leave blank, when you're usually right.
+  const { pen } = markingInfo(ctx.marking);
+  const out = ruleOutForGuess(ctx.marking);
+  const tip = s.n >= 30 && s.answered >= 20 && s.attempted !== null && s.attempted <= 0.9 && s.accuracy >= 0.6
+    ? (pen > 0 ? t("stats.attemptTip", { acc: pctText(s.accuracy), blank: Math.round(s.blank100), pen: markingWords(ctx.marking).pen, out })
+      : t("stats.attemptTipNoNeg", { acc: pctText(s.accuracy), blank: Math.round(s.blank100) })) : "";
   return html`${title ? html`<h2 class="section-title">${t("stats.how")}</h2>` : ""}
     <div class="hero">
       <span class="hero-num">${formatNumber(Math.round(s.per100 * 10) / 10)}</span>
@@ -49,11 +59,26 @@ export function howBlock(ctx, records, { trendKeep = null, title = true } = {}) 
     </div>
     <details class="info"><summary>${t("stats.what")}</summary><p>${t("stats.per100Info", markingWords(ctx.marking))}</p>
       <p>${t(`stats.basisInfo.${ctx.basis}`)}</p></details>
-    <p class="facts"><span><strong>${pctText(s.accuracy)}</strong> ${t("stats.accuracy")}</span>
+    <p class="fact-line"><span><strong>${pctText(s.accuracy)}</strong> ${t("stats.accuracy")}</span>
       <span><strong>${pctText(s.attempted)}</strong> ${t("stats.attempted")}</span>
       <span><strong>${formatNumber(s.n)}</strong> ${t("stats.questionsCounted")}</span></p>
+    ${targetLine(ctx, records)}
+    ${tip ? html`<p class="attempt-tip">🎯 ${tip}</p>` : ""}
     ${trend.length >= 2 ? html`<div class="trend">${sparkline(trend, { label: t("stats.trendLabel", { n: trend.length }) })}
-      <p class="hint">${t("stats.trend", { n: trend.length, first: pctText(trend[0].value), last: pctText(trend[trend.length - 1].value) })}</p></div>` : ""}`;
+      <p class="hint">${t("stats.trend", { n: trend.length, min: TREND_MIN, first: pctText(trend[0].value), last: pctText(trend[trend.length - 1].value) })}</p></div>` : ""}`;
+}
+
+/** Your nearest exam with a target (for this syllabus): where you likely are now, and the gap. */
+function targetLine(ctx, records) {
+  if (ctx.mode !== "pyq") return "";
+  const exam = upcoming(allExams()).find((e) => e.target && (!e.syllabusId || e.syllabusId === ctx.syllabus?.id));
+  if (!exam) return "";
+  const r = likelyRange(records, ctx.marking);
+  if (!r) return html`<p class="target-line">🏁 ${t("stats.targetNoData", { target: formatNumber(exam.target), exam: exam.name || t("exam.yourExam") })}</p>`;
+  const gap = Math.round((exam.target - r.per100) * 10) / 10;
+  return html`<p class="target-line ${gap <= 0 ? "met" : ""}">🏁 ${t(gap <= 0 ? "stats.targetAbove" : "stats.targetBelow", {
+    target: formatNumber(exam.target), exam: exam.name || t("exam.yourExam"), now: formatNumber(Math.round(r.per100)), low: formatNumber(Math.round(r.low)), high: formatNumber(Math.round(r.high)), gap: formatNumber(Math.abs(gap))
+  })}</p>`;
 }
 
 export function markingWords(m) {
@@ -68,11 +93,11 @@ export function marksBlock(ctx, records) {
   const right = Math.round((s.right / s.n) * 1000) / 10;
   return html`<h2 class="section-title">${t("stats.marksTitle")}</h2>
     ${marksBar([
-      { key: "right", share: right, label: t("stats.mb.right", { n: formatNumber(s.earned100) }) },
-      { key: "wrong", share: s.wrong100, label: t("stats.mb.wrong", { n: formatNumber(s.wrong100), lost: formatNumber(s.lost100) }) },
-      { key: "blank", share: s.blank100, label: t("stats.mb.blank", { n: formatNumber(s.blank100) }) }
+      { key: "right", share: right, label: t("stats.mb.right", { n: one(s.earned100) }) },
+      { key: "wrong", share: s.wrong100, label: t("stats.mb.wrong", { n: Math.round(s.wrong100), lost: one(s.lost100) }) },
+      { key: "blank", share: s.blank100, label: t("stats.mb.blank", { n: Math.round(s.blank100) }) }
     ], t("stats.marksTitle"))}
-    <p class="hint">${t("stats.mbNote", { right: formatNumber(s.earned100), lost: formatNumber(s.lost100), blank: formatNumber(s.blank100) })}</p>`;
+    <p class="hint">${t("stats.mbNote", { right: one(s.earned100), lost: one(s.lost100), blank: Math.round(s.blank100) })}</p>`;
 }
 
 /** Insight sentences with one action each. */
@@ -104,7 +129,7 @@ export function practiseTopic(topicId) {
   const syl = store.currentSyllabus();
   const topic = store.topic(topicId);
   if (!topic) return;
-  return openStartTest({ scope: { type: "topic", ref: topicId, label: topic.name }, questions: store.questionsFor({ syllabusId: syl.id, topicId }), keepOrder: false });
+  return openStartTest({ scope: { type: "topic", ref: topicId, label: tests.topicLabel(topic) }, questions: store.questionsFor({ syllabusId: syl.id, topicId }), keepOrder: false });
 }
 
 export const insightHandlers = {
@@ -221,12 +246,16 @@ export const progressScreen = {
       </div>
       ${ctx.resetAt ? html`<p class="hint">${t("stats.freshSince", { date: dateText(ctx.resetAt) })}</p>` : ""}
       ${active ? html`<button type="button" class="continue-card" data-action="continue">
-        <span class="row-main"><span class="row-title">${t("today.continue", { label: active.scope?.label || "" })}</span>
+        <span class="row-main"><span class="row-title">${t("today.continue", { label: tests.testLabel(active) })}</span>
         <span class="row-sub">${progressText(active)}</span></span>${chev}</button>` : ""}
       ${hasData ? html`
         ${howBlock(ctx, ctx.records)}
-        ${insightsBlock(ctx, ctx.records)}
-        ${marksBlock(ctx, ctx.records)}` : html`<p class="hint pad">${ctx.mode === "ai" ? t("stats.noAi") : t("stats.noTests")}</p>`}
+        ${insightsBlock(ctx, ctx.records)}` : html`<p class="hint pad">${ctx.mode === "ai" ? t("stats.noAi") : t("stats.noTests")}</p>`}
+      ${ctx.mode === "pyq" ? html`<div class="rows links deep-links">
+        <button type="button" class="row" data-action="insights"><span class="row-main"><span class="row-title">🔎 ${t("insights.button")}</span><span class="row-sub">${t("insights.rowSub")}</span></span>${chev}</button>
+        <button type="button" class="row" data-action="timetable"><span class="row-main"><span class="row-title">🗓 ${t("tt.fromProgress")}</span><span class="row-sub">${t("tt.rowSub")}</span></span>${chev}</button>
+      </div>` : ""}
+      ${hasData ? marksBlock(ctx, ctx.records) : ""}
       ${rows.length ? html`<div class="section-row"><h2 class="section-title">${t("stats.subjects")}</h2>
         <button type="button" class="pill" data-action="sort">${t(`stats.sort.${subjectSort}`)} ▾</button></div>
       <div class="rows">${rows.map((r) => accRow(r, { title: nameHtml(store.subject(r.id)), sub: rowSub(r), action: "subject" }))}</div>` : ""}
@@ -237,8 +266,6 @@ export const progressScreen = {
         <button type="button" class="row" data-action="go" data-to="stats-tables"><span class="row-main"><span class="row-title">${t("stats.tables")}</span><span class="row-sub">${t("stats.tablesSub")}</span></span>${chev}</button>
       </div>
       <button type="button" class="btn wide" data-action="start">${t("today.startTest")}</button>
-      ${ctx.mode === "pyq" ? html`<div class="actions-col"><button type="button" class="btn wide" data-action="insights">🔎 ${t("insights.button")}</button>
-        <button type="button" class="btn btn-quiet wide" data-action="timetable">🗓 ${t("tt.fromProgress")}</button></div>` : ""}
     </section>`;
 
     onAction(container, {
@@ -269,7 +296,8 @@ const GROUPS = ["all", "paper", "subject", "topic", "bank", "other", "ai"];
 const hist = { group: "all", sort: "recent", term: "" };
 const groupOf = (a) => (a.kind === "ai" ? "ai" : ["paper", "subject", "topic", "bank"].includes(a.scope?.type) ? a.scope.type : "other");
 const keyOf = (a) => `${a.scope?.type || "x"}|${a.scope?.ref || a.scope?.label || ""}`;
-const pct = (a) => (a.counts?.total ? a.counts.correct / a.counts.total : 0);
+// "% right" means the same everywhere: right ÷ answered (blanks and questions you never opened left out).
+const pct = (a) => { const c = a.counts || {}; const n = (c.correct || 0) + (c.wrong || 0); return n ? c.correct / n : null; };
 
 export const historyScreen = {
   id: "history",
@@ -290,8 +318,9 @@ export const historyScreen = {
     let rows = [...map.values()].map((g) => {
       g.list.sort((x, y) => y.submittedAt - x.submittedAt);
       g.latest = g.list[0];
-      g.label = g.latest.scope?.label || g.label;
-      g.avg = g.list.reduce((s, a) => s + pct(a), 0) / g.list.length;
+      g.label = tests.testLabel(g.latest) || g.label;
+      const vals = g.list.map(pct).filter((x) => x !== null);
+      g.avg = vals.length ? vals.reduce((s, x) => s + x, 0) / vals.length : null;
       return g;
     });
     const q = hist.term.trim().toLowerCase();
@@ -299,8 +328,8 @@ export const historyScreen = {
     rows.sort({
       recent: (x, y) => y.latest.submittedAt - x.latest.submittedAt,
       az: (x, y) => x.label.localeCompare(y.label, undefined, { numeric: true }),
-      best: (x, y) => y.avg - x.avg,
-      worst: (x, y) => x.avg - y.avg
+      best: (x, y) => (y.avg ?? -1) - (x.avg ?? -1),
+      worst: (x, y) => (x.avg ?? 2) - (y.avg ?? 2)
     }[hist.sort]);
 
     container.innerHTML = html`<header class="screen-head">
@@ -314,7 +343,7 @@ export const historyScreen = {
         <div class="rows" id="hRows">${rows.length ? rows.map((g) => html`
           <button type="button" class="row" data-action="open" data-key="${g.key}">
             <span class="row-main"><span class="row-title">${g.label}</span>
-              <span class="row-sub">${t("history.groupSub", { n: g.list.length, avg: Math.round(g.avg * 100), when: dateText(g.latest.submittedAt) })}</span></span>
+              <span class="row-sub">${g.avg === null ? t("history.groupSubNone", { n: g.list.length, when: dateText(g.latest.submittedAt) }) : t("history.groupSub", { n: g.list.length, avg: Math.round(g.avg * 100), when: dateText(g.latest.submittedAt) })}</span></span>
             <span class="row-count">${formatNumber(g.latest.netScore)}</span>${chev}
           </button>`) : html`<p class="hint pad">${t("library.nothingFound", { q: hist.term })}</p>`}</div>`
         : html`<p class="hint pad">${t("history.none")}</p>`}`;
@@ -339,6 +368,13 @@ export const historyScreen = {
   }
 };
 
+/** "5 right · 1 wrong · 2 left" (+ "· 86 not opened" for a test ended early). */
+function testSubLine(a) {
+  const c = a.counts || { correct: 0, wrong: 0, unanswered: 0 };
+  const un = (a.answers || []).filter((r) => notOpened(r, a)).length;
+  return [t("history.testSub", { right: c.correct, wrong: c.wrong, blank: Math.max(0, c.unanswered - un) }), un ? t("history.notOpened", { n: un }) : null].filter(Boolean).join(" · ");
+}
+
 export const testsScreen = {
   id: "tests",
   parent: "progress",
@@ -352,10 +388,10 @@ export const testsScreen = {
     container.innerHTML = html`<header class="screen-head">
       <div class="head-bar"><button type="button" class="back" data-action="back">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>${back.to === "topic" ? (store.topic(back.params.id)?.name || t("history.title")) : t("history.title")}</span></button></div>
-      <h1>${list[0].scope?.label || ""}</h1><p class="hint">${t("common.tests", { n: list.length })}</p></header>
+      <h1>${tests.testLabel(list[0])}</h1><p class="hint">${t("common.tests", { n: list.length })}</p></header>
       <div class="rows">${list.map((a) => html`<button type="button" class="row" data-action="open" data-id="${a.id}">
         <span class="row-main"><span class="row-title">${new Date(a.submittedAt).toLocaleString(dateLocale(), { dateStyle: "medium", timeStyle: "short" })}</span>
-        <span class="row-sub">${t("history.testSub", { right: a.counts.correct, wrong: a.counts.wrong, blank: a.counts.unanswered })}${a.timerMinutes ? ` · ${t("results.timed", { n: a.timerMinutes })}` : ""}${a.autoSubmitted ? ` · ${t("results.autoSubmitted")}` : ""}</span></span>
+        <span class="row-sub">${testSubLine(a)}${a.timerMinutes ? ` · ${t("results.timed", { n: a.timerMinutes })}` : ""}${a.autoSubmitted ? ` · ${t("results.autoSubmitted")}` : ""}</span></span>
         <span class="row-count">${scoreLine(a)}</span>${chev}</button>`)}</div>`;
     onAction(container, { back: () => goBack(back.to, back.params), open: (el) => go("result", { id: el.dataset.id, ...openedFrom("tests", { type, ref, ...back.keep }) }) });
   }

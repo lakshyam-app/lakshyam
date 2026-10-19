@@ -24,6 +24,8 @@ import { pickTopic } from "./topic-picker.js";
 import { header, backHandler, chev } from "./library.js";
 import { can } from "../../core/entitlements.js";
 import { label as nameLabel, pathLabel } from "../../core/names.js";
+import { notOpened } from "../../domain/stats.js";
+import { fromRevise } from "../../core/back.js";
 
 export const AUTO = { flagged: "auto:flagged", wrong: "auto:wrong" };
 
@@ -42,7 +44,7 @@ export function stillWrongQuestions(syllabusId) {
   const latest = new Map();
   store.attemptsOf(syllabusId).filter((a) => a.kind !== "ai").forEach((a) => {
     a.answers.forEach((r) => {
-      if (!r.graded) return;
+      if (!r.graded || notOpened(r, a)) return; // a blank you never opened isn't a mistake
       const prev = latest.get(r.questionId);
       if (!prev || prev.at < a.submittedAt) latest.set(r.questionId, { at: a.submittedAt, right: r.isCorrect });
     });
@@ -84,6 +86,9 @@ export function banksRows(syllabusId, q) {
     html`<h3 class="rows-head">${t("ai.hubHead")}</h3>`,
     nAi ? hub("ai", t("ai.hubAi"), nAi) : "",
     nCards ? hub("cards", t("ai.hubCards"), nCards) : "",
+    // 1.26: a quiz on one month's news, made from a web search (kept with the AI questions)
+    can("ai") && (!q || t("ca.title").toLowerCase().includes(q)) ? html`<button type="button" class="row" data-action="ca-quiz">
+      <span class="row-main"><span class="row-title">🗞 ${t("ca.title")}</span><span class="row-sub">${t("ca.rowSub")}</span></span>${chev}</button>` : "",
     can("pdfs") && (!q || t("pdf.title").toLowerCase().includes(q)) ? html`<button type="button" class="row" data-action="open" data-to="pdfs" data-id="">
       <span class="row-main"><span class="row-title">📄 ${t("pdf.title")}</span><span class="row-sub">${t("pdf.hubSub")}</span></span>${chev}</button>` : ""
   ].filter(Boolean);
@@ -94,14 +99,15 @@ export function banksRows(syllabusId, q) {
 export const bankScreen = {
   id: "bank",
   parent: "library",
-  render(container, { id }) {
+  render(container, params) {
+    const { id } = params;
     const syllabus = store.currentSyllabus();
     const info = bankInfo(id, syllabus.id);
     if (!info) return go("library", { view: "banks" });
     const key = `bank:${id}`;
     const noteType = info.auto ? "set" : "bank";
     container.innerHTML = html`${header({
-      backTo: "library", backParams: { view: "banks" }, backLabel: t("library.views.banks"),
+      ...(fromRevise(params) ? { backTo: "revise", backParams: {}, backLabel: t("tabs.revise") } : { backTo: "library", backParams: { view: "banks" }, backLabel: t("library.views.banks") }),
       title: info.name, sub: [t("common.questions", { n: info.questions.length }), info.auto ? info.hint : null].filter(Boolean).join(" · "), menu: true
     })}
     <div class="actions-row">

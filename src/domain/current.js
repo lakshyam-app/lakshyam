@@ -17,6 +17,22 @@ export function timeSensitive(q, { subject = "", topic = "", now = new Date() } 
   return "";
 }
 
+/* For the ⏳ "answer as of" badge (1.26) a stricter test than timeSensitive (which only decides whether to look
+   something up, so a false alarm costs nothing): only wording that asks about the present — not past events
+   ("was appointed", "elected"), not a bare "now" ("now known as", "now it is a legal right"), not physics'
+   "current", and not language or maths papers. */
+const STRICT_EN = /\b(?:at\s+present|presently|the\s+present\s+(?!tense|participle|perfect|continuous|simple)|currently|current(?=\s+(?:chief|head|chair\w*|ceo|director|governor|president|prime|secretary|minister|captain|judge|justice|commissioner|speaker|leader|holder|champion|vice|deputy|editor|ambassador))|incumbent|latest|recent(?:ly)?|newly|this\s+year|right\s+now|as\s+of\s+now)\b/i;
+// (not "നിലവിൽ വന്ന" — "came into force", a fixed fact — nor "ഇപ്പോൾ അറിയപ്പെടുന്ന", "now known as")
+const STRICT_ML = /(നിലവിലെ|നിലവിൽ(?!\s*വ)|ഇപ്പോഴത്തെ|ഇപ്പോഴുള്ള|ഇപ്പോൾ(?!\s*അറിയപ്പെടുന്ന)|അടുത്തിടെ|അടുത്തകാലത്ത്|ഏറ്റവും പുതിയ)/;
+const NOT_FACTS = /english|malayalam|grammar|mental ability|reasoning|arithmetic|maths|mathematics/i;
+
+/** Does this question's answer depend on when it's asked ("the present Governor", "the latest", "recently")? */
+export function changesOverTime(q, { subject = "" } = {}) {
+  if (NOT_FACTS.test(subject)) return false;
+  const text = String(q?.text || "");
+  return STRICT_EN.test(text) || STRICT_ML.test(text);
+}
+
 /** A chat message that asks about now ("who is it now?", "ഇപ്പോൾ ആരാണ്?"). */
 export const asksAboutNow = (message) => NOW_EN.test(String(message || "")) || NOW_ML.test(String(message || ""));
 

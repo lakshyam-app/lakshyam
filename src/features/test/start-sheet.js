@@ -29,16 +29,18 @@ export const defaults = () => ({ timerOn: false, layout: "single", count: 25, ..
 /**
  * preset (optional): { scope: { type, ref, label }, questions, keepOrder }
  * — the listing the sheet was opened from.
+ * opts.what (1.26, without a preset): the choice to start on, e.g. "mistakes" from the Revise tab.
  */
-export async function openStartTest(preset = null) {
-  if (await clearForNewTest()) startSheet(preset);
+export async function openStartTest(preset = null, opts = {}) {
+  if (await clearForNewTest()) startSheet(preset, opts);
 }
+const FIRST_CHOICES = ["mistakes", "mock", "weak", "wrong", "flagged"];
 
 /** If a test is unfinished, asks to continue it or discard it. True = OK to start a new one. */
 export async function clearForNewTest() {
   const active = tests.activeTest();
   if (!active) return true;
-  const choice = await runFlow(() => chooseAction({ title: t("start.unfinishedTitle"), sub: active.scope?.label, items: [
+  const choice = await runFlow(() => chooseAction({ title: t("start.unfinishedTitle"), sub: tests.testLabel(active), items: [
     { id: "continue", label: t("start.continue"), sub: progressText(active) },
     { id: "discard", label: t("start.discardAndNew"), danger: true }
   ] }));
@@ -58,7 +60,7 @@ export async function quickTest(topicId, n = 10) {
   const questions = sampleRandom(pool, n);
   const d = defaults();
   await tests.startTest({
-    syllabusId: syllabus.id, scope: { type: "topic", ref: topicId, label: topic.name },
+    syllabusId: syllabus.id, scope: { type: "topic", ref: topicId, label: tests.topicLabel(topic) },
     questionIds: questions.map((q) => q.id), timerMinutes: d.timerOn ? suggestedMinutes(questions.length) : null, layout: d.layout
   });
   go("test");
@@ -72,13 +74,13 @@ export function progressText(attempt) {
   return parts.join(" · ");
 }
 
-function startSheet(preset) {
+function startSheet(preset, opts = {}) {
   const syllabus = store.currentSyllabus();
   // You left the app in recent tests: suggest Do Not Disturb before this one.
   const dndTip = store.setting("focusCheck", true) !== false && suggestDnd(store.attemptsOf(syllabus.id).filter((a) => a.status === "submitted"));
   const d = defaults();
   const s = {
-    what: preset ? "listing" : "mock", bankId: null,
+    what: preset ? "listing" : FIRST_CHOICES.includes(opts.what) ? opts.what : "mock", bankId: null,
     count: preset ? "all" : d.count, timerOn: d.timerOn, minutes: null, layout: d.layout,
     mixed: preset ? !preset.keepOrder : true, saveBank: false,
     mockCounts: null, mockExams: null, more: false

@@ -24,7 +24,7 @@ import * as jobsApi from "../../pdf/pdf-jobs.js";
 import { DEFAULT_STYLE } from "../../ai/pdf-prompts.js";
 import { countsLine, modelNames, aiModelOf } from "../../domain/made-by.js";
 import { header, backHandler, chev } from "../library/library.js";
-import { backFrom } from "../../core/back.js";
+import { backFrom, fromRevise } from "../../core/back.js";
 import { pickTopic } from "../library/topic-picker.js";
 import { ensureAi, errorText } from "../ai/ai-ui.js";
 import { strategyFor, patternFrom } from "../../data/strategy.js";
@@ -115,12 +115,14 @@ async function addPdf(owner, statusEl) {
 export const pdfsScreen = {
   id: "pdfs",
   parent: "library",
-  render(container, { type, id }) {
+  render(container, params) {
+    const { type, id } = params;
     const owner = type && id ? { type, id } : null;
     if (owner && !ownerName(owner)) return go("library", { view: "banks" });
     const back = owner?.type === "topic" ? { backTo: "topic", backParams: { id }, backLabel: ownerName(owner) }
       : owner ? { backTo: "subject", backParams: { id }, backLabel: ownerName(owner) }
-        : { backTo: "library", backParams: { view: "banks" }, backLabel: t("library.views.banks") };
+        : fromRevise(params) ? { backTo: "revise", backParams: {}, backLabel: t("tabs.revise") }
+          : { backTo: "library", backParams: { view: "banks" }, backLabel: t("library.views.banks") };
     container.innerHTML = html`${header({ ...back, title: t("pdf.title"), sub: owner ? ownerLabel(owner) : t("pdf.allSub") })}
       <p class="hint pad">${t("pdf.intro")}</p>
       <div class="actions-row"><button type="button" class="btn" data-action="add">＋ ${t("pdf.add")}</button></div>

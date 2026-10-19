@@ -242,3 +242,40 @@ Task: make ${n} flashcards for this step: one fact per card, the front a short c
 Return ONLY a JSON array; each item: {"front":"...","back":"...","topic":"T1"${web ? ',"source":"the URL of the trustworthy page that states this fact"' : ""}}`;
 }
 
+
+/* ---------- 1.26: monthly current-affairs quiz, from the web only ---------- */
+export const CA_SYSTEM = `You write Kerala PSC current-affairs multiple-choice questions from one month's news, which you look up on the web now (your memory does not know recent news). ${WEB_RULES} Use news reports from trustworthy newspapers (The Hindu, The Indian Express) and official sites (pib.gov.in, kerala.gov.in, prd.kerala.gov.in, ministries). Every question must be about an event of that month that such a source reports, with exactly one correct option. Output ONLY a JSON array, no commentary.`;
+
+const CA_AREAS = {
+  kerala: "Kerala: state government decisions, schemes and projects, appointments, awards, sports, firsts and records, people in the news",
+  india: "India: Union government schemes and decisions, appointments, awards and honours, defence and space, reports and rankings, summits, sports, firsts and records",
+  world: "World: international events and summits, organisations and agreements, awards (e.g. Nobel, Booker), sports, science, people in the news"
+};
+
+/** month: "September 2026"; from / to: "2026-09-01" / "2026-09-30"; topics: [{ key, name }]; avoid: questions already saved for this month. */
+export function caQuizTask({ month, from, to, partial = false, regions, topics, n, avoid = [] }) {
+  return `MONTH: ${month} (${from} to ${to}${partial ? ", the month so far" : ""})
+
+NEWS FROM:
+${regions.map((r) => `- ${CA_AREAS[r]}`).join("\n")}
+
+TOPICS (use the key in "topic"):
+${topics.map((x) => `${x.key}: ${x.name}`).join("\n")}${avoid.length ? `\n\nALREADY ASKED FOR THIS MONTH (ask about other news):\n${avoid.map((x) => `- ${x}`).join("\n")}` : ""}
+
+Task: search the web for this month's news that Kerala PSC asks about, then write ${n} multiple-choice questions spread over the areas above. Each question must be about something that happened or was announced between ${from} and ${to}, and must stay correct later: name the month and year in the question (e.g. "In ${month}, who …?"); never use "current", "present", "now", "recently" or "latest". 4 options each, exactly one correct; the wrong options must be the same kind of thing (other people, places, numbers) and clearly wrong.
+Return ONLY a JSON array; each item: {"question_text":"...","options":["...","...","...","..."],"correct_answer_index":0-3,"explanation":"1-2 sentences: the fact and its date","date":"YYYY-MM-DD (the day it happened or was announced)","region":"kerala"|"india"|"world","topic":"T1","difficulty":"E"|"M"|"D","source":"the URL of the trustworthy page that reports it"}`;
+}
+
+/** The second pass: answers each question on its own, from its own web search (not from memory). */
+export const CA_CHECK_SYSTEM = `You answer Kerala PSC current-affairs multiple-choice questions independently. Search the web for each one first; your memory does not know recent news. ${WEB_RULES} Answer only when a trustworthy source confirms it; if you are not sure or the question is unclear, answer 0. Output ONLY a JSON array.`;
+export const caCheckTask = (items, month) => `These questions are about the news of ${month}.\n\n${generalCheckTask(items)}`;
+
+/* ---------- 1.26: sort "Other" questions into their topics ---------- */
+export const TIDY_SYSTEM = "You sort Kerala PSC past-paper questions into the topics of a syllabus. You only classify: you never answer, rewrite or judge the questions. Reply with JSON only.";
+
+/** topics: [{ key: "T1", name }]; items: [{ n, text, options: [] }] (questions of one subject now filed under "Other"). */
+export function tidyTask(subject, topics, items) {
+  const list = topics.map((x) => `${x.key}: ${x.name}`).join("\n");
+  const qs = items.map((x) => `${x.n}. ${String(x.text).replace(/\s+/g, " ").slice(0, 320)}${x.options?.length ? ` [options: ${x.options.map((o) => String(o).slice(0, 50)).join(" | ")}]` : ""}`).join("\n");
+  return `Subject: ${subject}\n\nTOPICS OF THIS SUBJECT:\n${list}\n\nQUESTIONS (now filed under "Other"):\n${qs}\n\nFor each question pick the ONE topic it belongs to. Use "T0" when none of the topics fits or you are not sure: it stays in "Other", which is fine. Reply with JSON only, one entry per question: [{"n":1,"t":"T3"},{"n":2,"t":"T0"}]`;
+}

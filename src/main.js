@@ -14,6 +14,8 @@ import { can } from "./core/entitlements.js";
 import { runFlow } from "./core/dialogs.js";
 import { aiTopLabel, chooseAiSetup } from "./features/ai/ai-ui.js";
 import { AI_CHANGED } from "./ai/presets.js";
+import { toast } from "./core/toast.js";
+import { APP_VERSION } from "./core/version.js";
 
 import { todayScreen } from "./features/today/today.js";
 import { examsScreen } from "./features/today/countdown.js";
@@ -22,6 +24,7 @@ import { guideScreen, guidePdfScreen } from "./features/guide/guide.js";
 import { autoDriveBackup } from "./features/settings/drive.js";
 import { libraryScreen, subjectScreen, subjectAllScreen, topicScreen, paperScreen } from "./features/library/library.js";
 import { bankScreen, bankAddScreen } from "./features/library/banks.js";
+import { tidyScreen } from "./features/library/tidy.js";
 import { searchScreen } from "./features/search/search.js";
 import { aiHubScreen } from "./features/ai/content.js";
 import { pdfsScreen, pdfScreen, pdfPageScreen, pdfMakeScreen } from "./features/pdfs/pdfs.js";
@@ -38,11 +41,12 @@ import { statsTablesScreen } from "./features/progress/tables.js";
 import { testScreen } from "./features/test/test-screen.js";
 import { resultScreen } from "./features/test/results.js";
 import { notesScreen } from "./features/notes/notes.js";
+import { reviseScreen, cardsScreen } from "./features/revise/revise.js";
 import { settingsScreen } from "./features/settings/settings.js";
 import { remindersScreen, remindersOnOpen, syncSoon, listenToWorker } from "./features/reminders/reminders.js";
 
-[todayScreen, libraryScreen, subjectScreen, subjectAllScreen, topicScreen, paperScreen, bankScreen, bankAddScreen,
-  searchScreen, aiHubScreen, pdfsScreen, pdfScreen, pdfPageScreen, pdfViewScreen, pdfMakeScreen, insightsScreen, insightTopicScreen, timetableScreen, ttListScreen, ttPlansScreen, ttPlanScreen, ttScheduleScreen, ttNewScreen, ttReviewScreen, diaryScreen, diaryDaysScreen, progressScreen, historyScreen, testsScreen, statsSubjectScreen, statsTopicScreen, statsTopicsScreen, statsTablesScreen, testScreen, resultScreen, notesScreen, settingsScreen, remindersScreen, examsScreen, mapScreen, guideScreen, guidePdfScreen]
+[todayScreen, libraryScreen, subjectScreen, subjectAllScreen, topicScreen, paperScreen, bankScreen, bankAddScreen, tidyScreen,
+  searchScreen, aiHubScreen, pdfsScreen, pdfScreen, pdfPageScreen, pdfViewScreen, pdfMakeScreen, insightsScreen, insightTopicScreen, timetableScreen, ttListScreen, ttPlansScreen, ttPlanScreen, ttScheduleScreen, ttNewScreen, ttReviewScreen, diaryScreen, diaryDaysScreen, progressScreen, historyScreen, testsScreen, statsSubjectScreen, statsTopicScreen, statsTopicsScreen, statsTablesScreen, testScreen, resultScreen, notesScreen, reviseScreen, cardsScreen, settingsScreen, remindersScreen, examsScreen, mapScreen, guideScreen, guidePdfScreen]
   .forEach(registerScreen);
 
 function renderTabbar(activeId) {
@@ -73,7 +77,8 @@ async function paintAiButton() {
   const label = can("ai") ? await aiTopLabel() : null;
   btn.hidden = !label;
   if (!label) return;
-  document.getElementById("aiBtnName").textContent = `🤖 ${label.name}`;
+  // Just 🤖 and the language: the preset's name is in its sheet (it was cut off on phones).
+  document.getElementById("aiBtnName").textContent = "🤖";
   document.getElementById("aiBtnLang").textContent = label.lang;
   btn.setAttribute("aria-label", t("ai.topAria", { name: label.name, lang: label.lang }));
 }
@@ -132,6 +137,13 @@ async function boot() {
   });
   // Any data change (import, restore, syllabus switch) redraws the screen.
   store.onChange(() => { setLocale(store.setting("appLang", "en")); applyTheme(store.setting("theme", "system")); applyTextSize(store.setting("textSize", "m")); awake(); rerender(); syncSoon(); });
+
+  // After an update: say so once, with a way to see what's new (not on a first install).
+  const seen = store.setting("seenVersion", null);
+  if (seen !== APP_VERSION) {
+    if (seen && !store.isEmpty()) setTimeout(() => toast(t("about.updated", { version: APP_VERSION }), { actionLabel: t("about.whatsNew"), onAction: () => go("settings", { section: "about" }), duration: 9000 }), 1500);
+    store.quietly(() => store.setSetting("seenVersion", APP_VERSION));
+  }
 
   registerServiceWorker();
   requestPersistence();

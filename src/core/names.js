@@ -2,7 +2,7 @@
    (⚙ → Display → Subject & topic names: English · മലയാളം · Both).
    English stays the real name: matching, sorting, AI prompts, test labels and
    backups always use it. Malayalam is an optional extra (nameMl, nameMlStatus). */
-import { html } from "./dom.js";
+import { html, raw, escapeHtml } from "./dom.js";
 import { can } from "./entitlements.js";
 import * as store from "../data/store.js";
 
@@ -29,10 +29,13 @@ export function label(rec) {
 export function nameHtml(rec) {
   if (!rec) return "";
   const mode = nameMode();
-  if (mode === "en") return rec.name;
-  if (mode === "ml") return ml(rec) ? html`<span lang="ml">${ml(rec)}</span>` : html`<span class="name-missing">${rec.name}</span>`;
-  return ml(rec) ? html`<span class="nm2"><span class="nm-en">${rec.name}</span><span class="nm-ml" lang="ml">${ml(rec)}</span></span>` : rec.name;
+  if (mode === "en") return soft(rec.name);
+  if (mode === "ml") return ml(rec) ? html`<span lang="ml">${soft(ml(rec))}</span>` : html`<span class="name-missing">${soft(rec.name)}</span>`;
+  return ml(rec) ? html`<span class="nm2"><span class="nm-en">${soft(rec.name)}</span><span class="nm-ml" lang="ml">${soft(ml(rec))}</span></span>` : soft(rec.name);
 }
+
+/** A long name like "Executive/Parliament/Judiciary" may wrap after its slashes (not mid-word). */
+export const soft = (text) => raw(escapeHtml(text).replace(/\//g, "/<wbr>"));
 
 export const subjectLabel = (id) => label(store.subject(id));
 export const topicLabel = (id) => label(store.topic(id));

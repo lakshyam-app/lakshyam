@@ -8,21 +8,22 @@ import { openedFrom } from "../../core/back.js";
 import { t } from "../../core/i18n.js";
 import { toast } from "../../core/toast.js";
 import { runFlow, chooseAction, askText, confirmAction } from "../../core/dialogs.js";
-import { openSheet } from "../../core/sheet.js";
+import { openSheet, closeSheet } from "../../core/sheet.js";
 import { letterFor } from "../../domain/text.js";
 import * as store from "../../data/store.js";
 import { label as nameLabel } from "../../core/names.js";
 import * as mut from "../../data/mutations.js";
-import { questionCard, difficultyOf } from "./card.js";
+import { questionCard, difficultyOf, asOfYear } from "./card.js";
 import { copyQuestion } from "./copy.js";
 import { pickTopic } from "../library/topic-picker.js";
 import { pickExams } from "./exam-filter.js";
 import { mountCards, forgetPlace } from "./pager.js";
 import { can } from "../../core/entitlements.js";
-import { aiHelp } from "../ai/ai-actions.js";
+import { aiHelp, wrongTricks } from "../ai/ai-actions.js";
 import { findInNotes } from "./find-notes.js";
 import { speakQuestion } from "./speak.js";
 import { inReview, stopReviewing } from "../../data/review.js";
+import { timesAsked, repeatsOf } from "../../data/repeats.js";
 
 const examsBy = new Map();   // listing key → Set of included paper IDs (none = all)
 const sortBy = new Map();    // listing key → "none" | "diff-asc" | "diff-desc"
@@ -32,7 +33,8 @@ let editMode = false;
 
 const RANK = { E: 1, M: 2, D: 3 };
 
-export const viewMode = () => (editMode ? "edit" : store.setting("questionView", "study"));
+// Self-test (answers hidden until you tap) is the default since 1.26: recalling an answer teaches more than reading it.
+export const viewMode = () => (editMode ? "edit" : store.setting("questionView", "selftest"));
 export const listLayout = () => store.setting("listLayout", "scroll");
 export const difficultyOn = () => store.setting("difficultyEnabled", true) !== false;
 
@@ -47,7 +49,11 @@ export function visibleQuestions(key, questions) {
   if (ans === "none") list = list.filter((q) => lacksAnswer(store.question(q.id) || q));
   if (ans === "has") list = list.filter((q) => !lacksAnswer(store.question(q.id) || q));
   const sort = sortBy.get(key) || "none";
-  if (sort !== "none") {
+  if (sort === "rep") {
+    // Asked in the most papers first (PSC repeats questions); the rest keep their order.
+    const n = new Map(list.map((q) => [q.id, timesAsked(q.id)]));
+    list.sort((a, b) => n.get(b.id) - n.get(a.id));
+  } else if (sort !== "none") {
     const r = (q) => RANK[difficultyOf(q)] || 0;
     list.sort((a, b) => (sort === "diff-asc" ? r(a) - r(b) : r(b) - r(a)));
   }
@@ -83,7 +89,28 @@ export function bindCardActions(host, { view, bank = null, onOption = null, onRe
     },
     "q-diff": (el) => runFlow(() => chooseDifficulty(qOf(el), quiet)),
     "q-ai": (el) => { const q = qOf(el); aiHelp(q, { selected: selectedFor?.(q), mode: el.dataset.mode || null, onSaved: () => view.refresh(q.id) }); },
+    // The one 🤖 button: the same five actions in a small sheet.
+    "q-ai-menu": (el) => runFlow(async () => {
+      const q = qOf(el);
+      const wrong = el.dataset.wrong === "1";
+      const mode = await chooseAction({ title: t("ai.help"), items: [
+        { id: "explain", label: `🤖 ${wrong ? t("ai.explainMistakeShort") : t("ai.explainShort")}`, sub: t("ai.menu.explain") },
+        { id: "facts", label: `📚 ${t("ai.factsShort")}`, sub: t("ai.menu.facts") },
+        { id: "chat", label: `💬 ${t("ai.chatShort")}`, sub: t("ai.menu.chat") },
+        { id: "similar", label: `✨ ${t("ai.similarShort")}`, sub: t("ai.menu.similar") },
+        { id: "find", label: `🔎 ${t("find.short")}`, sub: t("ai.menu.find") }
+      ] });
+      if (!mode) return;
+      if (mode === "find") return findInNotes(q);
+      aiHelp(q, { selected: selectedFor?.(q), mode, onSaved: () => view.refresh(q.id) });
+    }),
     "q-find": (el) => findInNotes(qOf(el)),
+    // A question you keep missing: an AI memory trick for it (saved to your notes if you like).
+    "q-trick": (el) => wrongTricks([qOf(el)]),
+    // 🔁 Asked again: where else this question came.
+    "q-repeats": (el) => repeatsSheet(qOf(el)),
+    // ⏳ An answer that may have changed since the paper.
+    "q-asof": (el) => asOfSheet(qOf(el), { selected: selectedFor?.(qOf(el)), refresh: (id) => view.refresh(id) }),
     "q-speak": (el) => speakQuestion(qOf(el)),
     // The study-PDF page an AI question came from, as the real page (‹ comes back here).
     "q-open-pdf": (el) => { const here = current(); go("pdf-view", { id: el.dataset.pdf, n: el.dataset.n, ...openedFrom(here.id, here.params) }); },
@@ -158,7 +185,7 @@ export function mountQuestions(host, { key, questions, showPaper = true, bank = 
     { id: "scroll", label: t("layout.scroll"), sub: t("layout.scrollHint"), current: layout === "scroll" },
     { id: "single", label: t("layout.single"), sub: t("layout.singleHint"), current: layout === "single" }
   ];
-  const sortItems = () => ["none", "diff-asc", "diff-desc"].map((s) => ({ id: s, label: t(`sort.${s}`), current: s === sort }));
+  const sortItems = () => ["none", "rep", "diff-asc", "diff-desc"].map((s) => ({ id: s, label: t(`sort.${s}`), sub: s === "rep" ? t("sort.repHint") : "", current: s === sort }));
   const applyView = async (id) => {
     if (id === "scroll" || id === "single") {
       await store.quietly(() => store.setSetting("listLayout", id));
@@ -213,6 +240,30 @@ export function mountQuestions(host, { key, questions, showPaper = true, bank = 
       redraw();
     }
   });
+}
+
+/* ---------- 🔁 asked again · ⏳ answer as of ---------- */
+
+function repeatsSheet(q) {
+  const list = repeatsOf(q.id);
+  openSheet(html`<h2>🔁 ${t("question.askedN", { n: timesAsked(q.id) })}</h2>
+    <p class="hint">${t("question.askedHint")}</p>
+    <div class="rows">${list.map((x) => html`<div class="row rep-row ${x.q.id === q.id ? "is-current" : ""}"><span class="row-main">
+      <span class="row-title">${[x.year, x.paper?.postName || x.paper?.name].filter(Boolean).join(" · ")}${x.q.number ? ` · ${t("question.number", { n: x.q.number })}` : ""}</span>
+      <span class="row-sub clamp">${x.q.text}</span></span></div>`)}</div>
+    <div class="sheet-actions"><button type="button" class="btn" data-action="close">${t("common.close")}</button></div>`,
+  { close: () => closeSheet() }, { label: t("question.askedN", { n: timesAsked(q.id) }) });
+}
+
+function asOfSheet(q, { selected, refresh }) {
+  const year = asOfYear(q);
+  openSheet(html`<h2>⏳ ${t("question.asOfTitle", { year })}</h2>
+    <p>${t("question.asOfBody", { year })}</p>
+    <div class="sheet-actions"><button type="button" class="btn btn-quiet" data-action="close">${t("common.close")}</button>
+      ${can("ai") ? html`<button type="button" class="btn" data-action="check">🤖 ${t("question.asOfCheck")}</button>` : ""}</div>`, {
+    close: () => closeSheet(),
+    check: () => { closeSheet(); setTimeout(() => aiHelp(q, { selected, mode: "explain", onSaved: () => refresh(q.id) }), 60); }
+  }, { label: t("question.asOfTitle", { year }) });
 }
 
 /* ---------- card ⋯ menu ---------- */

@@ -28,6 +28,8 @@ import { can } from "../../core/entitlements.js";
 import * as presets from "../../ai/presets.js";
 import { header, backHandler } from "../library/library.js";
 import { driveBlock, driveHandlers, driveConfig, paintBackgroundLine } from "./drive.js";
+import { shareBlock, shareHandlers } from "./share-ui.js";
+import { aboutBlocks } from "./about.js";
 import { settingsBlock as pdfCloudBlock, settingsHandlers as pdfCloudHandlers } from "../pdfs/pdf-cloud.js";
 import { openGuideSheet } from "../guide/guide.js";
 import { remindersState } from "../reminders/reminders.js";
@@ -196,7 +198,7 @@ const PAGES = {
 
   tests() {
     const d = testDefaults();
-    const view = store.setting("questionView", "study");
+    const view = store.setting("questionView", "selftest");
     const listLayout = store.setting("listLayout", "scroll");
     const resLayout = store.setting("resultLayout", null);
     const diffOn = on("difficultyEnabled");
@@ -254,6 +256,7 @@ const PAGES = {
   ai() {
     return html`<div class="group" data-set="presets aiLang fallback pause removeKeys"><div id="aiBlock"></div></div>
       <div class="group">${sw("aiOnCards", "aiOnCards", t("ai.onCards"), t("ai.onCardsHint"))}
+        <label class="switch-row sub-switch" data-set="aiChipsAll"><input type="checkbox" data-switch="aiChipsAll" ${store.setting("aiChipsAll", false) === true ? "checked" : ""}><span>${t("ai.chipsAll")}<span class="row-sub">${t("ai.chipsAllHint")}</span></span></label>
         ${sw("aiAutoAnalysis", "aiAutoAnalysis", t("ai.autoAnalysis"), t("ai.autoAnalysisHint"))}
         ${sw("aiWebCurrent", "aiWebCurrent", t("ai.webCurrent"), t("ai.webCurrentHint"))}
         ${sw("aiMlBest", "aiMlBest", t("ai.mlBest"), t("ai.mlBestHint"))}
@@ -263,6 +266,7 @@ const PAGES = {
   data() {
     return html`${store.isEmpty() ? "" : driveBlock()}
       <div class="group">${dataBlock()}</div>
+      ${shareBlock()}
       <div class="group" data-set="pdfCloud" id="pdfCloudBlock"></div>
       <div class="group" data-set="protect">
         <h3>${t("settings.sectionStorage")}</h3>
@@ -274,7 +278,8 @@ const PAGES = {
     return html`<div class="group" data-set="update">
         <p>${t("app.name")}, ${t("settings.version", { version: APP_VERSION }).toLowerCase()}</p>
         <button type="button" class="btn btn-quiet" data-action="update">${t("settings.checkUpdate")}</button>
-      </div>`;
+      </div>
+      ${aboutBlocks()}`;
   }
 };
 
@@ -372,6 +377,7 @@ function handlers(container, goalNow) {
     ...backHandler,
     ...namesHandlers,
     ...driveHandlers,
+    ...shareHandlers,
     cat: (el) => go("settings", { section: el.dataset.id }),
     hit: (el) => openHit(el.dataset.id),
     guide: () => openGuideSheet(),

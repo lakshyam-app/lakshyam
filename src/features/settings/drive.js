@@ -143,6 +143,8 @@ async function disconnect() {
 
 /* ---------- restore ---------- */
 
+/** Restore from Google Drive (also on a new phone's first screen, before anything is set up). */
+export const restoreFromDrive = () => restoreSheet();
 async function restoreSheet() {
   openSheet(html`<p class="sheet-status">${t("drive.listing")}</p>`, {}, { label: t("drive.restoreTitle") });
   try {

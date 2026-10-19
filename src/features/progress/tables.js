@@ -4,7 +4,7 @@ import { html, onAction } from "../../core/dom.js";
 import { t, formatNumber } from "../../core/i18n.js";
 import { go, goBack } from "../../core/router.js";
 import { formatDuration } from "../../domain/testing.js";
-import { pickByBasis, isTimed, isAnswered, guessSummary, markingInfo, avgDifficulty } from "../../domain/stats.js";
+import { pickByBasis, isTimed, isAnswered, guessSummary, markingInfo, avgDifficulty, LOW_N } from "../../domain/stats.js";
 import * as store from "../../data/store.js";
 import { label as nameLabel } from "../../core/names.js";
 import { difficultyOf } from "../question/card.js";
@@ -83,9 +83,13 @@ function timeTab(ctx) {
   const crossRows = (m, label, subOf) => sortEntries([...m.entries()].filter(([, xs]) => enough(xs.length))
     .map(([k, xs]) => ({ label: label(k), v: avgMs(xs), n: xs.length, sub: subOf(k), cells: LV.map((d) => cell(xs, d)) }))
     .filter((e) => rowHasData(e.cells)), view.sort.time).map((e) => [e.label, ...e.cells]);
-  return html`<p class="facts"><span><strong>${formatDuration(avgMs(timed))}</strong> ${t("tables.avgPerQ")}</span>
+  return html`<p class="fact-line"><span><strong>${formatDuration(avgMs(timed))}</strong> ${t("tables.avgPerQ")}</span>
       <span><strong>${formatNumber(timed.length)}</strong> ${t("tables.timedAnswers")}</span></p>
-    <h3>${t("tables.timeByDiff")}</h3>${bars(LV.filter((d) => byDiff.has(d)).map((d) => ({ label: `${t(`question.difficulty.${d}`)} (${byDiff.get(d).length})`, v: avgMs(byDiff.get(d)), text: formatDuration(avgMs(byDiff.get(d))) })))}
+    <h3>${t("tables.timeByDiff")}</h3>${bars(LV.filter((d) => byDiff.has(d)).map((d) => {
+      // A level with only a few timed answers would mislead (e.g. "Hard" faster than "Easy"): no bar, just the count.
+      const xs = byDiff.get(d); const few = xs.length < Math.max(LOW_N, view.minN);
+      return { label: `${t(`question.difficulty.${d}`)} (${xs.length})`, v: few ? 0 : avgMs(xs), text: few ? t("tables.tooFew") : formatDuration(avgMs(xs)) };
+    }))}
     ${view.subject ? "" : html`<h3>${t("tables.timeBySubject")}</h3>${bars(entries(bySub, subName, (k) => k))}`}
     <h3>${t("tables.timeByTopic")}</h3>${bars(entries(byTop, topicLabel, topicSubject))}
     ${view.subject ? "" : html`<h3>${t("tables.timeDiffSubject")}</h3>${table(["", ...LV.map((d) => t(`question.difficulty.${d}`))], crossRows(bySub, subName, (k) => k))}`}
@@ -102,7 +106,7 @@ function difficultyTab(ctx) {
     .map(([k, xs]) => ({ k, a: avgDifficulty(xs.map((x) => x.d)) })).filter((x) => x.a && enough(x.a.count))
     .map((x) => ({ label: `${label(x.k)} (${x.a.count}/${x.a.total})`, v: x.a.avg, n: x.a.count, sub: subOf(x.k), text: `${x.a.avg}/9`, cls: `lv-${x.a.avg <= 4 ? "E" : x.a.avg <= 7 ? "M" : "D"}` })), view.sort.difficulty);
   return html`<p class="hint">${t("tables.diffScale")}</p>
-    <p class="facts"><span><strong>${overall ? `${overall.avg}/9` : "—"}</strong> ${t("tables.avgDiff")}</span>
+    <p class="fact-line"><span><strong>${overall ? `${overall.avg}/9` : "—"}</strong> ${t("tables.avgDiff")}</span>
       <span><strong>${overall ? overall.count : 0}/${qs.length}</strong> ${t("tables.marked")}</span></p>
     <h3>${t("tables.qByDiff")}</h3>${bars(LV.map((d) => ({ label: t(`question.difficulty.${d}`), v: dist[d], text: formatNumber(dist[d]), cls: `lv-${d}` })))}
     <h3>${t("tables.accByDiff")}</h3>${answered.length ? bars(LV.map((d) => {
@@ -154,7 +158,7 @@ function guessTab(ctx) {
     .sort({ "net-asc": (a, b) => a.net - b.net, "net-desc": (a, b) => b.net - a.net, count: (a, b) => b.n - a.n }[guessView.sort]);
   const sign = (x) => `${x > 0 ? "+" : ""}${formatNumber(x)}`;
   return html`${head}
-    <p class="facts"><span><strong>${all.n}</strong> ${t("tables.guessed")}</span><span><strong>${pct(all.right, all.n)}</strong> ${t("tables.guessAcc")}</span>
+    <p class="fact-line"><span><strong>${all.n}</strong> ${t("tables.guessed")}</span><span><strong>${pct(all.right, all.n)}</strong> ${t("tables.guessAcc")}</span>
       <span><strong>${sign(all.net)}</strong> ${t("tables.netMarks")}</span></p>
     <p>${all.acc >= mk.breakEven ? t("tables.guessPays") : t("tables.guessCosts")} ${t("tables.gainedLost", { gained: formatNumber(Math.round(all.right * mk.pos * 100) / 100), lost: formatNumber(Math.round(all.wrong * mk.pen * 100) / 100) })}</p>
     <div class="toolbar">

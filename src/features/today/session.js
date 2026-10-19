@@ -56,11 +56,20 @@ export function sessionPlan(syllabus, steps = []) {
   return { mistakes, dueTotal: allDue.length, focus, cards, n, minutes: suggestedMinutes(n) };
 }
 
-export function sessionCard(plan) {
+/** opts.reason: why the focus topic (e.g. "due 21 days ago · studied 1× · 26 questions in papers");
+    opts.canChange: offer another topic (not when it comes from your timetable). */
+export function sessionCard(plan, { reason = "", canChange = false } = {}) {
   if (!plan.n && !plan.cards) return "";
   const parts = [];
   if (plan.mistakes.length) parts.push(html`<li><span class="ss-ic" aria-hidden="true">🔁</span><span>${plan.dueTotal > plan.mistakes.length ? t("session.mistakesOf", { n: plan.mistakes.length, of: plan.dueTotal }) : t("session.mistakes", { n: plan.mistakes.length })}</span></li>`);
-  if (plan.focus) parts.push(html`<li><span class="ss-ic" aria-hidden="true">🎯</span><span>${t(`session.focus.${plan.focus.why}`, { n: plan.focus.questions.length })}: <b>${nameHtml(plan.focus.topic)}</b></span></li>`);
+  if (plan.focus) {
+    const id = plan.focus.topic.id;
+    parts.push(html`<li><span class="ss-ic" aria-hidden="true">🎯</span><span class="ss-focus"><span>${t(`session.focus.${plan.focus.why}`, { n: plan.focus.questions.length })}: <b>${nameHtml(plan.focus.topic)}</b></span>
+      ${reason ? html`<span class="hint">${reason}</span>` : ""}
+      <span class="ss-links"><button type="button" class="link inline" data-action="topic" data-id="${id}">${t("next.open")} ›</button>
+        <button type="button" class="link inline" data-action="quick" data-id="${id}">▶ ${t("session.onlyTopic")}</button>
+        ${canChange ? html`<button type="button" class="link inline" data-action="another">↻ ${t("session.otherTopic")}</button>` : ""}</span></span></li>`);
+  }
   if (plan.cards) parts.push(html`<li><span class="ss-ic" aria-hidden="true">🃏</span><span><button type="button" class="link inline" data-action="session-cards">${t("session.cards", { n: plan.cards })}</button></span></li>`);
   return html`<article class="session-card">
     <p class="kicker">${t("session.kicker")}</p>

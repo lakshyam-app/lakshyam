@@ -1,5 +1,6 @@
 name: Tests
-# Runs the automatic checks (pure logic only: no browser, no real data) on every push.
+# Runs the automatic checks on every push: the logic tests, and a browser smoke test of the main screens.
+# Both use made-up data only (this repository is public); AI answers are faked inside the test browser.
 on:
   push:
   pull_request:
@@ -18,3 +19,25 @@ jobs:
         run: |
           node tools/gen-docs.mjs
           git diff --exit-code -- docs/
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Playwright (pinned) and its Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright@1.56.0
+          npx playwright install --with-deps chromium
+      - name: Browser smoke test
+        run: node tests/e2e/smoke.mjs
+        env:
+          SHOTS: smoke-shots
+      - name: Screenshots of failed steps
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-shots
+          path: smoke-shots
+          if-no-files-found: ignore

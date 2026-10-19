@@ -41,5 +41,5 @@ export function sparkline(points, { width = 280, height = 56, label = "" } = {})
 export function marksBar(parts, label) {
   const shown = parts.filter((p) => p.share > 0);
   return html`<div class="marksbar" role="img" aria-label="${label}">${shown.map((p) => html`<span class="mb-${p.key}" style="flex:${p.share} 0 0" title="${p.label}"></span>`)}</div>
-    <ul class="legend">${parts.map((p) => html`<li><span class="swatch mb-${p.key}"></span>${p.label}</li>`)}</ul>`;
+    <ul class="mb-legend">${parts.map((p) => html`<li><span class="mb-swatch mb-${p.key}" aria-hidden="true"></span>${p.label}</li>`)}</ul>`;
 }

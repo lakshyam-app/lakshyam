@@ -58,6 +58,16 @@ export function splitSources(text) {
   return { body, sources: list };
 }
 
+/** One item's source: kept only when it is one of the pages actually found (or, without that list, as given). */
+export function sourceFor(url, found) {
+  if (!url || !/^https?:\/\//.test(String(url))) return null;
+  const domain = domainOf(url);
+  if (!found.length) return { url: String(url).slice(0, 500), domain, trust: trustOf(domain) };
+  // With Google's list, the link kept is the page Google actually found on that site (the AI's own link could be made up).
+  const hit = found.find((s) => s.domain === domain);
+  return hit ? { url: hit.url, domain, trust: hit.trust } : null;
+}
+
 const withTrust = (list) => list.map((x) => { const domain = x.domain || domainOf(x.url); return { ...x, domain, trust: trustOf(domain) }; });
 
 async function post(url, headers, body, signal = null, preset = null) {

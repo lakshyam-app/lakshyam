@@ -87,6 +87,23 @@ export function moveQuestion(question, subjectId, topicId) {
   return store.apply({ questions: { put: [copy(question, { subjectId, topicId, topicMovedByUser: true })] } });
 }
 
+/** Moves several questions to other topics at once (1.26, "Sort Other into topics"), and your past answers to
+    them too, so Progress counts them under the new topic. moves: [{ id, subjectId, topicId }].
+    Returns what Undo needs (undoMoves). One transaction; a safety copy is taken first. */
+export async function moveQuestions(moves) {
+  const to = new Map(moves.map((m) => [m.id, m]));
+  const qs = moves.map((m) => store.question(m.id)).filter(Boolean);
+  const atts = store.all("attempts").filter((a) => (a.answers || []).some((r) => to.has(r.questionId)));
+  const before = { questions: qs.map((q) => ({ ...q })), attempts: atts.map((a) => structuredClone(a)) };
+  await takeSnapshot("move-questions");
+  await store.apply({
+    questions: { put: qs.map((q) => copy(q, { subjectId: to.get(q.id).subjectId, topicId: to.get(q.id).topicId, topicMovedByUser: true })) },
+    attempts: { put: atts.map((a) => copy(a, { answers: a.answers.map((r) => (to.has(r.questionId) ? { ...r, subjectId: to.get(r.questionId).subjectId, topicId: to.get(r.questionId).topicId } : r)) })) }
+  });
+  return before;
+}
+export const undoMoves = (before) => store.apply({ questions: { put: before.questions }, attempts: { put: before.attempts } });
+
 /** Removes questions; returns what's needed to undo. */
 export async function deleteQuestions(questionIds) {
   const removed = questionIds.map((id) => store.question(id)).filter(Boolean);

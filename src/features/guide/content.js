@@ -104,8 +104,8 @@ export const STEPS = [
     id: "after", tone: "red", scene: "after",
     title: { en: "After a test: mistakes are gold", ml: "ടെസ്റ്റിന് ശേഷം: തെറ്റുകളാണ് സ്വർണം" },
     points: {
-      en: ["Open the result and tap Wrong.", "On each one: 🤖 Explain, 📚 Related facts or 💬 Ask AI. Keep the useful ones under the question.", "Don’t try to remember them all: Mistake review brings each one back after 1, 3, 7 and 21 days.", "Right at the 21-day check? It leaves the queue. You’ve learnt it."],
-      ml: ["ഫലം തുറന്ന് “തെറ്റ്” തൊടൂ.", "ഓരോന്നിലും 🤖 വിശദീകരണം, 📚 ബന്ധപ്പെട്ട വസ്തുതകൾ, അല്ലെങ്കിൽ 💬 AI-യോട് ചോദിക്കൂ. ഉപകാരമുള്ളവ ചോദ്യത്തിനു താഴെ സൂക്ഷിക്കൂ.", "എല്ലാം ഓർക്കാൻ ശ്രമിക്കേണ്ട: തെറ്റുകളുടെ റിവ്യൂ ഓരോന്നിനെയും 1, 3, 7, 21 ദിവസങ്ങൾക്ക് ശേഷം തിരികെ കൊണ്ടുവരും.", "21-ാം ദിവസം ശരിയായോ? അത് ലിസ്റ്റിൽ നിന്ന് മാറും. നിങ്ങൾ അത് പഠിച്ചു."]
+      en: ["Open the result and tap Wrong.", "On each one: 🤖 Explain, 📚 Related facts or 💬 Ask AI. Keep the useful ones under the question.", "Don’t try to remember them all: Mistake review brings each one back after 1, 3, 7 and 21 days (Revise → Mistakes due).", "Right at the 21-day check? It leaves the queue. You’ve learnt it."],
+      ml: ["ഫലം തുറന്ന് “തെറ്റ്” തൊടൂ.", "ഓരോന്നിലും 🤖 വിശദീകരണം, 📚 ബന്ധപ്പെട്ട വസ്തുതകൾ, അല്ലെങ്കിൽ 💬 AI-യോട് ചോദിക്കൂ. ഉപകാരമുള്ളവ ചോദ്യത്തിനു താഴെ സൂക്ഷിക്കൂ.", "എല്ലാം ഓർക്കാൻ ശ്രമിക്കേണ്ട: തെറ്റുകളുടെ റിവ്യൂ ഓരോന്നിനെയും 1, 3, 7, 21 ദിവസങ്ങൾക്ക് ശേഷം തിരികെ കൊണ്ടുവരും (റിവിഷൻ → റിവ്യൂവിനുള്ള തെറ്റുകൾ).", "21-ാം ദിവസം ശരിയായോ? അത് ലിസ്റ്റിൽ നിന്ന് മാറും. നിങ്ങൾ അത് പഠിച്ചു."]
     },
     tip: { en: "A mistake you have reviewed a few times is far less likely to cost you a mark on exam day.", ml: "പല തവണ റിവ്യൂ ചെയ്ത തെറ്റ് പരീക്ഷാദിവസം മാർക്ക് കളയാനുള്ള സാധ്യത വളരെ കുറവാണ്." },
     go: { to: "history", label: { en: "Open test history", ml: "ടെസ്റ്റ് ചരിത്രം തുറക്കുക" } }

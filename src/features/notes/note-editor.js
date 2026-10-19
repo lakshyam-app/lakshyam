@@ -12,6 +12,7 @@ import { ids } from "../../data/ids.js";
 import * as store from "../../data/store.js";
 import { label as nameLabel } from "../../core/names.js";
 import * as mut from "../../data/mutations.js";
+import { testLabel } from "../../data/tests.js";
 import { flagChip } from "../ai/flag-ui.js";
 
 export const noteFor = (type, id) => store.byId("notes", ids.note(type, id)) || null;
@@ -29,7 +30,7 @@ export function noteTarget(note) {
     case "list": { const x = s.byId("topicLists", id); return x ? { name: x.name, kind: t("notes.kind.list"), to: "library", params: { view: "topics", list: id } } : null; }
     case "pdfnote": { const x = s.topic(note.target.topicId); return x ? { name: nameLabel(x), kind: t("notes.kind.pdfnote"), sub: `📄 ${note.label || ""}`, to: "topic", params: { id: x.id, mode: "notes" } } : null; }
     case "question": { const q = s.question(id); const p = q && s.paper(q.paperId); return p ? { name: note.label || p.name, kind: t("notes.kind.question"), to: "paper", params: { id: p.id } } : null; }
-    case "test": { const a = s.byId("attempts", id); return a ? { name: note.label || a.scope?.label || t("test.title"), kind: t("notes.kind.test"), to: "result", params: { id } } : null; }
+    case "test": { const a = s.byId("attempts", id); return a ? { name: note.label || testLabel(a) || t("test.title"), kind: t("notes.kind.test"), to: "result", params: { id } } : null; }
     default: return null;
   }
 }

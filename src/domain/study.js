@@ -22,3 +22,26 @@ export function stepStudied(state, delta, now = Date.now()) {
 }
 
 export const isDue = (state, now = Date.now()) => Boolean(state?.nextReviewAt && now >= state.nextReviewAt);
+
+/* ---------- a good test counts as a revision (1.26) ---------- */
+export const REVISION_MIN = 8;    // answered questions of the topic in that test
+export const REVISION_PCT = 0.6;  // and at least this share right
+
+/**
+ * Topics that were due for review and that this test revised: you answered at least REVISION_MIN of
+ * their questions and got REVISION_PCT or more right (testing yourself is revision).
+ * answers: the test's answer records; stateOf(topicId) → its studied/review state.
+ */
+export function revisedByTest(answers, stateOf, now = Date.now()) {
+  const by = new Map();
+  for (const r of answers || []) {
+    if (!r?.graded || r.selected === null || r.selected === undefined || !r.topicId) continue;
+    const x = by.get(r.topicId) || { n: 0, right: 0 };
+    x.n++; if (r.isCorrect) x.right++;
+    by.set(r.topicId, x);
+  }
+  return [...by.entries()].filter(([id, x]) => {
+    const st = stateOf(id);
+    return (st?.studiedCount || 0) > 0 && isDue(st, now) && x.n >= REVISION_MIN && x.right / x.n >= REVISION_PCT;
+  }).map(([id]) => id);
+}

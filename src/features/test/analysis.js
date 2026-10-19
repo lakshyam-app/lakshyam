@@ -23,7 +23,8 @@ const hiddenIds = new Set(); // tests whose analysis you folded away (while the 
 
 export const autoAnalysisOn = () => store.setting("aiAutoAnalysis", true) !== false;
 export const analysisState = (id) => running.get(id) || null;
-export const canAnalyse = (a) => (a?.answers || []).filter((r) => r.graded).length >= MIN_ANSWERS;
+// Answered questions only: a test you stopped after 1 answer (with 86 blanks) isn't worth a request.
+export const canAnalyse = (a) => (a?.answers || []).filter((r) => r.graded && r.selected !== null && r.selected !== undefined).length >= MIN_ANSWERS;
 
 function earlierTries(a) {
   return store.all("attempts")

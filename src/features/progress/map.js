@@ -87,7 +87,7 @@ export const mapScreen = {
           ${["good", "fair", "weak", "none"].map((b) => (d.bands[b] ? html`<span class="mt-${b}" style="flex:${d.bands[b] / total} 0 0"></span>` : ""))}
         </div>
         <div class="chip-wrap map-filters" role="group">${FILTERS.map((f) => html`<button type="button" class="pill ${filter === f ? "on" : ""} ${f !== "all" ? `pf-${f}` : ""}" data-action="filter" data-v="${f}" aria-pressed="${String(filter === f)}">
-          ${f === "all" ? t("map.all") : html`<span class="swatch mt-${f}"></span>${t(`map.band.${f}`)}`} <span class="count">${f === "all" ? d.tiles.length : d.bands[f]}</span></button>`)}</div>
+          ${f === "all" ? t("map.all") : html`<span class="map-swatch mt-${f}"></span>${t(`map.band.${f}`)}`} <span class="count">${f === "all" ? d.tiles.length : d.bands[f]}</span></button>`)}</div>
         <p class="hint">${t("map.legend", { basis: t(`stats.basis.${d.basis}`) })}</p>
       </div>
       ${d.groups.map((g) => {

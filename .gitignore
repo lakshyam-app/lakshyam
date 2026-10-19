@@ -1,3 +1,6 @@
 # Never commit personal backups: this repository is public.
 *backup*.json
 .tmp-dm/
+# (CI installs Playwright for the smoke test)
+node_modules/
+smoke-shots/

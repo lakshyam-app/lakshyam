@@ -20,6 +20,7 @@ import { bindCardActions, listLayout, difficultyOn } from "../question/list.js";
 import { copyQuestions } from "../question/copy.js";
 import { openStartTest } from "./start-sheet.js";
 import { label as nameLabel } from "../../core/names.js";
+import { notOpened } from "../../domain/stats.js";
 import { analysisBlock, analysisHandlers, autoAnalyse, ANALYSIS_EVENT } from "./analysis.js";
 
 const filterBy = new Map(); // attempt id → filter
@@ -27,7 +28,8 @@ const sortBy = new Map();   // attempt id → sort
 const freshShown = new Set(); // results already shown once right after their test
 const RANK = { E: 1, M: 2, D: 3 };
 
-const stateOf = (r) => (!r.graded ? "ungraded" : r.selected === null ? "blank" : r.isCorrect ? "right" : "wrong");
+/** right / wrong / blank (left) / unopened (never on screen: not counted) / ungraded — for one test's answers. */
+export const stateFor = (a) => (r) => (!r.graded ? "ungraded" : r.selected === null ? (notOpened(r, a) ? "unopened" : "blank") : r.isCorrect ? "right" : "wrong");
 
 export function scoreLine(a) {
   const c = a.counts || { correct: 0, wrong: 0, unanswered: 0, total: 0 };
@@ -36,7 +38,7 @@ export function scoreLine(a) {
 
 /* Screens a result can go Back to: where it was opened from, or where its test was started. */
 const BACK_TO = ["tests", "topic", "history", "today", "subject", "subject-all", "bank", "library", "progress", "stats-topic", "stats-subject",
-  "insights", "insight-topic", "search", "syllabus-map", "timetable", "tt-plan", "ai-hub", "paper", "exams"];
+  "insights", "insight-topic", "search", "syllabus-map", "timetable", "tt-plan", "ai-hub", "paper", "exams", "revise", "cards"];
 
 /** The Back label: the group's, topic's, subject's or bank's name, the tab, or "Test history". */
 function backLabel(to, params) {
@@ -45,11 +47,12 @@ function backLabel(to, params) {
   if (to === "bank") return store.byId("sets", params.id)?.name || t("common.back");
   if (to === "tests") {
     const a = store.all("attempts").find((x) => x.scope?.type === params.type && (x.scope?.ref || x.scope?.label) === params.ref);
-    return a?.scope?.label || t("history.title");
+    return (a && tests.testLabel(a)) || t("history.title");
   }
   if (to === "today") return t("tabs.today");
   if (to === "library") return t("tabs.library");
   if (to === "progress") return t("tabs.progress");
+  if (to === "revise") return t("tabs.revise");
   if (to === "history") return t("history.title");
   return t("common.back");
 }
@@ -63,26 +66,31 @@ export const resultScreen = {
     const a = store.byId("attempts", id);
     if (!a || a.status === "in_progress") return go("history");
     const c = a.counts;
+    const stateOf = stateFor(a);
     const recs = a.answers.map((r) => ({ r, q: store.question(r.questionId) })).filter((x) => x.q);
     const missing = a.answers.length - recs.length;
-    const filter = filterBy.get(id) || "all";
-    const sort = sortBy.get(id) || "test";
-    const mk = markingText(a.marking);
-    const graded = c.correct + c.wrong + c.unanswered;
-    const attemptedPct = graded ? Math.round(((c.correct + c.wrong) / graded) * 100) : 0;
-    const accuracy = c.correct + c.wrong ? Math.round((c.correct / (c.correct + c.wrong)) * 100) : 0;
-    const totalMs = a.answers.reduce((s, r) => s + (r.timeMs || 0), 0);
-    const guesses = a.answers.filter((r) => r.guessed && r.graded && r.selected !== null);
-    const guessRight = guesses.filter((r) => r.isCorrect).length;
-    const guessNet = Math.round((guessRight * a.marking.pos - (guesses.length - guessRight) * (a.marking.negNum / a.marking.negDen)) * 100) / 100;
+    const unopenedN = a.answers.filter((r) => notOpened(r, a)).length;
     const counts = {
       all: recs.length,
       right: recs.filter((x) => stateOf(x.r) === "right").length,
       wrong: recs.filter((x) => stateOf(x.r) === "wrong").length,
       blank: recs.filter((x) => stateOf(x.r) === "blank").length,
+      unopened: recs.filter((x) => stateOf(x.r) === "unopened").length,
       "guess-right": recs.filter((x) => x.r.guessed && x.r.isCorrect).length,
       "guess-wrong": recs.filter((x) => x.r.guessed && x.r.graded && x.r.selected !== null && !x.r.isCorrect).length
     };
+    // After a test you mostly want your mistakes: open on "Wrong" when there are any (your own pick is kept).
+    const filter = filterBy.get(id) || (counts.wrong ? "wrong" : "all");
+    const sort = sortBy.get(id) || "test";
+    const mk = markingText(a.marking);
+    const graded = c.correct + c.wrong + c.unanswered;
+    const seenGraded = graded - unopenedN; // questions you saw (the ones you never opened aren't counted)
+    const attemptedPct = seenGraded > 0 ? Math.round(((c.correct + c.wrong) / seenGraded) * 100) : 0;
+    const accuracy = c.correct + c.wrong ? Math.round((c.correct / (c.correct + c.wrong)) * 100) : 0;
+    const totalMs = a.answers.reduce((s, r) => s + (r.timeMs || 0), 0);
+    const guesses = a.answers.filter((r) => r.guessed && r.graded && r.selected !== null);
+    const guessRight = guesses.filter((r) => r.isCorrect).length;
+    const guessNet = Math.round((guessRight * a.marking.pos - (guesses.length - guessRight) * (a.marking.negNum / a.marking.negDen)) * 100) / 100;
     let shown = recs.filter((x) => filter === "all" || (filter === "guess-right" ? x.r.guessed && x.r.isCorrect
       : filter === "guess-wrong" ? x.r.guessed && x.r.graded && x.r.selected !== null && !x.r.isCorrect : stateOf(x.r) === filter));
     if (sort !== "test") {
@@ -107,12 +115,13 @@ export const resultScreen = {
         <div class="head-bar"><button type="button" class="back" data-action="back">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>${backLabel(backTo, backParams)}</span></button>
           <button type="button" class="icon-btn" data-action="menu" aria-label="${t("common.more")}">⋯</button></div>
-        <h1>${a.scope?.label || t("test.title")}</h1>
+        <h1>${tests.testLabel(a) || t("test.title")}</h1>
         <p class="hint">${[when, a.timerMinutes ? t("results.timed", { n: a.timerMinutes }) : t("results.untimed"), a.autoSubmitted ? t("results.autoSubmitted") : null].filter(Boolean).join(" · ")}</p>
       </header>
       <section class="score-panel">
         <div class="score-big"><span class="score-num">${formatNumber(a.netScore)}</span><span class="score-max">/ ${formatNumber(maxScore(c, a.marking))}</span></div>
-        <p class="score-words">${t("results.breakdown", { right: c.correct, plus: formatNumber(c.correct * a.marking.pos), wrong: c.wrong, minus: formatNumber(Math.round(c.wrong * (a.marking.negNum / a.marking.negDen) * 100) / 100), blank: c.unanswered })}</p>
+        <p class="score-words">${t("results.breakdown", { right: c.correct, plus: formatNumber(c.correct * a.marking.pos), wrong: c.wrong, minus: formatNumber(Math.round(c.wrong * (a.marking.negNum / a.marking.negDen) * 100) / 100), blank: Math.max(0, c.unanswered - unopenedN) })}</p>
+        ${unopenedN ? html`<p class="hint">${t("results.notOpenedNote", { n: unopenedN })}</p>` : ""}
         <p class="hint">${t("results.marking", { right: mk.right, wrong: mk.wrong })}</p>
         <div class="score-facts">
           <span><strong>${accuracy}%</strong> ${t("results.accuracy")}</span>
@@ -125,18 +134,20 @@ export const resultScreen = {
         ${graded < c.total ? html`<p class="hint">${t("results.ungraded", { n: c.total - graded })}</p>` : ""}
       </section>
       ${focusHtml}
-      <div id="anHost"></div>
-      <div class="actions-row">
-        <button type="button" class="btn" data-action="retake">${t("results.retake")}</button>
-        ${counts.wrong + counts.blank ? html`<button type="button" class="btn btn-quiet" data-action="wrong-again">${t("results.practiseWrong", { n: counts.wrong + counts.blank })}</button>` : ""}
+      <div class="actions-row result-actions">
+        ${counts.wrong + counts.blank ? html`<button type="button" class="btn" data-action="wrong-again">${t("results.practiseWrong", { n: counts.wrong + counts.blank })}</button>` : ""}
+        ${counts.unopened ? html`<button type="button" class="btn btn-quiet" data-action="rest">${t("results.continueRest", { n: counts.unopened })}</button>` : ""}
+        <button type="button" class="btn ${counts.wrong + counts.blank ? "btn-quiet" : ""}" data-action="retake">${t("results.retake")}</button>
       </div>
-      <div class="chip-row wrap">${["all", "right", "wrong", "blank"].map(pill)}${counts["guess-right"] + counts["guess-wrong"] ? html`${pill("guess-right")}${pill("guess-wrong")}` : ""}</div>
+      <div id="anHost"></div>
+      <div class="chip-row wrap">${["all", "right", "wrong", "blank"].map(pill)}${counts.unopened ? pill("unopened") : ""}${counts["guess-right"] + counts["guess-wrong"] ? html`${pill("guess-right")}${pill("guess-wrong")}` : ""}</div>
       <div class="toolbar"><button type="button" class="pill" data-action="sort">${t(`results.sort.${sort}`)} ▾</button>
         <div class="segmented two compact" role="group" aria-label="${t("layout.title")}">${["scroll", "single"].map((l) => html`<button type="button" class="${layout === l ? "on" : ""}" data-action="layout" data-v="${l}" aria-pressed="${String(layout === l)}">${t(`layout.${l}Short2`)}</button>`)}</div></div>
       <div id="rHost"></div>`;
 
     const order = new Map(a.answers.map((r, i) => [r.questionId, i]));
-    const recFor = new Map(recs.map((x) => [x.q.id, x.r]));
+    // Not-opened blanks are labelled so; wrong answers get the "Why?" tags (saved with this test).
+    const recFor = new Map(recs.map((x) => { const st = stateOf(x.r); return [x.q.id, st === "unopened" ? { ...x.r, unopened: true } : st === "wrong" ? { ...x.r, whyOn: true } : x.r]; }));
     const card = (q0) => questionCard(store.question(q0.id) || q0, { showPaper: true, review: recFor.get(q0.id), n: order.get(q0.id) + 1, showDifficulty: difficultyOn() });
     const view = mountCards(container.querySelector("#rHost"), {
       key: `result:${id}:${filter}:${sort}`, items: shown.map((x) => x.q), card, layout,
@@ -163,12 +174,22 @@ export const resultScreen = {
       }),
       retake: () => startAgain(a, null),
       "wrong-again": () => startAgain(a, recs.filter((x) => ["wrong", "blank"].includes(stateOf(x.r))).map((x) => x.q.id)),
+      rest: () => startAgain(a, recs.filter((x) => stateOf(x.r) === "unopened").map((x) => x.q.id), "results.restLabel"),
+      // "Why was it wrong?": one tap tags it (again clears it); kept with the test, counted in Smart insights.
+      "q-why": async (el) => {
+        const qid = el.closest("[data-qid]").dataset.qid;
+        const cur = store.byId("attempts", id)?.answers.find((r) => r.questionId === qid)?.why || null;
+        const next = cur === el.dataset.v ? null : el.dataset.v;
+        await store.quietly(() => tests.setWhy(id, qid, next));
+        const r = store.byId("attempts", id)?.answers.find((x) => x.questionId === qid);
+        if (r) { recFor.set(qid, { ...r, whyOn: true }); view.refresh(qid); }
+      },
       menu: () => runFlow(async () => {
-        const choice = await chooseAction({ title: a.scope?.label || t("test.title"), items: [
+        const choice = await chooseAction({ title: tests.testLabel(a) || t("test.title"), items: [
           { id: "copy-wrong", label: t("results.copyWrong") },
           { id: "delete", label: t("results.delete"), danger: true }
         ] });
-        if (choice === "copy-wrong") return copyQuestions(recs.filter((x) => ["wrong", "blank"].includes(stateOf(x.r))).map((x) => x.q), `${a.scope?.label} — ${t("results.filter.wrong")}`);
+        if (choice === "copy-wrong") return copyQuestions(recs.filter((x) => ["wrong", "blank"].includes(stateOf(x.r))).map((x) => x.q), `${tests.testLabel(a)} — ${t("results.filter.wrong")}`);
         if (choice === "delete") {
           const ok = await confirmAction({ title: t("results.deleteTitle"), body: t("results.deleteBody"), confirmLabel: t("common.delete"), danger: true });
           if (!ok) return;
@@ -178,13 +199,20 @@ export const resultScreen = {
         }
       })
     });
-    if (fresh && !freshShown.has(id)) { freshShown.add(id); window.scrollTo(0, 0); } // only when the test has just ended, not on a redraw
+    if (fresh && !freshShown.has(id)) { // only when the test has just ended, not on a redraw
+      freshShown.add(id); window.scrollTo(0, 0);
+      // A good test on a topic that was due counts as its revision (its review moves on); Undo puts it back.
+      if (a.revised?.length) {
+        const names = a.revised.map((x) => nameLabel(store.topic(x))).filter(Boolean).join(", ");
+        toast(t("results.revised", { n: a.revised.length, names }), { actionLabel: t("common.undo"), onAction: () => tests.undoRevision(a), duration: 9000 });
+      }
+    }
     return () => window.removeEventListener(ANALYSIS_EVENT, onAnalysis);
   }
 };
 
-async function startAgain(a, onlyIds) {
+async function startAgain(a, onlyIds, labelKey = "results.wrongLabel") {
   if (tests.activeTest()) return openStartTest(); // asks what to do with the unfinished one
-  await tests.retake(a, onlyIds ? { onlyIds, label: t("results.wrongLabel", { label: a.scope?.label || "" }) } : {});
+  await tests.retake(a, onlyIds ? { onlyIds, label: t(labelKey, { label: tests.testLabel(a) }) } : {});
   go("test");
 }

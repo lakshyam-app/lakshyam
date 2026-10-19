@@ -8,6 +8,7 @@ import { BACKUP_STORES } from "./schema.js";
 const cache = Object.fromEntries(BACKUP_STORES.map((name) => [name, new Map()]));
 const listeners = new Set();
 let indexes = null;
+let memo = new Map(); // derived(): values worked out from the data, kept until the next change
 
 /* ---------- loading ---------- */
 
@@ -16,12 +17,18 @@ export async function load() {
   BACKUP_STORES.forEach((name, i) => {
     cache[name] = new Map(all[i].map((record) => [record.id, record]));
   });
-  indexes = null;
+  indexes = null; memo = new Map();
 }
 
 export function onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); }
 let muted = 0;
-function notify() { indexes = null; if (!muted) listeners.forEach((fn) => fn()); }
+function notify() { indexes = null; memo = new Map(); if (!muted) listeners.forEach((fn) => fn()); }
+
+/** A value worked out from the data (e.g. every question's past answers), built once until the data changes. */
+export function derived(key, build) {
+  if (!memo.has(key)) memo.set(key, build());
+  return memo.get(key);
+}
 
 /** Redraws the screen after a series of quiet changes. */
 export function touch() { notify(); }
@@ -29,7 +36,7 @@ export function touch() { notify(); }
 /** Runs a change without redrawing the screen (the caller updates the part it changed). */
 export async function quietly(fn) {
   muted++;
-  try { return await fn(); } finally { muted--; indexes = null; }
+  try { return await fn(); } finally { muted--; indexes = null; memo = new Map(); }
 }
 
 /** The single write path for everyday edits (used by mutations.js).
@@ -43,6 +50,7 @@ export async function apply(changes, { silent = false } = {}) {
     (c.delete || []).forEach((id) => cache[name].delete(id));
     (c.put || []).forEach((r) => cache[name].set(r.id, r));
   });
+  memo = new Map();
   if (!silent) notify();
 }
 

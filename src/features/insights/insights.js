@@ -11,7 +11,7 @@ import { toast } from "../../core/toast.js";
 import { can } from "../../core/entitlements.js";
 import { nameHtml, label as nameLabel } from "../../core/names.js";
 import { letterFor } from "../../domain/text.js";
-import { answerRecords, pickByBasis, accuracyBy, guessSummary, markingInfo, isTimed } from "../../domain/stats.js";
+import { answerRecords, pickByBasis, accuracyBy, guessSummary, markingInfo, isTimed, whyStats } from "../../domain/stats.js";
 import { rankWeakSpots, mistakeStats, checkFact } from "../../domain/insights.js";
 import { pageCounts } from "../../pdf/pdf-tools.js";
 import * as store from "../../data/store.js";
@@ -22,6 +22,7 @@ import { listPdfs } from "../../pdf/pdf-store.js";
 import { finishedTests } from "../progress/data.js";
 import { stillWrongQuestions } from "../library/banks.js";
 import { openStartTest } from "../test/start-sheet.js";
+import { topicLabel } from "../../data/tests.js";
 import { askInSheet, ensureAi } from "../ai/ai-ui.js";
 import { openPrepared } from "../pdfs/pdfs.js";
 import { chev } from "../library/library.js";
@@ -54,13 +55,14 @@ function topicFigures(syllabus, records) {
 
 const pct = (x) => `${Math.round(x * 100)}%`;
 /* Weak spots: which topics (all / practised / not practised yet) and top 10 or all. Kept while the app is open. */
-const weakView = { filter: "all", showAll: false };
+// filter null = the default: topics you've practised (weak ones), so "weak" isn't mixed with "never tried".
+const weakView = { filter: null, showAll: false };
 const openSecs = new Set(["weak"]); // which parts of Smart insights are unfolded
-const WEAK_FILTERS = ["all", "done", "todo"];
+const WEAK_FILTERS = ["done", "todo", "all"];
 const TOP_N = 10;
 function reasonChips(r) {
-  // "not practised" is already said in the line above
-  return html`<span class="chips-inline">${r.reasons.filter((k) => k !== "untried").map((k) => html`<span class="mini-chip r-${k}">${t(`insights.reason.${k}`)}</span>`)}</span>`;
+  // "not practised" is already said in the line above; "no notes" is said once above the list
+  return html`<span class="chips-inline">${r.reasons.filter((k) => k !== "untried" && k !== "nonotes").map((k) => html`<span class="mini-chip r-${k}">${t(`insights.reason.${k}`)}</span>`)}</span>`;
 }
 
 /* ---------- #/insights ---------- */
@@ -86,14 +88,17 @@ export const insightsScreen = {
       const byTopic = topicFigures(syllabus, records);
       const KEEP = { all: () => true, done: (r) => r.adj !== null, todo: (r) => r.adj === null };
       const pool = rankWeakSpots(byTopic, { hasNotes, limit: Infinity, all: weakView.showAll });
-      const ranked = pool.filter(KEEP[weakView.filter]);
-      const weak = weakView.showAll ? ranked : ranked.slice(0, TOP_N);
       const everyTopic = weakView.showAll ? pool : rankWeakSpots(byTopic, { hasNotes, limit: Infinity, all: true });
       const filterCount = (f) => everyTopic.filter(KEEP[f]).length; // counts are always of every topic
+      const wf = weakView.filter || (pool.some(KEEP.done) ? "done" : "all");
+      const ranked = pool.filter(KEEP[wf]);
+      const weak = weakView.showAll ? ranked : ranked.slice(0, TOP_N);
+      const noNotesN = weak.filter((r) => r.reasons.includes("nonotes")).length;
       const wrongQs = stillWrongQuestions(syllabus.id);
       const lastRec = new Map(); records.forEach((r) => { if (r.graded) lastRec.set(r.questionId, r); });
       const wrong = wrongQs.map((q) => ({ q, r: lastRec.get(q.id) })).filter((x) => x.r);
       const ms = mistakeStats(wrong);
+      const why = whyStats(records);
       const wrongByTopic = new Map(); wrongQs.forEach((q) => wrongByTopic.set(q.topicId, (wrongByTopic.get(q.topicId) || 0) + 1));
       const notesRows = [...wrongByTopic.entries()].filter(([id]) => hasNotes(id)).sort((a, b) => b[1] - a[1]);
       const noNotesRows = [...wrongByTopic.entries()].filter(([id]) => !hasNotes(id) && store.topic(id)).sort((a, b) => b[1] - a[1]).slice(0, 5);
@@ -108,8 +113,9 @@ export const insightsScreen = {
         ${records.length ? "" : html`<p class="warn-box">${t("insights.noTests")}</p>`}
         ${sec("weak", 1, t("insights.weakTitle"), topWeak ? `1. ${topWeak}` : "", html`
           <p class="hint">${t("insights.weakHint")}</p>
-          <div class="chip-row wrap" role="group" aria-label="${t("insights.weakTitle")}">${WEAK_FILTERS.map((f) => html`<button type="button" class="pill ${weakView.filter === f ? "on" : ""}" data-action="wfilter" data-f="${f}" aria-pressed="${String(weakView.filter === f)}">${t(`insights.wf.${f}`)} <span class="count">${filterCount(f)}</span></button>`)}</div>
-          ${weakView.filter === "todo" ? html`<p class="hint">${t("insights.todoHint")}</p>` : ""}
+          <div class="chip-row wrap" role="group" aria-label="${t("insights.weakTitle")}">${WEAK_FILTERS.map((f) => html`<button type="button" class="pill ${wf === f ? "on" : ""}" data-action="wfilter" data-f="${f}" aria-pressed="${String(wf === f)}">${t(`insights.wf.${f}`)} <span class="count">${filterCount(f)}</span></button>`)}</div>
+          ${wf === "todo" ? html`<p class="hint">${t("insights.todoHint")}</p>` : ""}
+          ${noNotesN ? html`<p class="hint">📄 ${t("insights.noNotesN", { n: noNotesN, of: weak.length })}</p>` : ""}
           ${weakView.showAll ? html`<p class="hint">${t("insights.showingAll", { n: weak.length })} · <button type="button" class="link inline" data-action="wall">${t("insights.showTop", { n: TOP_N })}</button></p>` : ""}
           ${weak.length ? html`<div class="rows">${weak.map((r, i) => html`<button type="button" class="row" data-action="topic" data-id="${r.topicId}">
             <span class="row-main"><span class="row-title">${i + 1}. ${nameHtml(store.topic(r.topicId))}</span>
@@ -118,7 +124,7 @@ export const insightsScreen = {
             ${weakView.showAll ? html`<div class="collapse-bar"><button type="button" class="btn btn-small" data-action="wall">▲ ${t("insights.showTop", { n: TOP_N })}</button></div>`
               : ranked.length > TOP_N ? html`<button type="button" class="link" data-action="wall">${t("insights.showAll")}</button>` : ""}
             ${ai ? html`<button type="button" class="btn btn-quiet" data-action="ai-weak">🤖 ${t("insights.aiWeak")}</button>` : ""}`
-          : html`<p class="hint pad">${weakView.filter === "all" ? t("insights.noWeak") : t("insights.noneInFilter")}</p>
+          : html`<p class="hint pad">${wf === "all" ? t("insights.noWeak") : t("insights.noneInFilter")}</p>
             ${weakView.showAll ? "" : html`<button type="button" class="link" data-action="wall">${t("insights.showAll")}</button>`}`}`)}
         ${sec("patterns", 2, t("insights.patternsTitle"), ms.total ? t("insights.missedN", { n: ms.total }) : "", ms.total ? html`<p class="hint">${t("insights.patternsHint", { n: ms.total })}</p>
             <div class="facts">
@@ -133,7 +139,8 @@ export const insightsScreen = {
           : html`<p class="hint pad">${pdfs.length ? t("insights.noNotesMatch") : t("insights.noPdfs")}</p>`}
           ${noNotesRows.length ? html`<p class="hint">${t("insights.noNotesFor")}</p><div class="rows">${noNotesRows.map(([id, n]) => html`<button type="button" class="row" data-action="topic" data-id="${id}">
             <span class="row-main"><span class="row-title">${nameHtml(store.topic(id))}</span><span class="row-sub">${t("insights.missedN", { n })} · ${t("insights.reason.nonotes")}</span></span>${chev}</button>`)}</div>` : ""}`)}
-        ${sec("focus", 4, t("focus.title"), focusKey(syllabus), focusSection(syllabus, 4, { inner: true }))}`;
+        ${sec("focus", 4, t("focus.title"), focusKey(syllabus), focusSection(syllabus, 4, { inner: true }))}
+        ${sec("why", 5, t("why.sectionTitle"), why.tagged ? t("why.tagged", { n: why.tagged, of: why.wrong }) : "", whyInner(why))}`;
       body.querySelectorAll("details.ins-sec").forEach((d) => d.addEventListener("toggle", () => { if (d.open) openSecs.add(d.dataset.sec); else openSecs.delete(d.dataset.sec); }));
 
       if (weakView.scrollBack) { weakView.scrollBack = false; body.querySelector("#weakSec")?.scrollIntoView({ block: "start" }); }
@@ -165,6 +172,16 @@ export const insightsScreen = {
     });
   }
 };
+
+/** 5 · Why you lose marks: the reasons you tagged on wrong answers, and the one thing to change. */
+function whyInner(w) {
+  if (!w.tagged) return html`<p class="hint">${t("why.none")}</p>`;
+  const kinds = ["know", "mix", "misread", "changed"];
+  const top = kinds.slice().sort((a, b) => w[b] - w[a])[0];
+  return html`<p class="hint">${t("why.sectionHint")}</p>
+    <div class="facts">${kinds.map((k) => html`<div class="fact"><span class="fact-n">${w[k]}</span><span class="fact-l">${t(`why.${k}`)}</span></div>`)}</div>
+    <p class="attempt-tip">💡 ${t(`why.advice.${top}`)}</p>`;
+}
 
 const pathEn = (topicId) => { const x = store.topic(topicId); return x ? `${store.subject(x.subjectId)?.name || ""} › ${x.name}` : "?"; };
 
@@ -243,9 +260,9 @@ export const insightTopicScreen = {
       onAction(body, {
         page: (el) => go("pdf-view", { id: el.dataset.pdf, n: el.dataset.n, ...openedFrom("insight-topic", { id }) }),
         "add-pdf": () => go("pdfs", { type: "topic", id }),
-        "practise-all": () => openStartTest({ scope: { type: "topic", ref: id, label: topic.name }, questions: topicQs, keepOrder: false }),
+        "practise-all": () => openStartTest({ scope: { type: "topic", ref: id, label: topicLabel(topic) }, questions: topicQs, keepOrder: false }),
         "open-topic": () => go("topic", { id }),
-        retry: () => openStartTest({ scope: { type: "topic", ref: id, label: `${topic.name} — ${t("insights.missedLabel")}` }, questions: missed, keepOrder: false }),
+        retry: () => openStartTest({ scope: { type: "topic", ref: id, label: `${topicLabel(topic)} — ${t("insights.missedLabel")}` }, questions: missed, keepOrder: false }),
         cards: async () => {
           await mut.saveCards(syllabus.id, topic.subjectId, id, newCards.map((q) => ({ front: q.text, back: ans(q), sourceRef: { questionId: q.id, paperId: q.paperId } })), "pyq");
           toast(t("insights.cardsMade", { n: newCards.length }), { actionLabel: t("insights.open"), onAction: () => go("topic", { id, mode: "cards" }) });

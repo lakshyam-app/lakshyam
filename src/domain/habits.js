@@ -36,18 +36,31 @@ export function weekDots(activeDays, today) {
   });
 }
 
+/** How many due topics Today asks you to revise each day (the rest wait their turn, so they don't pile up). */
+export const REVIEW_CAP = 3;
+
+/**
+ * Due topics, most important first: how often the topic is asked in papers × how overdue it is
+ * (capped at 60 days). freq: Map(topicId → questions in papers). Without freq: most overdue first.
+ */
+export function rankDue(due, freq = null, now = Date.now()) {
+  if (!freq) return due.slice().sort((a, b) => a.nextReviewAt - b.nextReviewAt);
+  const score = (d) => (freq.get(d.topicId) || 0) * (1 + Math.min(60, Math.max(0, (now - d.nextReviewAt) / DAY)) / 30);
+  return due.slice().sort((a, b) => score(b) - score(a) || a.nextReviewAt - b.nextReviewAt);
+}
+
 /**
  * Candidates for "What to study next", best first:
- *   1. topics due for review (oldest due first),
+ *   1. topics due for review (with freq: asked most × most overdue first; without: oldest due first),
  *   2. weak topics that appear often (ranked by frequency × how often you get them wrong),
  *   3. topics that appear often that you have never answered.
  * input: { due: [{ topicId, nextReviewAt, studiedCount }], weak: [{ topicId, freq, accuracy(0–1, adjusted), pct, n }],
- *          untouched: [{ topicId, freq }], gradable: Map(topicId → number of scorable questions) }
+ *          untouched: [{ topicId, freq }], gradable: Map(topicId → number of scorable questions), freq?: Map }
  */
-export function nextSteps({ due = [], weak = [], untouched = [], gradable = new Map(), limit = 6 }) {
+export function nextSteps({ due = [], weak = [], untouched = [], gradable = new Map(), limit = 6, freq = null, now = Date.now() }) {
   const out = []; const seen = new Set();
   const add = (x) => { if (!seen.has(x.topicId) && (gradable.get(x.topicId) || 0) > 0) { seen.add(x.topicId); out.push(x); } };
-  due.slice().sort((a, b) => a.nextReviewAt - b.nextReviewAt).forEach((x) => add({ ...x, kind: "due" }));
+  rankDue(due, freq, now).forEach((x) => add({ ...x, kind: "due" }));
   weak.filter((x) => x.accuracy !== null && x.pct < 0.7).sort((a, b) => b.freq * (1 - b.accuracy) - a.freq * (1 - a.accuracy))
     .forEach((x) => add({ ...x, kind: "weak" }));
   untouched.slice().sort((a, b) => b.freq - a.freq).forEach((x) => add({ ...x, kind: "new" }));

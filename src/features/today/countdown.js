@@ -132,6 +132,8 @@ export function editExam(exam = null) {
       <option value="">${t("cd.noSyllabus")}</option>
       ${syllabi.map((s) => html`<option value="${s.id}" ${e.syllabusId === s.id ? "selected" : ""}>${s.name}</option>`)}</select></label>
       <p class="hint">${t("cd.syllabusHint")}</p>` : ""}
+    <label class="field-label">${t("cd.target")}<input class="field" id="exTarget" type="number" inputmode="decimal" min="1" max="100" step="0.5" value="${e.target ?? ""}" placeholder="${t("cd.targetPlaceholder")}"></label>
+    <p class="hint">${t("cd.targetHint")}</p>
     ${exam ? html`<button type="button" class="link danger" data-action="remove">${t("cd.remove")}</button>` : ""}
     <div class="sheet-actions"><button type="button" class="btn btn-quiet" data-action="cancel">${t("common.cancel")}</button>
       <button type="button" class="btn" data-action="save">${t("common.save")}</button></div>`, {
@@ -145,7 +147,7 @@ export function editExam(exam = null) {
       const date = body.querySelector("#exDate").value;
       const time = body.querySelector("#exTime").value;
       if (!examMoment(date, time)) { toast(t("exam.pickDate")); return; }
-      const ok = await exams.saveExam({ ...e, date, time, name: body.querySelector("#exName").value.trim(), syllabusId: body.querySelector("#exSyl")?.value || null });
+      const ok = await exams.saveExam({ ...e, date, time, name: body.querySelector("#exName").value.trim(), syllabusId: body.querySelector("#exSyl")?.value || null, target: body.querySelector("#exTarget").value });
       if (!ok) { toast(t("cd.full", { n: X.MAX_EXAMS })); return; }
       closeSheet();
       toast(t("exam.saved"));

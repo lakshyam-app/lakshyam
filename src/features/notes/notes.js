@@ -1,7 +1,8 @@
-/* Notes tab: every listing note in one place, with search and a link back. */
+/* Notes: every listing note in one place, with search and a link back.
+   (1.26: opened from the Revise tab, which took its place in the bottom bar; #/notes still works.) */
 import { html, onAction } from "../../core/dom.js";
 import { t } from "../../core/i18n.js";
-import { go } from "../../core/router.js";
+import { go, goBack } from "../../core/router.js";
 import { richText, noteText } from "../../domain/text.js";
 import * as store from "../../data/store.js";
 import { noteTarget, editNote, viewNote } from "./note-editor.js";
@@ -68,13 +69,24 @@ const SORT_FN = {
   longest: (a, b) => (b.n.text || "").length - (a.n.text || "").length
 };
 
+/** How many notes the Notes screen shows at first (this syllabus and general ones). */
+export function notesShown() {
+  const syl = store.currentSyllabus();
+  const relOf = syllabusIndex();
+  return store.all("notes").filter((n) => { const r = relOf(n); return r === null || !syl || r.has(syl.id); }).length;
+}
+
+const backBar = () => html`<div class="head-bar"><button type="button" class="back" data-action="back">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>${t("tabs.revise")}</span></button></div>`;
+
 export const notesScreen = {
   id: "notes",
-  tab: 4,
+  parent: "revise",
   render(container) {
     const notes = store.all("notes").sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
     if (!notes.length) {
-      container.innerHTML = html`<section class="empty"><h1>${t("notes.emptyTitle")}</h1><p>${t("notes.emptyBody")}</p></section>`;
+      container.innerHTML = html`${backBar()}<section class="empty"><h1>${t("notes.emptyTitle")}</h1><p>${t("notes.emptyBody")}</p></section>`;
+      onAction(container, { back: () => goBack("revise") });
       return;
     }
     // By default only the notes of the syllabus chosen at the top (and general ones); "All syllabi" shows every note.
@@ -87,7 +99,7 @@ export const notesScreen = {
     const subjectsWithNotes = [...new Set(all.map((x) => x.subjectId).filter(Boolean))].map((id) => store.subject(id)).filter(Boolean)
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name));
     if (view.subject !== "all" && view.subject !== "none" && !store.subject(view.subject)) view.subject = "all";
-    container.innerHTML = html`<section class="notes">
+    container.innerHTML = html`${backBar()}<section class="notes">
       <h1 class="page-title">${t("tabs.notes")}</h1>
       <input type="search" class="search" id="noteSearch" placeholder="${t("notes.search")}" value="${term}" autocomplete="off">
       <div class="chip-wrap tf-bar" id="noteBar"></div>
@@ -136,6 +148,7 @@ export const notesScreen = {
       if (id) { view[key] = id; draw(); }
     });
     onAction(container, {
+      back: () => goBack("revise"),
       "n-sort": () => pick(t("notes.sortTitle"), SORTS.map((x) => ({ id: x, label: t(`notes.sort.${x}`), current: view.sort === x })), "sort"),
       "n-kind": () => pick(t("notes.f.kindTitle"), KINDS.map((x) => ({ id: x, label: t(`notes.f.kind.${x}`), sub: String(x === "all" ? all.length : all.filter((y) => (x === "ai" ? isAi(y.n) : x === "own" ? !isAi(y.n) : y.kind === x)).length), current: view.kind === x })).filter((it) => it.id === "all" || it.sub !== "0"), "kind"),
       "n-subject": () => pick(t("notes.f.subjectTitle"), [

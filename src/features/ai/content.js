@@ -7,7 +7,7 @@
 import { html, onAction } from "../../core/dom.js";
 import { t, dateLocale } from "../../core/i18n.js";
 import { go, goBack } from "../../core/router.js";
-import { openedFrom } from "../../core/back.js";
+import { openedFrom, fromRevise } from "../../core/back.js";
 import { runFlow, confirmAction, chooseAction } from "../../core/dialogs.js";
 import { toast } from "../../core/toast.js";
 import { typesetMath } from "../../core/math.js";
@@ -98,6 +98,7 @@ async function makeFrom(topic, kind, general = null) {
 }
 
 const stateOf = (card) => store.byId("flashcardState", card.id) || { id: card.id, cardId: card.id, status: "new", reviews: 0, lastAt: null, dueAt: null };
+export const cardState = stateOf; // (1.26: the Revise tab counts due cards the same way)
 
 /** The PYQ / AI / Cards switch; empty when there's no AI content here. */
 export function contentSwitch(mode, counts, to, params) {
@@ -159,6 +160,13 @@ export function renderAiPanel(host, { syllabus, scope, topic = null, label }) {
 /* ---------- flashcards ---------- */
 
 const deckBy = new Map(); // scope key → { ids, index, flipped, filter, mode, shuffle }
+
+/** Starts a deck's next round on one filter ("due", "all", "learn", "known"), e.g. Revise → Flashcards due. */
+export function presetDeck(scope, filter) {
+  const key = `cards:${scope.topicId || scope.subjectId || "all"}`;
+  const st = deckBy.get(key) || { filter: "due", mode: "study", shuffle: false, ids: null, index: 0, flipped: false };
+  deckBy.set(key, { ...st, filter, mode: "study", ids: null, index: 0, flipped: false });
+}
 
 export function renderCardsPanel(host, { syllabus, scope, topic = null }) {
   const key = `cards:${scope.topicId || scope.subjectId || "all"}`;
@@ -327,8 +335,9 @@ function readTogether(notes) {
 export const aiHubScreen = {
   id: "ai-hub",
   parent: "library",
-  render(container, { kind, id }) {
-    kind = kind || id;
+  render(container, params) {
+    const kind = params.kind || params.id;
+    const revise = fromRevise(params); // opened from the Revise tab: ‹ goes back there
     const syllabus = store.currentSyllabus();
     if (!syllabus) return go("library");
     const isCards = kind === "cards";
@@ -338,14 +347,14 @@ export const aiHubScreen = {
     const rows = [...byTopic.entries()].map(([id, n]) => ({ topic: store.topic(id), n })).filter((r) => r.topic)
       .sort((a, b) => b.n - a.n);
     container.innerHTML = html`<header class="screen-head"><div class="head-bar"><button type="button" class="back" data-action="back">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>${t("library.views.banks")}</span></button></div>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>${revise ? t("tabs.revise") : t("library.views.banks")}</span></button></div>
       <h1>${isCards ? t("ai.hubCards") : t("ai.hubAi")}</h1><p class="hint">${isCards ? t("ai.cardsN", { n: items.length }) : t("common.questions", { n: items.length })} · ${t("ai.separateNote")}</p></header>
       <div class="rows">${rows.map((r) => html`<button type="button" class="row" data-action="open" data-id="${r.topic.id}">
         <span class="row-main"><span class="row-title">${nameHtml(r.topic)}</span><span class="row-sub">${nameLabel(store.subject(r.topic.subjectId))}</span></span>
         <span class="row-count">${r.n}</span><span class="chev-txt">›</span></button>`)}</div>
       ${rows.length ? "" : html`<p class="hint pad">${isCards ? t("ai.noCards") : t("ai.noAi")}</p>`}`;
     onAction(container, {
-      back: () => goBack("library", { view: "banks" }),
+      back: () => (revise ? goBack("revise") : goBack("library", { view: "banks" })),
       open: (el) => go("topic", { id: el.dataset.id, mode: isCards ? "cards" : "ai" })
     });
   }

@@ -117,6 +117,8 @@ export function gradeTest(questions, run, marking, difficultyOf = () => null) {
     return {
       questionId: q.id, selected, correct: graded ? q.answerIndex : null, isCorrect, graded,
       guessed: Boolean(run.guesses?.[q.id]), timeMs: ms > 0 ? Math.round(ms) : null,
+      // Whether the question was ever on screen: a blank you never opened isn't counted in stats.
+      opened: selected !== null || ms > 0 || Boolean(run.seen?.[q.id]),
       struck: Array.isArray(run.struck?.[q.id]) ? run.struck[q.id].filter((k) => k !== selected).length : 0,
       subjectId: q.subjectId, topicId: q.topicId, difficulty: difficultyOf(q)
     };

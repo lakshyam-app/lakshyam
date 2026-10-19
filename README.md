@@ -14,8 +14,10 @@ or any other app. Your data comes in only from an export file you choose.
 
 ### Getting started
 
-1. Open the app and tap **Import from PSC Exam Vault** (or Settings → Backup → Import).
-   Choose the export file. Lakshyam checks it, shows what it will add, and verifies it after saving.
+1. The first screen offers three ways to start: **Restore from Google Drive** (a new or lost phone),
+   **Restore or import a file** (a Lakshyam backup, a PSC Exam Vault export, or papers shared from another phone),
+   or **Start fresh** (name your exam, then add your first paper). Lakshyam checks a file, shows what it will add,
+   and verifies it after saving. Importing from PSC Exam Vault only reads its export file; the old app is never touched.
 2. Pick your syllabus from the chip at the top.
 3. On Today, tap **Set your exam date**. You can keep up to 20 exams (Today → tap a countdown) and choose
    which ones Today shows (the nearest few, or the ones you pick) and how: large cards, tiles or a compact list.
@@ -25,10 +27,10 @@ or any other app. Your data comes in only from an export file you choose.
 
 | Tab | What you do there |
 |---|---|
-| **Today** | Exam countdown, what to study now, Quick 10, daily goal, streak, due reviews, the day's checklist and day review (opens the study diary), unfinished test |
-| **Library** | Subjects → topics → questions, all topics, papers, banks, Study PDFs; ▶ Practice on any list |
-| **Progress** | Score per 100, insights, where marks go, drill-down, detailed tables, test history, 🔎 Smart insights, 🗓 My timetable |
-| **Notes** | All your notes, searchable, each linked back to its question or topic |
+| **Today** | Exam countdown, today's session (mistakes due + a focus topic, one button), the day's card (goal, streak, checklist, day review), topics to revise today, unfinished test |
+| **Library** | Subjects → topics → questions, all topics, papers, banks, Study PDFs, AI questions, 🗞 Current affairs quiz; ▶ Practice on any list |
+| **Progress** | Score per 100, your target and likely range, where marks go, drill-down, detailed tables, test history, 🔎 Smart insights, 🗓 My timetable |
+| **Revise** | Due today (mistakes, flashcards, topics), Still wrong and Flagged, **Notes** (all your notes, searchable, each linked back), all flashcards as one deck, Study PDFs, AI questions, 🗞 Current affairs quiz |
 
 Search (🔍) and Settings (⚙) are in the top bar.
 
@@ -64,6 +66,9 @@ Presets fall back to the next one if one fails, and can be paused.
   them to your own Google Drive (on a PDF, or Settings → Backup & data → Study PDFs) to free space.
   The app only removes its own copy after Drive's copy is checked byte-for-byte; your original file is never touched.
 - Clearing the browser's site data for this address deletes Lakshyam's data. Export first.
+- Settings → Backup & data → **Papers for another phone** makes a file with only your question papers (answer keys,
+  explanations, topic names) for someone else's Lakshyam: never your tests, diary, notes, screen time or AI keys.
+  Adding it on the other phone only adds what isn't there yet.
 
 ### Reminders
 
@@ -92,12 +97,16 @@ No build step: plain ES modules served as static files.
 ```
 python3 -m http.server 8765        # then open http://localhost:8765/
 node --test tests/*.test.mjs       # unit tests (Node 20+)
+node tests/e2e/smoke.mjs           # browser smoke test (needs Playwright: npm i --no-save playwright && npx playwright install chromium)
 node tools/gen-docs.mjs            # regenerate docs/ai-instructions-*.md from the code
 ```
 
-GitHub Actions ([`.github/workflows/test.yml`](.github/workflows/test.yml)) runs the unit tests on every push
-and checks that the generated docs are up to date. Tests use only made-up data;
-never commit a real backup (the repo is public).
+GitHub Actions ([`.github/workflows/test.yml`](.github/workflows/test.yml)) runs the unit tests and the browser
+smoke test on every push, and checks that the generated docs are up to date. The smoke test
+([`tests/e2e/smoke.mjs`](tests/e2e/smoke.mjs)) imports a made-up PSC Exam Vault file
+([`tests/e2e/fixture.mjs`](tests/e2e/fixture.mjs)), walks through the main screens on a phone-sized window,
+backs up and restores on a second "phone", and fakes every AI answer inside the browser (no key, nothing sent).
+Tests use only made-up data; never commit a real backup (the repo is public).
 
 ### Folders
 
@@ -117,9 +126,9 @@ src/ai/                                    AI client (presets, fallback, pausing
 src/pdf/                                   Study PDFs: text tools, storage, reader, AI jobs
 src/cloud/                                 Google Drive backup client; relay-script.js (your own Apps Script), relay.js, sw-backup.js (background)
 src/features/<name>/                       one folder per area: today, library, question, test, progress,
-                                           insights, timetable, diary, notes, search, ai, pdfs, import, settings
-src/strings/                               interface text: en.js, ml.js (ml-1 … ml-6); missing ml text falls back to English
-tests/                                     unit tests (node --test)
+                                           insights, timetable, diary, notes, revise, search, ai, pdfs, import, settings
+src/strings/                               interface text: en.js, ml.js (ml-1 … ml-13); missing ml text falls back to English
+tests/                                     unit tests (node --test); tests/e2e/ the browser smoke test and its made-up data
 tools/gen-docs.mjs                         writes the AI instruction docs
 tools/gen-guide.mjs                        builds guide/*.pdf from src/features/guide/content.js (needs Playwright)
 guide/                                     the “How to use” PDFs (English, Malayalam), served offline
@@ -169,6 +178,7 @@ and [`docs/feature-check.md`](docs/feature-check.md) for where every old-app fea
 | 1.3 | Up to 20 exam countdowns, with a choice of which and how Today shows them |
 | 1.6 | Automatic Drive backup without sign-in, through your own Google Apps Script (docs/apps-script); background backup on installed app |
 | 1.5 | How to use Lakshyam: illustrated demo + PDF (English, മലയാളം) in Settings |
+| 1.26 | From the full UX review: tests stopped early no longer pull scores down (questions you never opened aren't counted; do them later); calmer Today (one session button, one day card, 3 due topics a day); a good test on a due topic counts as its revision (Undo); Self-test is the default view and one 🤖 button holds the AI actions; past tries, 🔁 asked-again and ⏳ answer-as-of marks on cards; Progress leads with blanks, steadier trend, exam target and likely range; "Why was it wrong?" tags; new **Revise** tab (Notes inside it); 🗞 monthly current-affairs quiz from the web with sources; AI sorts "Other" into topics and look-alike names can be merged (you approve); new-phone setup and papers sharing; About → What's new / what leaves this phone; browser smoke test in CI |
 | 1.25 | More trustworthy answers from weaker AIs: Malayalam style guide and standard PSC terms; Malayalam answers go to the best Malayalam AI first (Gemini) without changing your 🤖 choice; low creativity for facts; often-🚩 presets tried later as fallbacks; optional second opinion (a stronger AI checks the facts and shows corrections) |
 | 1.24 | Out-of-date AI facts: every AI request knows today's date and marks facts that change "⚠ verify"; current-affairs questions are looked up on trusted websites first (Explain, Related facts, Ask AI) with sources; "🌐 Check on the web" on every AI answer and "🌐 Recheck with the web" on the test analysis; Settings → AI switch |
 | 1.23 | 📱 Screen time from your Digital Wellbeing / Samsung screenshot (or PDF): AI reads it, you check it and tap how much of each app (20 min+) was study; study / needed / wasted per day, weekly figures, a limit from your own baseline, if–then plan, app-timer tip; in the day, Today card and weekly report. Study diary: swipe between days; All daily entries by week or month, as a list or one day at a time |

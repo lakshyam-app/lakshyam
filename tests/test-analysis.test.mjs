@@ -14,7 +14,7 @@ const attempt = {
   marking: { pos: 1, negNum: 1, negDen: 3 }, counts: { correct: 1, wrong: 1, unanswered: 1, total: 3 },
   answers: [
     { questionId: "a", selected: 1, correct: 0, isCorrect: false, graded: true, timeMs: 4000, guessed: true },
-    { questionId: "b", selected: null, correct: 1, isCorrect: false, graded: true, timeMs: 0 },
+    { questionId: "b", selected: null, correct: 1, isCorrect: false, graded: true, timeMs: 0, opened: true },
     { questionId: "c", selected: 1, correct: 1, isCorrect: true, graded: true, timeMs: 12000 }
   ]
 };

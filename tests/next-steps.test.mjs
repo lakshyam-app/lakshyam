@@ -23,7 +23,7 @@ test("tagged next steps are read; tags are hidden in the text", () => {
 
 test("the AI is told the weak topics and the missed questions", () => {
   const qs = { a: { text: "Who led Vaikom?", options: ["Kelappan", "T K Madhavan"], answerIndex: 1, topicId: "t1" }, b: { text: "Year?", options: ["1924", "1930"], answerIndex: 0, topicId: "t1" }, c: { text: "Capital?", options: ["X", "Y"], answerIndex: 0, topicId: "t2" } };
-  const a = { answers: [{ questionId: "a", graded: true, isCorrect: false, selected: 0, correct: 1 }, { questionId: "b", graded: true, isCorrect: false, selected: null, correct: 0 }, { questionId: "c", graded: true, isCorrect: true, selected: 0, correct: 0 }] };
+  const a = { answers: [{ questionId: "a", graded: true, isCorrect: false, selected: 0, correct: 1 }, { questionId: "b", graded: true, isCorrect: false, selected: null, correct: 0, opened: true }, { questionId: "c", graded: true, isCorrect: true, selected: 0, correct: 0 }] };
   const ctx = contextOf(a, { questionOf: (id) => qs[id], topicOf: (id) => ({ id, name: id === "t1" ? "Renaissance" : "Geo", subjectId: "s" }), subjectOf: () => ({ name: "History" }) });
   assert.deepEqual(ctx.topics.map((x) => [x.key, x.path]), [["T1", "History › Renaissance"]]);
   assert.equal(ctx.missed[0], "- [T1] Who led Vaikom? → right answer: T K Madhavan");

@@ -4,7 +4,7 @@
    (Banks live in banks.js.) */
 import { openedFrom } from "../../core/back.js";
 import { html, onAction } from "../../core/dom.js";
-import { t, dateLocale } from "../../core/i18n.js";
+import { t, dateLocale, formatNumber } from "../../core/i18n.js";
 import { go, goBack } from "../../core/router.js";
 import { openSheet } from "../../core/sheet.js";
 import { onLongPress } from "../../core/longpress.js";
@@ -12,16 +12,20 @@ import { runFlow, chooseAction, askText, confirmAction } from "../../core/dialog
 import { toast } from "../../core/toast.js";
 import * as store from "../../data/store.js";
 import * as mut from "../../data/mutations.js";
-import { startImport } from "../import/import-flow.js";
-import { mountQuestions, visibleQuestions } from "../question/list.js";
+import * as tests from "../../data/tests.js";
+import { setupPanel, setupHandlers } from "../import/setup.js";
+import { mountQuestions, visibleQuestions, lacksAnswer } from "../question/list.js";
 import { copyQuestions } from "../question/copy.js";
 import { noteBlock, editNote, openNote } from "../notes/note-editor.js";
 import { topicMenu, labelFor, labelDot, LABELS, renameTopicFlow, renameSubjectFlow, markStudied } from "./topic-actions.js";
 import { addPaperFlow, answerKeyFlow } from "./paper-files.js";
 import { banksRows } from "./banks.js";
+import { lookAlikes, lookAlikeSheet } from "./tidy.js";
 import { openStartTest } from "../test/start-sheet.js";
 import { contentSwitch, contentHandler, renderAiPanel, renderCardsPanel, renderPdfNotesPanel, aiQuestions, cardsOf, pdfNotesOf } from "../ai/content.js";
 import { generateQuestions, topicStrategy, viewStrategy } from "../ai/ai-actions.js";
+import { openCaQuiz } from "../ai/ca-quiz.js";
+import { isCaSubject } from "../../domain/ca-quiz.js";
 import { strategyFor } from "../../data/strategy.js";
 import { plainPreview } from "../../domain/text.js";
 import { testsFor } from "../progress/progress.js";
@@ -29,6 +33,8 @@ import { pdfMenuItem } from "../pdfs/pdfs.js";
 import { can } from "../../core/entitlements.js";
 import { nameHtml, label as nameLabel } from "../../core/names.js";
 import { onSwipe } from "../../core/swipe.js";
+import { examYear } from "../../domain/current.js";
+import { maxScore } from "../../domain/testing.js";
 
 /** ▶ Practice from a listing: the questions as shown (exam filter and sort applied). */
 export function practice(key, questions, scope, keepOrder = false) {
@@ -47,12 +53,11 @@ export const chev = html`<svg class="chev-r" viewBox="0 0 24 24" aria-hidden="tr
 const dotsIcon = html`<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18.5" cy="12" r="1.4"/></svg>`;
 
 function emptyLibrary(container) {
-  container.innerHTML = html`<section class="empty">
+  container.innerHTML = html`<section class="library-empty">
     <h1>${t("library.emptyTitle")}</h1>
-    <p>${t("library.emptyBody")}</p>
-    <button type="button" class="btn" data-action="import">${t("today.importButton")}</button>
+    ${setupPanel()}
   </section>`;
-  onAction(container, { import: startImport });
+  onAction(container, setupHandlers);
 }
 
 const matches = (q, ...texts) => !q || texts.some((s) => String(s || "").toLowerCase().includes(q));
@@ -220,22 +225,44 @@ function listMenu(listId, syllabusId) {
 
 function rowsFor(view, syllabusId, q) {
   if (view === "subjects") {
-    return store.subjectsWithCounts(syllabusId).filter((x) => matches(q, x.subject.name, x.subject.nameMl)).map((x) => html`
+    const rows = store.subjectsWithCounts(syllabusId).filter((x) => matches(q, x.subject.name, x.subject.nameMl)).map((x) => html`
       <button type="button" class="row" data-action="open" data-to="subject" data-id="${x.subject.id}">
         <span class="row-main"><span class="row-title">${nameHtml(x.subject)}</span></span>
         <span class="row-count">${x.count}</span>${chev}
       </button>`);
+    // Subjects or topics that look like the same thing twice: a quiet row at the end to merge them (it asks first).
+    const alike = q ? 0 : lookAlikes(store.syllabi().find((s) => s.id === syllabusId) || store.currentSyllabus()).n;
+    if (alike) rows.push(html`<button type="button" class="row alike-link" data-action="alike"><span class="row-main"><span class="row-title">${t("alike.row", { n: alike })}</span><span class="row-sub">${t("alike.rowSub")}</span></span>${chev}</button>`);
+    return rows;
   }
   if (view === "topics") {
     return topicEntries(syllabusId).filter((r) => matches(q, r.topic.name, r.topic.nameMl, r.subject?.name, r.subject?.nameMl)).map(topicRow);
   }
   if (view === "banks") return banksRows(syllabusId, q);
-  return store.papersOf(syllabusId).filter((p) => matches(q, p.name, p.postName)).map((p) => html`
-    <button type="button" class="row" data-action="open" data-to="paper" data-id="${p.id}">
-      <span class="row-main"><span class="row-title">${p.name}</span>
-        ${p.postName ? html`<span class="row-sub">${p.postName}</span>` : ""}</span>
+  // Each paper by what it was for (the post), with its code and year, whether you've done it and your best,
+  // and how many of its questions still have no answer key.
+  const done = new Map();
+  store.attemptsOf(syllabusId).filter((a) => a.status !== "in_progress" && a.scope?.type === "paper").forEach((a) => {
+    const x = done.get(a.scope.ref) || { n: 0, best: null };
+    x.n++;
+    const max = maxScore(a.counts || { correct: 0, wrong: 0, unanswered: 0 }, a.marking);
+    const per100 = max > 0 ? (a.netScore / max) * 100 : null;
+    if (per100 !== null && (x.best === null || per100 > x.best)) x.best = per100;
+    done.set(a.scope.ref, x);
+  });
+  return store.papersOf(syllabusId).filter((p) => matches(q, p.name, p.postName)).map((p) => {
+    const year = examYear(p.name);
+    const d = done.get(p.id);
+    const noKey = store.questionsOfPaper(p.id).filter(lacksAnswer).length;
+    const sub = [p.postName ? p.name : null, year,
+      d ? t("papers.doneBest", { n: d.n, best: formatNumber(Math.round(d.best * 10) / 10) }) : t("papers.notDone"),
+      noKey ? t("papers.noKey", { n: noKey }) : null].filter((x) => x !== null && x !== "").join(" · ");
+    return html`<button type="button" class="row paper-row ${d ? "is-done" : ""}" data-action="open" data-to="paper" data-id="${p.id}">
+      <span class="row-main"><span class="row-title">${d ? html`<span class="done-tick" aria-hidden="true">✓</span> ` : ""}${p.postName || p.name}</span>
+        <span class="row-sub">${sub}</span></span>
       <span class="row-count">${p.questionCount}</span>${chev}
-    </button>`);
+    </button>`;
+  });
 }
 
 export const libraryScreen = {
@@ -297,6 +324,8 @@ export const libraryScreen = {
       "list-menu": () => listMenu(topicView.chip, syllabus.id),
       "note-edit": () => openNote("list", topicView.chip, store.byId("topicLists", topicView.chip)?.name || ""),
       "add-paper": () => addPaperFlow(),
+      alike: () => lookAlikeSheet(),
+      "ca-quiz": () => openCaQuiz(),
       "new-bank": () => runFlow(async () => {
         const name = await askText({ title: t("banks.newBank"), placeholder: t("banks.namePlaceholder"), confirmLabel: t("common.create") });
         if (!name) return;
@@ -388,9 +417,11 @@ export const subjectScreen = {
           { id: "rename", label: t("subjectMenu.rename") },
           { id: "copy", label: t("listing.copy") },
           { id: "note", label: t("notes.myNote") },
-          can("pdfs") ? { id: "pdfs", label: `📄 ${t("pdf.title")}` } : null
+          can("pdfs") ? { id: "pdfs", label: `📄 ${t("pdf.title")}` } : null,
+          can("ai") && isCaSubject(subject) ? { id: "ca", label: `🗞 ${t("ca.title")}` } : null
         ] });
         if (choice === "pdfs") return go("pdfs", { type: "subject", id });
+        if (choice === "ca") return openCaQuiz();
         if (choice === "rename") return renameSubjectFlow(subject);
         if (choice === "copy") return copyQuestions(visibleQuestions(`subject-all:${id}`, store.questionsFor({ syllabusId: syllabus.id, subjectId: id })), subject.name);
         if (choice === "note") return openNote("subject", id, subject.name);
@@ -454,7 +485,7 @@ export const topicScreen = {
       return;
     }
     container.innerHTML = html`${head}
-    ${done.length ? html`<button type="button" class="link" data-action="tests">${t("practice.testsDone", { n: done.length, last: Math.round((done[0].counts.correct / Math.max(1, done[0].counts.total)) * 100) })} ›</button>` : ""}
+    ${done.length ? html`<button type="button" class="link" data-action="tests">${t("practice.testsDone", { n: done.length, last: Math.round((done[0].counts.correct / Math.max(1, done[0].counts.correct + done[0].counts.wrong)) * 100) })} ›</button>` : ""}
     <div class="actions-row">
       ${questions.length ? html`<button type="button" class="btn" data-action="practice">${playIcon} ${t("practice.button")}</button>` : ""}
       <button type="button" class="btn btn-quiet" data-action="studied">${t("studied.button")}</button>
@@ -464,14 +495,17 @@ export const topicScreen = {
       <span class="note-label">🎯 ${t("ai.strategySaved")}${strat.at ? ` · ${new Date(strat.at).toLocaleDateString(dateLocale())}` : ""}${strat.by ? ` · 🤖 ${strat.by}` : ""} · ${t("notes.tapToRead")}</span>
       <span class="note-text">${plainPreview(strat.text, 200)}</span></button>` : ""}
     ${noteBlock("topic", id)}
+    ${topic.isFallback && can("ai") && questions.length >= 2 && store.topicsOf(topic.subjectId).some((x) => !x.isFallback) ? html`<button type="button" class="row tidy-row" data-action="tidy">
+      <span class="row-main"><span class="row-title">${t("tidy.button", { n: questions.length })}</span><span class="row-sub">${t("tidy.buttonSub")}</span></span>${chev}</button>` : ""}
     <div id="qHost"></div>`;
     const key = `topic:${id}`;
     onAction(container, {
       ...backHandler, ...contentHandler,
       studied: () => markStudied(syllabus.id, topic),
+      tidy: () => go("tidy", { id }),
       strategy: () => topicStrategy(topic),
       "strategy-view": () => viewStrategy(topic),
-      practice: () => practice(key, questions, { type: "topic", ref: id, label: topic.name }),
+      practice: () => practice(key, questions, { type: "topic", ref: id, label: tests.topicLabel(topic) }),
       tests: () => (done.length === 1 ? go("result", { id: done[0].id, ...openedFrom("topic", { id }) }) : go("tests", { type: "topic", ref: id, ...openedFrom("topic", { id }) })),
       "note-edit": () => openNote("topic", id, topic.name),
       menu: () => topicMenu(topic, { onPage: true, extra: [

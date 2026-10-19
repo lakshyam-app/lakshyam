@@ -18,11 +18,11 @@ import { runFlow, chooseAction, confirmAction } from "../../core/dialogs.js";
 import { richText, letterFor } from "../../domain/text.js";
 import { clock } from "../../domain/testing.js";
 import * as store from "../../data/store.js";
-import { label as nameLabel } from "../../core/names.js";
 import * as mut from "../../data/mutations.js";
 import * as tests from "../../data/tests.js";
 import { mountCards, setPlace } from "../question/pager.js";
 import { addLeave } from "../../domain/focus.js";
+import { examYear } from "../../domain/current.js";
 import { speakQuestion, speakButtonOn } from "../question/speak.js";
 
 const SAVE_EVERY_MS = 10000;
@@ -38,10 +38,12 @@ function testCard(q, i, run) {
   const sel = run.answers[q.id];
   const guessed = Boolean(run.guesses[q.id]);
   const flagged = Boolean(store.questionState(q.id)?.flagged);
-  // Which paper (and the post it was for), then subject and topic — as on question lists.
-  const where = [paper?.name, paper?.postName, nameLabel(store.subject(q.subjectId)), nameLabel(store.topic(q.topicId))].filter(Boolean).join(" · ");
+  // One short line: the year and the post it was asked for. The subject and topic aren't shown while you
+  // answer (they'd hint at the answer in a mixed test); the result shows everything.
+  const year = examYear(paper?.name);
+  const where = [year, paper?.postName || paper?.name].filter(Boolean).join(" · ");
   return html`<article class="qcard tcard ${sel !== undefined ? "is-answered" : ""}" data-qid="${q.id}" data-i="${i}" lang="${q.lang === "ml" ? "ml" : "en"}">
-    <header class="qcard-meta"><span class="qcard-where"><strong>${t("test.qOf", { n: i + 1, of: run.questionIds.length })}</strong>${q.number ? ` · ${t("question.paperNumber", { n: q.number })}` : ""}<br>${where}</span>
+    <header class="qcard-meta"><span class="qcard-where"><strong>${t("test.qOf", { n: i + 1, of: run.questionIds.length })}</strong>${q.number ? ` · ${t("question.paperNumber", { n: q.number })}` : ""}${where ? html`<span class="tcard-where" title="${paper?.name || ""}">${where}</span>` : ""}</span>
       <span class="qcard-badges">${speakButtonOn() ? html`<button type="button" class="icon-sm speak" data-action="speak" data-speak-q="${q.id}" aria-pressed="false" aria-label="${t("speak.read")}">🔊</button>` : ""}<button type="button" class="icon-sm ${flagged ? "on" : ""}" data-action="flag" aria-pressed="${String(flagged)}" aria-label="${t("question.flag")}">${star(flagged)}</button></span>
     </header>
     <div class="qtext">${richText(q.text)}</div>
@@ -91,12 +93,12 @@ export const testScreen = {
 
     container.innerHTML = html`<section class="test">
       <header class="test-bar">
-        ${timed ? html`<button type="button" class="test-timer" data-action="pause" aria-label="${t("test.pause")}"><span class="tt-icon"></span><span id="tClock">${clock(run.remainingMs)}</span></button>` : html`<button type="button" class="test-timer" data-action="pause" aria-label="${t("test.pause")}"><span class="tt-icon"></span><span>${t("test.pause")}</span></button>`}
+        ${timed ? html`<button type="button" class="test-timer" data-action="pause" aria-label="${t("test.pause")}"><span class="tt-icon"></span><span id="tClock">${clock(run.remainingMs)}</span></button>` : html`<button type="button" class="test-timer" data-action="pause" aria-label="${t("test.pause")}"><span class="tt-icon"></span><span class="tt-label">${t("test.pause")}</span></button>`}
         <span class="test-count" id="tCount"></span>
         <button type="button" class="icon-btn" data-action="menu" aria-label="${t("common.more")}">⋯</button>
         <button type="button" class="btn btn-small" data-action="submit">${t("test.submit")}</button>
       </header>
-      <p class="hint test-title">${attempt.scope?.label || ""}</p>
+      <p class="hint test-title">${tests.testLabel(attempt)}</p>
       <div id="tBody"></div>
       <div class="pause-cover" id="tPause" hidden><div><h2>${t("test.paused")}</h2><p class="hint">${t("test.pausedHint")}</p>
         <button type="button" class="btn" data-action="resume">${t("test.resume")}</button></div></div>
@@ -113,6 +115,10 @@ export const testScreen = {
     let lastTick = null;   // when time was last added (null = not running)
     let lastSave = Date.now();
     let finished = false;
+    // Questions that have been on screen: a blank you never opened isn't counted in your stats.
+    run.seen ||= {};
+    const markSeen = (id) => { if (id) run.seen[id] = true; };
+    markSeen(activeId);
     const running = () => !run.paused && !document.hidden && !finished;
     function account() {
       const now = performance.now();
@@ -123,7 +129,16 @@ export const testScreen = {
       }
       lastTick = running() ? now : null;
     }
-    function setActive(id) { if (id && id !== activeId) { account(); activeId = id; run.index = Math.max(0, run.questionIds.indexOf(id)); } }
+    function setActive(id) { markSeen(id); if (id && id !== activeId) { account(); activeId = id; run.index = Math.max(0, run.questionIds.indexOf(id)); } }
+    // Scroll layout: every card at least half on screen when scrolling stops counts as seen.
+    const markVisible = () => {
+      const h = window.innerHeight;
+      body.querySelectorAll(".tcard").forEach((el) => {
+        const r = el.getBoundingClientRect();
+        const shown = Math.min(r.bottom, h) - Math.max(r.top, 0);
+        if (shown > 0 && shown >= 0.5 * Math.min(r.height, h)) markSeen(el.dataset.qid);
+      });
+    };
     const save = () => { account(); lastSave = Date.now(); return tests.saveRun(attempt, run); };
     // Leaving or discarding: back where the test was started (Today if that isn't known).
     const leaveTo = () => (run.from ? goBack(run.from.screen, run.from.params) : go("today"));
@@ -167,12 +182,14 @@ export const testScreen = {
           if (dist < bestDist) { bestDist = dist; best = el; }
         });
         if (best) setActive(best.dataset.qid);
+        markVisible();
       }, 150);
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     if (attempt.layout === "scroll" && run.index > 0) {
       requestAnimationFrame(() => body.querySelector(`[data-i="${run.index}"]`)?.scrollIntoView({ block: "center" }));
     }
+    if (attempt.layout === "scroll") requestAnimationFrame(() => setTimeout(markVisible, 300));
 
     // Focus check: when you come back, the time you were away is added (also after the app was closed).
     const focusOn = store.setting("focusCheck", true) !== false;
@@ -202,9 +219,11 @@ export const testScreen = {
       if (finished) return;
       account();
       if (!auto) {
-        const left = run.questionIds.length - Object.keys(run.answers).length;
-        if (left > 0) {
-          const ok = await runFlow(() => confirmAction({ title: t("test.submitTitle"), body: t("test.submitLeft", { n: left }), confirmLabel: t("test.submit") }));
+        const blank = run.questionIds.filter((qid) => run.answers[qid] === undefined);
+        const unseen = blank.filter((qid) => !run.seen?.[qid] && !(run.timeSpent?.[qid] > 0)).length;
+        if (blank.length > 0) {
+          const msg = unseen ? t("test.submitUnseen", { n: blank.length, unseen }) : t("test.submitLeft", { n: blank.length });
+          const ok = await runFlow(() => confirmAction({ title: t("test.submitTitle"), body: msg, confirmLabel: t("test.submit") }));
           if (!ok) return;
         }
       }
@@ -279,7 +298,7 @@ export const testScreen = {
       resume: () => { account(); run.paused = false; account(); drawCount(); },
       submit: () => submit(false),
       menu: () => runFlow(async () => {
-        const choice = await chooseAction({ title: attempt.scope?.label || t("test.title"), items: [
+        const choice = await chooseAction({ title: tests.testLabel(attempt) || t("test.title"), items: [
           { id: "size", label: `Aa ${t("test.textSize")}`, sub: t(`setx.sizes.${store.setting("textSize", "m")}`) },
           { id: "leave", label: t("test.leave"), sub: t("test.leaveHint") },
           { id: "discard", label: t("test.discard"), danger: true }

@@ -10,6 +10,8 @@ import { buildImportPlan } from "../../data/import-legacy.js";
 import { isLakshyamBackup, readBackup, downloadBackup } from "../../data/backup.js";
 import * as store from "../../data/store.js";
 import { takeSnapshot, logImport } from "../../data/snapshots.js";
+import { isPapersPack } from "../../data/share.js";
+import { reviewPapersPack } from "../settings/share-ui.js";
 
 /** Entry point for every "Import…" / "Restore…" button. */
 export async function startImport() {
@@ -21,6 +23,8 @@ export async function startImport() {
 
   if (file.error) return showMessage(file.error === "not-json" ? t("import.notJson") : t("import.readFailed"));
   if (isLakshyamBackup(file.json)) return reviewRestore(file);
+  // Papers shared from another phone (no personal data): they're only added, never replace anything.
+  if (isPapersPack(file.json)) return reviewPapersPack(file);
 
   const plan = buildImportPlan(file.json);
   if (!plan.ok) return showMessage(t("import.notBackup"));

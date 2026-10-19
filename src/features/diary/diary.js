@@ -35,7 +35,9 @@ function factsOf(syllabus, date) {
 
 /* ---------- Today card ---------- */
 
-export function todayDiaryCard(syllabus) {
+/** Today's card. top: the goal ring and streak (Today puts them here, so there is one card for the day);
+    with the goal ring shown, the "questions" line isn't repeated in the list. */
+export function todayDiaryCard(syllabus, { top = "", goalShown = false } = {}) {
   if (!syllabus || store.setting("showDiary", true) === false) return "";
   const today = T.isoDate();
   const { f, score, level } = factsOf(syllabus, today);
@@ -49,9 +51,10 @@ export function todayDiaryCard(syllabus) {
   const item = (done, text, sub = "") => html`<li class="${done ? "done" : ""}"><span class="ck">${done ? "✓" : ""}</span><span class="ck-main"><span>${text}</span>${sub ? html`<span class="hint">${sub}</span>` : ""}</span></li>`;
   return html`<section class="diary-card lv-${level}">
     <div class="dc-head"><h2>${t("diary.todayTitle")}</h2><span class="score-pill lv-${level}" title="${t("diary.scoreTitle")}">${score}</span></div>
+    ${top ? html`<div class="dc-top">${top}</div>` : ""}
     <ul class="checklist">
       ${list.items.map((i) => item(i.done, html`${icon(i.block)} ${blockTitle(i.block)}`, `${fmt(i.block.start)}${i.topicIds.length ? ` · ${t("diary.topicsTicked", { n: i.topicIds.length })}` : i.skipped ? ` · ${t("diary.skipped")}` : ""}`))}
-      ${item(f.questions >= f.goal, t("diary.questions", { n: f.questions, goal: f.goal }), f.questions ? t("diary.accuracy", { pct: Math.round((f.correct / Math.max(1, f.questions)) * 100) }) : "")}
+      ${goalShown ? "" : item(f.questions >= f.goal, t("diary.questions", { n: f.questions, goal: f.goal }), f.questions ? t("diary.accuracy", { pct: Math.round((f.correct / Math.max(1, f.questions)) * 100) }) : "")}
       ${item(f.topics > 0, t("diary.topics", { n: f.topics }))}
       ${item(Boolean(r), t("diary.reviewItem"), r ? `${D.MOOD_FACE[r.mood]} ${t(`diary.mood.${r.mood}`)}` : t("diary.reviewWhen"))}
     </ul>
@@ -137,7 +140,7 @@ export const diaryScreen = {
         ${Array.from({ length: lead }, () => html`<span></span>`)}
         ${cells.map((c) => html`<button type="button" class="cal-day lv-${c.level} ${c.d === today ? "is-today" : ""}" data-action="day" data-d="${c.d}" ${c.level === "future" ? "disabled" : ""}>
           <span class="cd-n">${Number(c.d.slice(8))}</span><span class="cd-m">${c.mood ? D.MOOD_FACE[c.mood] : ""}</span></button>`)}</div>
-      <div class="legend">${["great", "good", "fair", "low", "missed", "none"].map((l) => html`<span><i class="lv-${l}"></i>${t(`diary.level.${l}`)}</span>`)}</div>
+      <div class="lv-legend">${["great", "good", "fair", "low", "missed", "none"].map((l) => html`<span><i class="lv-${l}"></i>${t(`diary.level.${l}`)}</span>`)}</div>
       <p class="hint">${t("diary.scoreExplain")}</p>
       <button type="button" class="btn btn-quiet wide" data-action="entries" data-m="${month}">📖 ${t("diary.entries")}</button>
       <h2 class="section-title">${t("diary.reports")}</h2>
@@ -180,8 +183,8 @@ function reportCard(syllabus, kind, from, to, title, { partial = false, key = fr
   return html`<section class="report-card">
     <h3>${kind === "week" ? "🗓" : "📅"} ${title}</h3>
     ${statsHtml(s)}
-    ${kind === "week" ? screenReport(from, to, { current: partial }) : ""}
     ${s.best && s.best.score > 0 ? html`<p class="hint">${t("diary.bestDay", { day: fmtDate(s.best.date), score: s.best.score })}</p>` : ""}
+    ${kind === "week" ? screenReport(from, to, { current: partial }) : ""}
     ${saved ? reportBody(saved) : ""}
     ${!partial && !saved && !s.studied && !s.reviewed && !scDays ? html`<p class="hint">${t("diary.nothingThen")}</p>` : ""}
     ${!partial && can("ai") && (s.studied || s.reviewed || saved || scDays) ? html`<button type="button" class="btn ${saved ? "btn-quiet" : ""}" data-action="ai-report" data-kind="${kind}" data-from="${from}" data-to="${to}" data-key="${key}">🤖 ${saved ? t("diary.rewrite") : t(`diary.write.${kind}`)}</button>` : ""}

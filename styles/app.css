@@ -152,7 +152,7 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .empty p { color: var(--muted); }
 
 /* ---------- Today ---------- */
-.today { display: grid; gap: 20px; padding-top: 8px; }
+.today { display: grid; gap: 16px; padding-top: 8px; }
 .greeting { font-size: 1.75rem; }
 .goal { display: flex; align-items: center; gap: 18px; }
 .goal-ring { width: 112px; height: 112px; flex: none; stroke-linecap: round; }
@@ -576,7 +576,8 @@ body.in-test .pager-bar { bottom: 0; padding-bottom: calc(8px + env(safe-area-in
 .result-line { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; font-weight: 600; font-size: 0.9375rem; }
 .result-line.right { color: var(--ok); }
 .result-line.wrong { color: var(--danger); }
-.result-line.blank, .result-line.ungraded { color: var(--muted); }
+.result-line.blank, .result-line.ungraded, .result-line.unopened { color: var(--muted); }
+.result-line.unopened { font-weight: 500; }
 .result-line .tag { font-weight: 500; color: var(--muted); font-size: 0.8125rem; padding: 1px 8px; border-radius: 999px; background: var(--brand-soft); }
 
 /* syllabus settings */
@@ -601,8 +602,8 @@ body.in-test .pager-bar { bottom: 0; padding-bottom: calc(8px + env(safe-area-in
 .delta.down { color: var(--danger); }
 .info summary { color: var(--brand); font-size: 0.875rem; min-height: 32px; cursor: pointer; }
 .info p { color: var(--muted); font-size: 0.875rem; margin-top: 4px; }
-.facts { display: flex; flex-wrap: wrap; gap: 4px 16px; color: var(--muted); font-size: 0.9375rem; }
-.facts strong { color: var(--text); font-variant-numeric: tabular-nums; }
+.fact-line { display: flex; flex-wrap: wrap; gap: 4px 16px; color: var(--muted); font-size: 0.9375rem; }
+.fact-line strong { color: var(--text); font-variant-numeric: tabular-nums; }
 .trend { margin-top: 6px; }
 .spark { display: block; }
 .spark-line { fill: none; stroke: var(--brand); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
@@ -620,10 +621,10 @@ body.in-test .pager-bar { bottom: 0; padding-bottom: calc(8px + env(safe-area-in
 .mb-right { background: var(--c-earned); }
 .mb-wrong { background: var(--c-lost); }
 .mb-blank { background: var(--c-track); }
-.legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.8125rem; color: var(--muted); }
-.legend li { display: inline-flex; align-items: center; gap: 6px; }
-.swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
-.swatch.mb-blank { outline: 1px solid var(--line); }
+.mb-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.8125rem; color: var(--muted); }
+.mb-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.mb-swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; flex: none; }
+.mb-swatch.mb-blank { background: var(--c-track); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--muted) 45%, transparent); }
 .accbar { display: block; height: 6px; margin-top: 6px; border-radius: 3px; background: var(--c-track); max-width: 220px; }
 .accbar > span { display: block; height: 100%; border-radius: 0 3px 3px 0; }
 .accbar.b-good > span { background: var(--c-good); }
@@ -653,8 +654,7 @@ body.in-test .pager-bar { bottom: 0; padding-bottom: calc(8px + env(safe-area-in
 svg.spark { width: 100%; height: 56px; }
 
 /* ======================= Phase 5: Today ======================= */
-.today { gap: 16px; }
-.habits { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 4px 14px; }
+.habits { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 4px 14px; min-width: 0; }
 .habits .hint { grid-column: 1 / -1; }
 .streak { font-weight: 700; font-size: 1.0625rem; font-variant-numeric: tabular-nums; }
 .week { display: flex; gap: 6px; justify-content: flex-end; }
@@ -848,7 +848,9 @@ table.report td { text-align: right; font-weight: 600; padding: 4px 0; }
 
 /* ---------- 0.10: study diary ---------- */
 :root { --lv-none: #E4E9E6; --lv-missed: #F3C9C4; --lv-low: #F2DFA9; --lv-fair: #CDE6C4; --lv-good: #8CCB8F; --lv-great: #3E9A57; }
-:root[data-theme="dark"] { --lv-none: #222C29; --lv-missed: #5A2B27; --lv-low: #5A4A1E; --lv-fair: #2E4A33; --lv-good: #3D7A4B; --lv-great: #58B873; }
+:root[data-theme="dark"] { --lv-none: #252F2C; --lv-missed: #8A3A33; --lv-low: #86691C; --lv-fair: #2E6A44; --lv-good: #3A8C55; --lv-great: #6CCB86; }
+/* dark mode: the six effort colours differ clearly in lightness and hue; dark text on the brightest */
+:root[data-theme="dark"] .cal-day.lv-great, :root[data-theme="dark"] .ds-cell.lv-great { color: #0F1F16; }
 .lv-none { --lv: var(--lv-none); } .lv-missed { --lv: var(--lv-missed); } .lv-low { --lv: var(--lv-low); }
 .lv-fair { --lv: var(--lv-fair); } .lv-good { --lv: var(--lv-good); } .lv-great { --lv: var(--lv-great); } .lv-future { --lv: transparent; }
 .diary-card { margin: 8px 0 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius-panel); background: var(--surface); }
@@ -863,7 +865,7 @@ table.report td { text-align: right; font-weight: 600; padding: 4px 0; }
 .checklist li.done .ck-main > span:first-child { color: var(--muted); }
 .ck-main { display: flex; flex-direction: column; }
 .day-strip { display: grid; grid-template-columns: repeat(14, 1fr); gap: 4px; width: 100%; margin-top: 10px; padding: 0; border: 0; background: none; }
-.ds-cell { aspect-ratio: 1; border-radius: 5px; background: var(--lv); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; line-height: 1; }
+.ds-cell { height: 26px; border-radius: 5px; background: var(--lv); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; line-height: 1; }
 .ds-cell.is-today { outline: 2px solid var(--brand); outline-offset: 1px; }
 .dc-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
 .mood-ask { margin: 10px 0 4px; padding: 10px; border-radius: 12px; background: var(--brand-soft); text-align: center; }
@@ -887,8 +889,8 @@ table.report td { text-align: right; font-weight: 600; padding: 4px 0; }
 .cal-day .cd-n { font-size: 0.8125rem; font-weight: 600; }
 .cal-day .cd-m { font-size: 0.875rem; line-height: 1; min-height: 0.875rem; }
 .cal-day:disabled { opacity: 0.35; }
-.legend { display: flex; flex-wrap: wrap; gap: 8px 12px; margin: 10px 0; font-size: 0.75rem; color: var(--muted); }
-.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: var(--lv); margin-right: 4px; vertical-align: -1px; }
+.lv-legend { display: flex; flex-wrap: wrap; gap: 8px 12px; margin: 10px 0; font-size: 0.75rem; color: var(--muted); }
+.lv-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: var(--lv); margin-right: 4px; vertical-align: -1px; }
 .report-card { margin: 12px 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius-panel); background: var(--surface); }
 .report-card h3 { margin-top: 0; }
 .report-text { margin: 8px 0; }
@@ -901,7 +903,6 @@ table.report td { text-align: right; font-weight: 600; padding: 4px 0; }
 .row-main, .ag-main, .ck-main { min-width: 0; }
 .progress, .today, .settings { grid-template-columns: minmax(0, 1fr); }
 .insights li > * { min-width: 0; overflow-wrap: anywhere; }
-.ds-cell { aspect-ratio: auto; height: 26px; }
 .sheet:focus { outline: none; }
 
 /* ======================= 1.1: question card that draws the eye ======================= */
@@ -1107,10 +1108,10 @@ table.report td { text-align: right; font-weight: 600; padding: 4px 0; }
 .map-bar { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--c-track); gap: 2px; }
 .map-bar > span { display: block; }
 .map-filters .pill { display: inline-flex; align-items: center; gap: 6px; }
-.swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; flex: none; }
+.map-swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; flex: none; }
 .mt-good { --mt: var(--c-good); } .mt-fair { --mt: var(--c-fair); } .mt-weak { --mt: var(--c-weak); } .mt-none { --mt: var(--c-track); }
-.map-bar > span, .swatch { background: var(--mt); }
-.map-bar > .mt-none, .swatch.mt-none { background: color-mix(in srgb, var(--muted) 35%, transparent); }
+.map-bar > span, .map-swatch { background: var(--mt); }
+.map-bar > .mt-none, .map-swatch.mt-none { background: color-mix(in srgb, var(--muted) 35%, transparent); }
 .map-group { display: grid; gap: 8px; }
 .map-subject { font-size: 1rem; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
 .map-subject .hint { font-weight: 400; font-size: 0.8125rem; }
@@ -1420,7 +1421,6 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .day-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .day-nav .tt-kicker { margin: 0; text-align: center; flex: 1; }
 .swipe-hint { font-size: 0.8125rem; margin: 4px 0 0; }
-.entries { display: grid; gap: 10px; }
 .entry-card { display: grid; gap: 4px; text-align: left; width: 100%; border: 1px solid var(--line); border-left: 6px solid var(--lv); border-radius: 12px; background: var(--surface); color: var(--text); font: inherit; padding: 10px 12px; }
 .entry-card.no-entry { opacity: 0.7; padding: 8px 12px; }
 .entry-card.big { padding: 14px; gap: 8px; min-height: 200px; align-content: start; }
@@ -1436,8 +1436,6 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .toolbar .segmented.small { margin: 0; }
 /* Today at 360 px in Malayalam: the goal and the habits row fit the card (they were ~17 px too wide) */
 .goal > :last-child { min-width: 0; overflow-wrap: anywhere; }
-.habits { grid-template-columns: auto minmax(0, 1fr); min-width: 0; }
-.habits .week { min-width: 0; overflow: hidden; }
 .goal, .habits { max-width: 100%; }
 .entries { display: flex; flex-direction: column; gap: 10px; }
 .entry-card { align-content: start; }
@@ -1448,3 +1446,108 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .check-box.bad { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, transparent); }
 .check-box.bad p { margin: 0 0 4px; color: var(--danger); font-weight: 600; }
 .check-box ul { margin: 0; padding-left: 18px; }
+
+/* ======================= 1.26 ======================= */
+/* The test header fits narrow phones in Malayalam (Submit was pushed off-screen at 360 px). */
+.test-bar > * { flex: none; }
+.test-bar > .test-count { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.test-bar .btn-small { white-space: nowrap; }
+@media (max-width: 420px) {
+  :lang(ml) .test-timer .tt-label { display: none; }
+  :lang(ml) .test-timer { padding: 0 11px; }
+  :lang(ml) .test-bar .btn-small { padding-left: 12px; padding-right: 12px; }
+}
+@media (max-width: 359px) { .test-timer .tt-label { display: none; } }
+/* Streak row: the week dots stay round, today's ring is drawn inside the dot (it was clipped into "( )"),
+   and on narrow phones the week goes under the streak instead of squeezing it. */
+.wd { flex: none; }
+.wd.is-today { outline: none; box-shadow: inset 0 0 0 2px var(--text); }
+@media (max-width: 420px) { .habits { grid-template-columns: minmax(0, 1fr); } .habits .week { justify-content: flex-start; } }
+/* Library tabs: labels never spill into the next tab (Malayalam at 360 px). */
+.segmented.four > button { overflow: hidden; }
+@media (max-width: 420px) { :lang(ml) .segmented.four > button { font-size: 0.8125rem; padding-left: 2px; padding-right: 2px; } }
+/* Bigger tap areas: the difficulty chip on cards and the 14-day strip on Today (they were 26 px tall). */
+.qcard-badges .chip { min-height: 32px; position: relative; }
+.qcard-badges .chip::after { content: ""; position: absolute; inset: -5px -2px; }
+.day-strip { padding: 7px 0; margin-top: 3px; }
+/* Today (1.26): one card for the day — goal ring and streak on top of the checklist. */
+.dc-top { display: grid; gap: 12px; margin: 10px 0 8px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.dc-top .goal-ring { width: 84px; height: 84px; }
+.dc-top .habits { padding-top: 10px; border-top: 1px solid var(--line); }
+.dc-top .goal:only-child, .dc-top .habits:only-child { padding-top: 0; border-top: 0; }
+/* the session's focus topic: why, and what else you can do with it */
+.ss-focus { display: grid; gap: 2px; min-width: 0; }
+.ss-links { display: flex; flex-wrap: wrap; gap: 2px 14px; margin-top: 2px; }
+.ss-links .link.inline { min-height: 36px; font-size: 0.875rem; }
+/* quiet rows under the day card */
+.today-rows { border: 1px solid var(--line); border-radius: var(--radius-panel); background: var(--surface); overflow: hidden; }
+.today-rows .row { padding: 10px 12px 10px 14px; margin: 0; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: none; }
+.today-rows .row:last-child { border-bottom: 0; }
+/* the backup warning, at the top of Today only when nothing (or nothing recent) is backed up */
+.backup-warn { padding: 12px 14px; border-radius: var(--radius-panel); border: 1px solid color-mix(in srgb, var(--gold) 55%, var(--line)); background: color-mix(in srgb, var(--gold) 12%, var(--surface)); }
+.backup-warn p { margin: 0 0 8px; font-size: 0.9375rem; }
+.backup-warn .actions-row { margin: 0; align-items: center; gap: 12px; }
+/* Top bar: the syllabus name gets the room (with … when it's long); the AI chip is just 🤖 + language. */
+#syllabusName { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ai-top { max-width: none; padding: 0 8px; }
+.switch-row.sub-switch { margin-left: 34px; }
+/* During a test: one short meta line (year · post), never more */
+.tcard-where { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+/* A card's one column may shrink: a long one-line post name (ellipsis) made the column, and the page, wider than the screen */
+.qcard { grid-template-columns: minmax(0, 1fr); }
+.tcard .qcard-where { min-width: 0; }
+/* Question cards: your past tries, and the memory-trick button for questions you keep missing */
+.qcard-tries { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 0; font-size: 0.8125rem; color: var(--muted); }
+.qcard-tries .try { white-space: nowrap; margin-left: 6px; }
+.qcard-tries .try.r { color: var(--ok); }
+.qcard-tries .try.w { color: var(--danger); }
+.mini-chip.stubborn { border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--line)); color: var(--danger); background: var(--wrong-bg); min-height: 32px; padding: 0 10px; border-radius: 999px; font-size: 0.8125rem; }
+button.mini-chip.stubborn { cursor: pointer; }
+.paper-row .done-tick { color: var(--ok); font-weight: 700; }
+/* 🔁 asked in several papers · ⏳ answer as of a year */
+.chip-rep { background: color-mix(in srgb, var(--brand) 14%, var(--surface)); color: var(--brand); }
+.chip-asof { background: color-mix(in srgb, var(--gold) 18%, var(--surface)); color: #7A5A1A; }
+:root[data-theme="dark"] .chip-asof { color: var(--gold); }
+.rep-row { cursor: default; }
+.rep-row.is-current .row-title::after { content: " ●"; color: var(--brand); }
+/* Tidy "Other" · look-alike names */
+.tidy-row { border: 1px dashed var(--line); border-radius: 12px; padding: 10px 12px; margin: 4px 0 10px; background: var(--surface); }
+.alike-link .row-title { color: var(--brand); }
+.progress-bar { height: 8px; border-radius: 4px; background: var(--c-track); overflow: hidden; margin: 8px 0 12px; }
+.progress-bar > span { display: block; height: 100%; background: var(--brand); transition: width 300ms ease; }
+.tidy-sum { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; margin: 8px 0; font-weight: 600; }
+.tidy-list { display: grid; gap: 8px; padding-bottom: 84px; }
+.tidy-item { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.tidy-item.on { border-color: color-mix(in srgb, var(--brand) 50%, var(--line)); }
+.tidy-check { flex: none; display: flex; align-items: center; justify-content: center; min-width: 32px; min-height: 40px; }
+.tidy-check input { width: 20px; height: 20px; }
+.tidy-main { flex: 1; min-width: 0; display: grid; gap: 6px; }
+.tidy-q { margin: 0; font-size: 0.9375rem; }
+.tidy-to { width: 100%; min-height: 40px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--text); font: inherit; font-size: 0.875rem; padding: 0 8px; }
+.sticky-actions { position: fixed; left: 0; right: 0; bottom: calc(64px + env(safe-area-inset-bottom)); z-index: 11; display: flex; justify-content: flex-end; gap: 10px; padding: 10px var(--pad); background: var(--bg); border-top: 1px solid var(--line); }
+.sticky-actions .btn { white-space: nowrap; }
+.alike-row { padding: 10px 0; border-bottom: 1px solid var(--line); }
+.alike-row p { margin: 0 0 6px; }
+.alike-row .actions-row { flex-wrap: wrap; gap: 8px; margin: 0; }
+label.row.check input[type="checkbox"] { width: 20px; height: 20px; flex: none; }
+/* first screen on a new phone */
+.setup-panel .rows { margin: 4px 0 8px; }
+.setup-panel .row { min-height: 60px; }
+.library-empty { display: grid; gap: 12px; padding-top: 8px; }
+.about-list { margin: 4px 0 8px; padding-left: 1.2em; display: grid; gap: 6px; }
+.about-ver { margin: 10px 0 2px; font-weight: 600; }
+/* Progress: the target line and the attempt tip */
+.target-line, .attempt-tip { margin: 8px 0 4px; padding: 10px 12px; border-radius: 12px; background: var(--brand-soft); font-size: 0.9375rem; }
+.target-line.met { background: color-mix(in srgb, var(--ok) 14%, var(--surface)); }
+/* "Why was it wrong?" tags on a wrong answer in a test's result */
+.why-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; }
+.why-chip { min-height: 32px; padding: 0 10px; border-radius: 999px; border: 1px dashed var(--line); background: none; color: var(--muted); font: inherit; font-size: 0.8125rem; }
+.why-chip.on { border-style: solid; border-color: var(--danger); color: var(--danger); background: var(--wrong-bg); font-weight: 600; }
+/* Revise tab: what's due today in one card, then the places you revise from */
+.revise { display: grid; gap: 4px; }
+.revise > .hint { margin: 0 0 8px; }
+.revise-due { margin: 4px 0 8px; gap: 4px; }
+.revise-due .kicker { margin: 0; }
+.revise-none { margin: 4px 0; color: var(--ok) !important; font-weight: 600; }
+/* Current affairs quiz: month and region chips wrap; the event date under each question */
+.ca-months .pill, .ca-regions .pill { min-height: 40px; }

@@ -5,11 +5,29 @@
 export const SHRINK_K = 5;   // small samples are pulled towards your overall accuracy
 export const LOW_N = 5;      // fewer answers than this = "few answers"
 
-/** Answer records from submitted tests, oldest test first. */
+/**
+ * A question left blank that you never opened: a test you ended early leaves the rest unseen.
+ * Such blanks are not counted anywhere (not "left", not "still wrong"): you didn't see them.
+ * - When the timer ran out (auto-submitted), unreached questions do count as left, as in the exam.
+ * - Tests taken in Lakshyam record this (`opened`); older Lakshyam tests are told by their time
+ *   (every question you were on has time). Tests imported from PSC Exam Vault can't tell: unchanged.
+ */
+export function notOpened(r, a) {
+  if (!r || !r.graded || (r.selected !== null && r.selected !== undefined)) return false;
+  if (a?.autoSubmitted) return false;
+  if (typeof r.opened === "boolean") return !r.opened;
+  if (a?.oldId) return false;
+  return !(r.timeMs > 0);
+}
+
+/** The answers of a test that count (all but the blanks you never opened). */
+export const countedAnswers = (a) => (a?.answers || []).filter((r) => !notOpened(r, a));
+
+/** Answer records from submitted tests, oldest test first (blanks you never opened are left out). */
 export function answerRecords(attempts) {
   return attempts.filter((a) => a.status !== "in_progress")
     .slice().sort((a, b) => (a.submittedAt || 0) - (b.submittedAt || 0))
-    .flatMap((a) => a.answers.map((r) => ({ ...r, at: a.submittedAt, attemptId: a.id })));
+    .flatMap((a) => countedAnswers(a).map((r) => ({ ...r, at: a.submittedAt, attemptId: a.id })));
 }
 
 export const isAnswered = (r) => r.graded && r.selected !== null && r.selected !== undefined;
@@ -68,6 +86,14 @@ export function markingInfo(marking) {
   return { pos, pen, breakEven: pos + pen > 0 ? pen / (pos + pen) : 0 };
 }
 
+/** With this marking, how many of 4 options you must rule out before a guess pays off on average (0–3). */
+export function ruleOutForGuess(marking, options = 4) {
+  const { breakEven } = markingInfo(marking);
+  if (breakEven <= 0) return 0;
+  for (let out = 0; out < options - 1; out++) if (1 / (options - out) > breakEven + 1e-9) return out;
+  return options - 1;
+}
+
 const r2 = (x) => Math.round(x * 100) / 100;
 
 /**
@@ -96,12 +122,42 @@ export function summarize(records, marking, basis = "first") {
   };
 }
 
-/** Accuracy (0–1) of each test, oldest first, for a trend line. */
-export function testTrend(attempts, keep = () => true) {
+/**
+ * Your likely marks per 100 questions now: from your latest answer to each question, the most recent
+ * `recent` of them, with an 80% range (how sure the estimate is). null with fewer than `min` answers.
+ */
+export function likelyRange(records, marking, { recent = 300, min = 30 } = {}) {
+  const { pos, pen } = markingInfo(marking);
+  const recs = pickByBasis(records, "latest", (r) => r.graded).sort((a, b) => (a.at || 0) - (b.at || 0)).slice(-recent);
+  const n = recs.length;
+  if (n < min) return null;
+  const x = recs.map((r) => (r.isCorrect ? pos : isAnswered(r) ? -pen : 0));
+  const mean = x.reduce((s, v) => s + v, 0) / n;
+  const sd = Math.sqrt(x.reduce((s, v) => s + (v - mean) ** 2, 0) / Math.max(1, n - 1));
+  const half = (1.28 * sd) / Math.sqrt(n);
+  const r1 = (v) => Math.round(v * 1000) / 10;
+  return { per100: r1(mean), low: r1(mean - half), high: r1(mean + half), n };
+}
+
+/** Why your wrong answers went wrong, from the reasons you tagged on results (1.26).
+    → { know, mix, misread, changed, tagged, wrong, careless } (careless = misread + changed). */
+export function whyStats(records) {
+  const wrong = records.filter((r) => isAnswered(r) && !r.isCorrect);
+  const c = { know: 0, mix: 0, misread: 0, changed: 0 };
+  wrong.forEach((r) => { if (r.why in c) c[r.why]++; });
+  const tagged = c.know + c.mix + c.misread + c.changed;
+  return { ...c, tagged, wrong: wrong.length, careless: c.misread + c.changed };
+}
+
+/** Fewest answers a test needs to be a point on the trend line (a 1–3 answer test says little). */
+export const TREND_MIN = 5;
+
+/** Accuracy (0–1) of each test with at least `min` answers, oldest first, for a trend line. */
+export function testTrend(attempts, keep = () => true, { min = 1 } = {}) {
   return attempts.filter((a) => a.status !== "in_progress").slice().sort((a, b) => a.submittedAt - b.submittedAt)
     .map((a) => {
       const recs = a.answers.filter((r) => keep(r) && isAnswered(r));
-      return recs.length ? { at: a.submittedAt, id: a.id, value: recs.filter((r) => r.isCorrect).length / recs.length, n: recs.length } : null;
+      return recs.length >= Math.max(1, min) ? { at: a.submittedAt, id: a.id, value: recs.filter((r) => r.isCorrect).length / recs.length, n: recs.length } : null;
     }).filter(Boolean);
 }
 

@@ -22,13 +22,17 @@ export function realDate(s) {
 /** A clean exam record, or null if it can't be used (bad date, wrong shape). */
 export function normalizeExam(x) {
   if (!x || typeof x !== "object" || !realDate(x.date)) return null;
-  return {
+  const out = {
     id: typeof x.id === "string" && x.id ? x.id.slice(0, 60) : `exam:${x.date}:${String(x.name || "").slice(0, 20)}`,
     name: String(x.name || "").trim().slice(0, 80),
     date: x.date,
     time: TIME.test(String(x.time || "")) && Number(x.time.split(":")[0]) < 24 && Number(x.time.split(":")[1]) < 60 ? x.time : "",
     syllabusId: typeof x.syllabusId === "string" && x.syllabusId ? x.syllabusId : null
   };
+  // 1.26: your target in marks per 100 questions (e.g. last year's cutoff, scaled); kept only when set
+  const target = Number(x.target);
+  if (x.target !== "" && x.target !== null && target > 0 && target <= 100) out.target = Math.round(target * 10) / 10;
+  return out;
 }
 
 export function normalizeList(list) {

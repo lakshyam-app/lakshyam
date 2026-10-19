@@ -8,3 +8,6 @@ export function backFrom({ bt, bp } = {}, allowed, fallback) {
   try { params = JSON.parse(bp || "{}") || {}; } catch { params = {}; }
   return { to: bt, params, keep: { bt, bp: bp || "{}" } };
 }
+
+/** 1.26: a Library screen opened from the Revise tab (openedFrom("revise")) goes Back there. */
+export const fromRevise = (params) => params?.bt === "revise";

@@ -6,8 +6,26 @@ import { newId } from "./ids.js";
 import { DEFAULT_MARKING } from "../domain/scoring.js";
 import { gradeTest, autoDifficulty, isGradable, AUTO_DIFF_DEFAULT, validThresholds, planAutoDifficulty } from "../domain/testing.js";
 import { takeSnapshot } from "./snapshots.js";
-import { localDate } from "../domain/study.js";
+import { localDate, revisedByTest } from "../domain/study.js";
+import { addStudied } from "./mutations.js";
 import { cleanFocus } from "../domain/focus.js";
+
+/** "Subject — Topic": what a topic test is called (several subjects have a topic called "Other"). */
+export function topicLabel(topic) {
+  if (!topic) return "";
+  const sub = store.subject(topic.subjectId);
+  return sub ? `${sub.name} — ${topic.name}` : topic.name;
+}
+
+/** A test's name as shown. Older topic tests saved only the topic's name ("Other"): the subject goes in front. */
+export function testLabel(a) {
+  const label = a?.scope?.label || "";
+  if (a?.scope?.type === "topic") {
+    const tp = store.topic(a.scope.ref);
+    if (tp && label === tp.name) return topicLabel(tp);
+  }
+  return label;
+}
 
 /** The unfinished test, if any (only one at a time). */
 export function activeTest() {
@@ -76,12 +94,38 @@ export async function submitTest(attempt, run, { auto = false } = {}) {
   // Focus check: how often you left the app during this test (absent when the check is off).
   if (run.focus) done.focus = cleanFocus(run.focus);
   delete done.run;
+  // Topics due for review that this test revised (enough answers, mostly right): their review moves on.
+  // AI-question tests don't count (they're kept apart from your past-paper work).
+  const revised = done.kind === "ai" ? [] : revisedByTest(done.answers, (id) => store.topicStateFor(done.syllabusId, id));
+  if (revised.length) done.revised = revised;
   await store.quietly(() => store.apply({
     attempts: { put: [done] },
     questionState: { put: states },
     activity: { put: [{ ...act, count: (act.count || 0) + 1, questions: (act.questions || 0) + answered, correct: (act.correct || 0) + (graded.counts.correct || 0) }] }
   }));
+  for (const id of revised) await store.quietly(() => addStudied(done.syllabusId, id, +1));
   return done;
+}
+
+/** "Why was it wrong?" on a test's answer (1.26): know | mix | misread | changed, or null to clear. */
+export const WHY = ["know", "mix", "misread", "changed"];
+export async function setWhy(attemptId, questionId, why) {
+  const a = store.byId("attempts", attemptId);
+  if (!a) return;
+  const answers = a.answers.map((r) => {
+    if (r.questionId !== questionId) return r;
+    const { why: _old, ...rest } = r;
+    return WHY.includes(why) ? { ...rest, why } : rest;
+  });
+  await store.apply({ attempts: { put: [{ ...a, answers }] } });
+}
+
+/** Undo for "counted as a revision": the studied marks go back and the test forgets it. */
+export async function undoRevision(attempt) {
+  const a = store.byId("attempts", attempt.id) || attempt;
+  for (const id of a.revised || []) await store.quietly(() => addStudied(a.syllabusId, id, -1));
+  const { revised, ...rest } = a;
+  await store.apply({ attempts: { put: [rest] } });
 }
 
 /** Same questions again, as a new test with the same settings. onlyIds narrows it (e.g. the wrong ones). */
