@@ -409,3 +409,9 @@ any saved record. (Review items 16 and the APK items were left for later, as ask
 |---|---|---|
 | A timetable draft you hadn't started using (e.g. made with AI) hid the timetable row from Today, so there was no way back from there; Today now shows "Finish your timetable" (to its review), or "Plan your days" when there is none | Today | ✅ fixed |
 
+## Fixed in 1.26.3
+
+| Fix | Where | Status |
+|---|---|---|
+| AI timetables: breaks are named again (Breakfast, Tea break, Lunch, Dinner, Wake up & exercise) instead of plain "Food" / "Exercise" (1.26.1 asked for shorter replies and the names were dropped); every day plan keeps your routine's meals and exercise | Timetable with AI | ✅ fixed |
+

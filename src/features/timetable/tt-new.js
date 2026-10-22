@@ -223,7 +223,7 @@ function aiPrompt(syllabus, weights, feedback = "", previous = null) {
 Pattern: ${pat}.
 Free time for study, per day plan:
 ${windows}
-${form.routine ? `Daily routine (keep these as break blocks, and never put study over them): ${form.routine}\nThe routine wins over the free study time: plan nothing before the wake-up time or after the bedtime it gives, even where the free study time starts earlier or ends later.\n` : ""}Preferred study session: about ${form.session} minutes, with ${form.gap}-minute breaks.
+${form.routine ? `Daily routine (keep these as break blocks, and never put study over them): ${form.routine}\nThe routine wins over the free study time: plan nothing before the wake-up time or after the bedtime it gives, even where the free study time starts earlier or ends later.\nIn EVERY day plan, put each routine item that falls between the plan's first and last block (meals, tea, exercise…) as a break block labelled with its own name ("Breakfast", "Tea break", "Lunch", "Dinner", "Wake up & exercise"), even when it is outside the free study time.\n` : ""}Preferred study session: about ${form.session} minutes, with ${form.gap}-minute breaks.
 ${bestLine(syllabus)}
 ${form.wish ? `Student's wishes: ${form.wish}\n` : ""}
 Subjects (share the study time roughly as given; weaker, frequently-asked subjects get more):
@@ -237,7 +237,7 @@ Rules:
 - Never schedule the same subject twice in a row.
 - block kinds: "study", "revision", "test", "break" (with break_type one of food, bath, rest, exercise, sleep, travel, work, other), "custom".
 ${feedback ? `\nThe student reviewed your previous draft and asks: "${feedback}"\nPrevious draft (one block per line):\n${draftLines(previous)}\nChange it accordingly, keeping everything else that was fine. Return the WHOLE new timetable (every day plan, every block), not only the changes.\n` : ""}
-Return exactly this JSON shape, written compactly (no line breaks or spaces between items; leave out "label" unless it adds something):
+Return exactly this JSON shape, written compactly (no line breaks or spaces between items). Give every break and every non-study block a short "label" (e.g. "Breakfast", "Tea break", "Mock test"); leave "label" out on study blocks:
 {"day_plans":[{"name":"${names[0]}","blocks":[{"start":"05:30","end":"06:20","kind":"study","subject":"…","topics":["…"],"label":"optional short note"},{"start":"06:20","end":"06:30","kind":"break","break_type":"rest"}]}${names.length > 1 ? `,{"name":"${names[1]}","blocks":[…]}` : ""}],
  "schedule":${schedule},
  "notes":"2-3 short sentences: how you balanced the subjects and why"}`;
@@ -267,7 +267,7 @@ function draftLines(previous) {
    there (its models allow far more than this); others keep the usual budget. */
 const TT_TOKENS = 8000;
 const ttBudget = (p) => (/generativelanguage\.googleapis/i.test(p.baseUrl || "") && !/gemma|gemini-(1\.|2\.0)/i.test(p.model || "") ? 24000 : TT_TOKENS);
-const AGAIN = "\n\nYOUR LAST REPLY COULD NOT BE READ (it was cut off or was not one JSON object). Reply again with ONLY the JSON object, as compact as possible: no line breaks, no spaces between items, no \"label\" fields, at most 2 topics per block.";
+const AGAIN = "\n\nYOUR LAST REPLY COULD NOT BE READ (it was cut off or was not one JSON object). Reply again with ONLY the JSON object, as compact as possible: no line breaks, no spaces between items, a short \"label\" only on breaks and non-study blocks, at most 2 topics per block.";
 
 /** Asks; a reply that can't be read (cut off, or not JSON) is asked for once more, compactly. */
 async function askTimetable(prompt) {
