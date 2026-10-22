@@ -114,3 +114,38 @@ test("calendar file: one event per block, reminders, escaping, folding, end at m
   assert.ok(text.split("\r\n").every((l) => new TextEncoder().encode(l).length <= 75), "lines folded");
   assert.ok(!/bath/.test(text), "breaks left out");
 });
+
+// 1.26.1: the routine's wake-up and bedtime bound the day; a long AI reply is still read
+import { routineBounds, keepInsideDay, jsonWithKey } from "../src/domain/timetable.js";
+
+test("wake-up and bedtime read from the routine (English and Malayalam)", () => {
+  assert.deepEqual(routineBounds("Wake up at 6 am.  exercise and freshen up from 6 to 7. Breakfast at 8:30. Dinner at 7:30 pm"), { wake: 360, sleep: null });
+  assert.deepEqual(routineBounds("e.g. wake 5:00, bath 7:00, office 9:30–5:30, dinner 8:30, sleep 10:30"), { wake: 300, sleep: 1350 });
+  assert.deepEqual(routineBounds("5:00 ഉണരും, 7:00 കുളി, 10:30 ഉറക്കം"), { wake: 300, sleep: 1350 });
+  assert.deepEqual(routineBounds("I get up at 5.30 and go to bed by 11 pm"), { wake: 330, sleep: 1380 });
+  assert.deepEqual(routineBounds("sleep at 1 am, wake at 9"), { wake: 540, sleep: null }, "after midnight isn't a bound");
+  assert.deepEqual(routineBounds("Exercise 6-7, lunch 1:30"), { wake: null, sleep: null });
+  assert.deepEqual(routineBounds(""), { wake: null, sleep: null });
+});
+
+test("nothing before waking or after bedtime; the routine's own blocks stay; trimmed blocks don't overlap", () => {
+  const blocks = [
+    { start: "05:30", end: "06:00", kind: "study" },
+    { start: "05:50", end: "06:40", kind: "study" },
+    { start: "06:00", end: "07:00", kind: "break", breakType: "exercise", label: "Wake up, exercise and freshen up" },
+    { start: "07:00", end: "07:30", kind: "study" },
+    { start: "20:40", end: "21:30", kind: "study" },
+    { start: "21:05", end: "21:30", kind: "revision" }
+  ];
+  const r = keepInsideDay(blocks, { wake: 360, sleep: 1275 });
+  assert.deepEqual(r.blocks.map((b) => `${b.start}-${b.end} ${b.kind}`), ["06:00-07:00 break", "07:00-07:30 study", "20:40-21:15 study"]);
+  assert.deepEqual(r.issues.sort(), ["after-sleep", "before-wake"]);
+  assert.deepEqual(keepInsideDay(blocks, {}).blocks.length, blocks.length, "no routine times: unchanged");
+});
+
+test("the timetable JSON is found in a reply with words, fences, an echoed old draft, or a cut-off end", () => {
+  assert.deepEqual(jsonWithKey('Old: {"day_plans":[1]}\nNew: ```json\n{"day_plans":[2],"notes":"a } b"}\n```', "day_plans"), { day_plans: [2], notes: "a } b" });
+  assert.deepEqual(jsonWithKey('{"day_plans":[3],}', "day_plans"), { day_plans: [3] }, "trailing comma");
+  assert.equal(jsonWithKey('{"day_plans":[{"name":"A","blocks":[{"start":"05', "day_plans"), null, "cut off");
+  assert.equal(jsonWithKey('{"other":1}', "day_plans"), null);
+});

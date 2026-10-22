@@ -16,7 +16,7 @@ import * as tt from "../../data/timetable.js";
 import { nameKey } from "../../data/ids.js";
 import { answerRecords, pickByBasis, accuracyBy } from "../../domain/stats.js";
 import { isDue } from "../../domain/study.js";
-import { ask, parseJsonLoose } from "../../ai/client.js";
+import { ask } from "../../ai/client.js";
 import { ensureAi, errorText } from "../ai/ai-ui.js";
 import { examOf } from "../today/countdown.js";
 import { finishedTests } from "../progress/data.js";
@@ -100,11 +100,11 @@ export const ttNewScreen = {
       <div class="checks">${weights.map((w) => {
         const on = form.subjects.includes(w.id);
         return html`<button type="button" class="check ${on ? "on" : ""}" data-action="sub" data-id="${w.id}"><span class="box">${on ? "✓" : ""}</span>
-          <span class="row-main"><span>${nameLabel(store.subject(w.id))}</span><span class="row-sub">${t("tt.weightLine", { share: Math.round(w.share * 100), acc: w.acc === null ? t("stats.notTried") : `${Math.round(w.acc * 100)}%`, time: on ? Math.round((w.weight / wsum) * 100) : 0 })}</span></span></button>`;
+          <span class="row-main"><span>${nameLabel(store.subject(w.id))}</span><span class="row-sub">${t(w.acc === null ? "tt.weightLineNew" : "tt.weightLine", { share: Math.round(w.share * 100), acc: w.acc === null ? "" : `${Math.round(w.acc * 100)}%`, time: on ? Math.round((w.weight / wsum) * 100) : 0 })}</span></span></button>`;
       })}</div>
       ${can("ai") ? html`<h3>${t("tt.routine")}</h3><p class="hint">${t("tt.routineHint")}</p>
         <textarea class="field" rows="3" data-f="routine" placeholder="${t("tt.routinePh")}">${form.routine}</textarea>
-        <label class="field-label">${t("tt.wish")}<input class="field" type="text" data-f="wish" value="${form.wish}" placeholder="${t("tt.wishPh")}" maxlength="300"></label>` : ""}
+        <label class="field-label">${t("tt.wish")}<textarea class="field" rows="3" data-f="wish" placeholder="${t("tt.wishPh")}" maxlength="1000">${form.wish}</textarea></label>` : ""}
       <div class="actions-col">
         ${can("ai") ? html`<button type="button" class="btn" data-action="ai">✨ ${t("tt.buildAi")}</button>` : ""}
         <button type="button" class="btn ${can("ai") ? "btn-quiet" : ""}" data-action="auto">⚡ ${t("tt.buildAuto")}</button>
@@ -223,7 +223,7 @@ function aiPrompt(syllabus, weights, feedback = "", previous = null) {
 Pattern: ${pat}.
 Free time for study, per day plan:
 ${windows}
-${form.routine ? `Daily routine (keep these as break blocks, and never put study over them): ${form.routine}\n` : ""}Preferred study session: about ${form.session} minutes, with ${form.gap}-minute breaks.
+${form.routine ? `Daily routine (keep these as break blocks, and never put study over them): ${form.routine}\nThe routine wins over the free study time: plan nothing before the wake-up time or after the bedtime it gives, even where the free study time starts earlier or ends later.\n` : ""}Preferred study session: about ${form.session} minutes, with ${form.gap}-minute breaks.
 ${bestLine(syllabus)}
 ${form.wish ? `Student's wishes: ${form.wish}\n` : ""}
 Subjects (share the study time roughly as given; weaker, frequently-asked subjects get more):
@@ -236,8 +236,8 @@ Rules:
 - For each study block pick 1–3 topics from that subject's priority list; spread the topics across the plans.
 - Never schedule the same subject twice in a row.
 - block kinds: "study", "revision", "test", "break" (with break_type one of food, bath, rest, exercise, sleep, travel, work, other), "custom".
-${feedback ? `\nThe student reviewed your previous draft and asks: "${feedback}"\nPrevious draft:\n${JSON.stringify(previous)}\nChange it accordingly, keeping everything else that was fine.\n` : ""}
-Return exactly this JSON shape:
+${feedback ? `\nThe student reviewed your previous draft and asks: "${feedback}"\nPrevious draft (one block per line):\n${draftLines(previous)}\nChange it accordingly, keeping everything else that was fine. Return the WHOLE new timetable (every day plan, every block), not only the changes.\n` : ""}
+Return exactly this JSON shape, written compactly (no line breaks or spaces between items; leave out "label" unless it adds something):
 {"day_plans":[{"name":"${names[0]}","blocks":[{"start":"05:30","end":"06:20","kind":"study","subject":"…","topics":["…"],"label":"optional short note"},{"start":"06:20","end":"06:30","kind":"break","break_type":"rest"}]}${names.length > 1 ? `,{"name":"${names[1]}","blocks":[…]}` : ""}],
  "schedule":${schedule},
  "notes":"2-3 short sentences: how you balanced the subjects and why"}`;
@@ -258,11 +258,45 @@ function finder(syllabusId) {
   };
 }
 
+/** The previous draft for a change request: one short line per block (much shorter than its JSON). */
+function draftLines(previous) {
+  return (previous?.day_plans || []).map((p) => `${p.name}:\n${p.blocks.map((b) => `${b.start}-${b.end} ${b.kind}${b.break_type ? ` (${b.break_type})` : ""}${b.subject ? ` ${b.subject}` : ""}${b.topics?.length ? `: ${b.topics.join("; ")}` : ""}${b.label ? ` "${b.label}"` : ""}`).join("\n")}`).join("\n\n");
+}
+
+/* A whole timetable is a long reply. Gemini counts its thinking against the reply budget, so it gets more room
+   there (its models allow far more than this); others keep the usual budget. */
+const TT_TOKENS = 8000;
+const ttBudget = (p) => (/generativelanguage\.googleapis/i.test(p.baseUrl || "") && !/gemma|gemini-(1\.|2\.0)/i.test(p.model || "") ? 24000 : TT_TOKENS);
+const AGAIN = "\n\nYOUR LAST REPLY COULD NOT BE READ (it was cut off or was not one JSON object). Reply again with ONLY the JSON object, as compact as possible: no line breaks, no spaces between items, no \"label\" fields, at most 2 topics per block.";
+
+/** Asks; a reply that can't be read (cut off, or not JSON) is asked for once more, compactly. */
+async function askTimetable(prompt) {
+  let budget = ttBudget;
+  const once = async (text) => {
+    try { return await ask(AI_SYSTEM, text, TT_TOKENS, { maxFor: budget }); } catch (e) {
+      // A model that doesn't allow the bigger budget: ask with the usual one.
+      if (budget && /max.{0,20}tokens|output.{0,10}tokens|token.{0,20}(limit|exceed)/i.test(String(e.message))) { budget = null; return ask(AI_SYSTEM, text, TT_TOKENS); }
+      throw e;
+    }
+  };
+  let r = await once(prompt);
+  let json = T.jsonWithKey(r.text, "day_plans");
+  if (!json) {
+    r = await once(prompt + AGAIN);
+    json = T.jsonWithKey(r.text, "day_plans");
+  }
+  if (!json) { const e = new Error(t(r.cut ? "tt.aiCut" : "tt.aiUnreadable")); e.unreadable = true; throw e; }
+  return { json, preset: r.preset };
+}
+
 async function buildWithAi(syllabus, weights, feedback = "", previous = null) {
-  const { text, preset } = await ask(AI_SYSTEM, aiPrompt(syllabus, weights, feedback, previous), 7000);
-  const json = parseJsonLoose(text);
+  const { json, preset } = await askTimetable(aiPrompt(syllabus, weights, feedback, previous));
   const find = finder(syllabus.id);
   const draft = T.readAiDraft(json, find);
+  // Nothing before you wake up or after bedtime (as your routine says), whatever the AI wrote.
+  const bounds = T.routineBounds(form.routine);
+  draft.dayPlans.forEach((p) => { const r = T.keepInsideDay(p.blocks, bounds); p.blocks = r.blocks; draft.issues.push(...r.issues); });
+  draft.issues = [...new Set(draft.issues)];
   if (!draft.dayPlans.length || !draft.dayPlans.some((p) => p.blocks.some((b) => b.kind === "study"))) throw new Error(t("tt.aiEmpty"));
   // Plans get plan ids (readAiDraft used block ids for both); fix the references.
   const remap = new Map(draft.dayPlans.map((p) => [p.id, tt.planId()]));

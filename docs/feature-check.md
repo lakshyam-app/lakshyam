@@ -394,3 +394,12 @@ any saved record. (Review items 16 and the APK items were left for later, as ask
 | Next steps review lists no longer jump to the top on each tick | Test result → next steps | ✅ fixed |
 | Browser smoke test with made-up data, run by GitHub on every push | tests/e2e, CI | ➕ |
 
+## Fixed in 1.26.1
+
+| Fix | Where | Status |
+|---|---|---|
+| "Ask AI to change it" said the reply couldn't be read: a whole timetable is a long reply, and Gemini's thinking counts against the reply budget, so it was cut off. Gemini now gets room for it; a cut-off or messy reply is asked again once, compactly; the old draft goes as short lines; the timetable is found even with words or an echoed old draft around it | Timetable → Review → Ask AI to change it; Build with AI | ✅ fixed |
+| Nothing is planned before the wake-up time or after the bedtime in your routine (the AI is told; the app also trims or removes such blocks and says so) | Timetable with AI | ✅ fixed |
+| "Anything else?" is a box that shows everything you write (up to 1000 letters) | Timetable → new | ✅ |
+| Subjects you haven't tested say "not practised yet" (was "Not practised yet right") | Timetable → new | ✅ fixed |
+

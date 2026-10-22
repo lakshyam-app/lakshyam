@@ -77,6 +77,12 @@ export function buildRequest(preset, system, user, maxTokens = 2500, images = []
 
 export const quickThinking = (p) => /generativelanguage\.googleapis/i.test(p.baseUrl || "") && /gemma/i.test(p.model || "") && !p.noEffort;
 
+/** True when the reply stopped because it ran out of room (its JSON, say, is cut off). */
+export function cutShort(format, data) {
+  const why = format === "anthropic" ? data?.stop_reason : data?.choices?.[0]?.finish_reason;
+  return /^(length|max_tokens|MAX_TOKENS)$/.test(String(why || ""));
+}
+
 /** Reads the text out of either format's reply. */
 export function replyText(format, data) {
   let text = format === "anthropic"
@@ -143,7 +149,7 @@ export async function request(preset, system, user, maxTokens = 2500, retried = 
   }
   // Counted on this phone: one request and the tokens the reply says it used (+ what the provider says is left).
   if (preset.id) presets.recordUsage(preset.id, { tokens: tokensOf(data), rate: rateOf(res.headers) }).catch(() => {});
-  if (meta) meta.model = servedModel(preset, data);
+  if (meta) { meta.model = servedModel(preset, data); meta.cut = cutShort(preset.format, data); }
   const text = replyText(preset.format, data);
   if (!text) {
     // Reasoning models can spend the whole budget thinking: retry once with more room.
@@ -179,7 +185,9 @@ export function aiControl(onTry = null) {
   return c;
 }
 
-export async function ask(system, user, maxTokens = 2500, { images = [], control = null } = {}) {
+/* opts.maxFor(preset): a bigger reply budget for presets known to allow it (1.26.1: long timetables on
+   Gemini, whose thinking counts against the budget). The reply says cut: true when it ran out of room. */
+export async function ask(system, user, maxTokens = 2500, { images = [], control = null, maxFor = null } = {}) {
   let routed = false;
   const list = await presets.getPresets();
   const config = await presets.getConfig();
@@ -206,20 +214,22 @@ export async function ask(system, user, maxTokens = 2500, { images = [], control
     try {
       let text;
       const meta = {};
-      try { text = await request(p, system, user, maxTokens, false, images, sig, meta); } catch (e) {
+      const budget = (maxFor && maxFor(p)) || maxTokens;
+      try { text = await request(p, system, user, budget, false, images, sig, meta); } catch (e) {
         if (!e.busy) throw e;
         await new Promise((r) => setTimeout(r, 3500));
-        text = await request(p, system, user, maxTokens, false, images, sig, meta);
+        text = await request(p, system, user, budget, false, images, sig, meta);
       }
       await presets.updatePreset(p.id, { uses: (p.uses || 0) + 1, lastUsedAt: Date.now(), limitHitAt: null });
       // The model that actually wrote it (OpenRouter's routers): shown and saved as "made by" instead of the router's name.
       const used = meta.model ? { ...p, model: meta.model, routedBy: p.model } : p;
-      if (images.length) return { text, preset: used, switched: false };
+      const cut = Boolean(meta.cut);
+      if (images.length) return { text, preset: used, switched: false, cut };
       // A paused active preset stays your choice: it is used again once the pause ends.
       const activePaused = list.some((x) => x.id === config.activeId && presets.isPaused(x));
       const switched = config.activeId !== p.id && !activePaused && !routed;
       if (switched) await presets.saveConfig({ activeId: p.id });
-      return { text, preset: used, switched };
+      return { text, preset: used, switched, cut };
     } catch (e) {
       if (control?.cancelled) throw new AiError("cancelled", { cancelled: true });
       errors.push(`${p.name}: ${e.skipped ? "skipped (took too long)" : e.message}${e.status ? ` (HTTP ${e.status})` : ""}`);

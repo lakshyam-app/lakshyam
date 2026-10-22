@@ -242,6 +242,77 @@ export function readAiDraft(json, find) {
   return { dayPlans, schedule, issues: [...new Set(issues)] };
 }
 
+/* ---------- 1.26.1: the day as your routine gives it, and reading a long AI reply ---------- */
+
+const ampm = (h, mi, mer, { evening = false } = {}) => {
+  let hh = Number(h); const mm = Number(mi || 0);
+  if (hh > 24 || mm > 59) return null;
+  const m = String(mer || "").toLowerCase().replace(/\./g, "");
+  if (m === "pm" && hh < 12) hh += 12;
+  else if (m === "am" && hh === 12) hh = 0;
+  else if (!m && evening && hh >= 6 && hh < 12) hh += 12; // "sleep at 10:30" is 22:30
+  return hh * 60 + mm;
+};
+const TIME = "(\\d{1,2})(?:[:.](\\d{2}))?\\s*(a\\.?m\\.?|p\\.?m\\.?)?";
+
+/**
+ * Wake-up and bedtime written in the routine ("wake up at 6 am", "wake 5:00", "sleep 10:30",
+ * "6:00 ഉണരും", "10:30 ഉറക്കം"). → { wake: minutes | null, sleep: minutes | null }
+ * A bedtime after midnight (e.g. "sleep 1 am") isn't used: blocks never run past 24:00.
+ */
+export function routineBounds(text) {
+  const s = String(text || "");
+  const en = (words, opts) => { const m = new RegExp(`\\b(?:${words})\\b[^\\d\\n]{0,14}?${TIME}`, "i").exec(s); return m ? ampm(m[1], m[2], m[3], opts) : null; };
+  const ml = (words, opts) => { const m = new RegExp(`${TIME}\\s*(?:മണിക്ക്)?\\s*(?:${words})`).exec(s); return m ? ampm(m[1], m[2], m[3], opts) : null; };
+  const wake = en("wake|wakes|waking|get up|gets up|rise") ?? ml("ഉണര|എഴുന്നേ");
+  let sleep = en("sleep|sleeps|bed|bedtime", { evening: true }) ?? ml("ഉറങ്ങ|ഉറക്കം", { evening: true });
+  if (sleep !== null && sleep < 360) sleep = null; // after midnight: blocks never run past 24:00 anyway
+  return { wake: wake !== null && wake < 720 ? wake : null, sleep: sleep !== null && sleep > (wake ?? 0) ? sleep : null };
+}
+/**
+ * Nothing is planned before you wake up or after you go to sleep (the AI is told so; this makes sure).
+ * Blocks that cross the line are trimmed (if 15 minutes or more is left), others removed.
+ * The routine's own wake-up and sleep breaks are kept. → { blocks, issues }
+ */
+export function keepInsideDay(blocks, { wake = null, sleep = null } = {}) {
+  const issues = new Set(); const kept = []; const trimmed = [];
+  sortBlocks(blocks).forEach((b) => {
+    let s = toMin(b.start); let e = toMin(b.end);
+    const routine = b.kind === "break" && (b.breakType === "sleep" || /wake|sleep|bed|ഉണര|ഉറക്ക|ഉറങ്ങ/i.test(b.label || ""));
+    if (routine) { kept.push(b); return; }
+    if (wake !== null && s < wake) { issues.add("before-wake"); s = wake; }
+    if (sleep !== null && e > sleep) { issues.add("after-sleep"); e = sleep; }
+    if (s === toMin(b.start) && e === toMin(b.end)) { kept.push(b); return; }
+    if (e - s >= 15) trimmed.push({ ...b, start: fromMin(s), end: fromMin(e) });
+  });
+  // A trimmed block stays only where it doesn't run into another block (e.g. the wake-up break).
+  const clash = (b) => kept.some((k) => toMin(b.start) < toMin(k.end) && toMin(k.start) < toMin(b.end));
+  return { blocks: sortBlocks([...kept, ...trimmed.filter((b) => !clash(b))]), issues: [...issues] };
+}
+
+/** The JSON object in an AI reply that has `key` (e.g. "day_plans"), even with words around it, two objects in a
+    row (an echoed old draft, then the new one: the last is used), or code fences. null if there is none. */
+export function jsonWithKey(text, key) {
+  const s = String(text || "").replace(/```(?:json)?/gi, "");
+  const found = []; const stack = []; let inStr = false; let esc = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (inStr) { if (esc) esc = false; else if (c === "\\") esc = true; else if (c === "\"") inStr = false; continue; }
+    if (c === "\"") inStr = true;
+    else if (c === "{") stack.push(i);
+    else if (c === "}" && stack.length) {
+      const a = stack.pop();
+      if (stack.length) continue; // only whole top-level objects
+      const part = s.slice(a, i + 1);
+      if (!part.includes(`"${key}"`)) continue;
+      try { found.push(JSON.parse(part)); } catch {
+        try { found.push(JSON.parse(part.replace(/,(\s*[}\]])/g, "$1"))); } catch { /* broken: skip */ }
+      }
+    }
+  }
+  return found.filter((o) => o && typeof o === "object" && key in o).pop() || null;
+}
+
 function guessBreak(text) {
   const s = String(text || "").toLowerCase();
   if (/food|meal|lunch|dinner|breakfast|tea|snack/.test(s)) return "food";
