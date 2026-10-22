@@ -403,3 +403,9 @@ any saved record. (Review items 16 and the APK items were left for later, as ask
 | "Anything else?" is a box that shows everything you write (up to 1000 letters) | Timetable → new | ✅ |
 | Subjects you haven't tested say "not practised yet" (was "Not practised yet right") | Timetable → new | ✅ fixed |
 
+## Fixed in 1.26.2
+
+| Fix | Where | Status |
+|---|---|---|
+| A timetable draft you hadn't started using (e.g. made with AI) hid the timetable row from Today, so there was no way back from there; Today now shows "Finish your timetable" (to its review), or "Plan your days" when there is none | Today | ✅ fixed |
+

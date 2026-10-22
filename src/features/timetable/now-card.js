@@ -43,7 +43,12 @@ export function timetableNow() {
   const s = state();
   if (!s) {
     const syllabus = store.currentSyllabus();
-    if (!syllabus || tt.timetables(syllabus.id).length || store.setting("hideTtHint", false)) return "";
+    if (!syllabus) return "";
+    // 1.26.2: a draft you haven't started using yet (e.g. made with AI) keeps its way back from Today;
+    // before, any timetable at all (even an unused draft) hid the "Plan your days" row.
+    const draft = tt.timetables(syllabus.id).filter((x) => x.status === "draft").sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
+    if (draft) return html`<button type="button" class="row exam-set" data-action="tt-draft" data-id="${draft.id}"><span class="row-main"><span class="row-title">🗓 ${t("tt.draftRow")}</span><span class="row-sub">${t("tt.draftRowSub", { name: draft.name })}</span></span><span class="chev-txt">›</span></button>`;
+    if (store.setting("hideTtHint", false)) return "";
     return html`<button type="button" class="row exam-set" data-action="tt-open"><span class="row-main"><span class="row-title">🗓 ${t("tt.hintRow")}</span><span class="row-sub">${t("tt.hintRowSub")}</span></span><span class="chev-txt">›</span></button>`;
   }
   return html`<div class="now-card" id="nowCard"><button type="button" class="now-main" data-action="tt-now">${inner(s)}</button>
@@ -59,6 +64,7 @@ export const nowHandlers = {
     if (b) openBlockSheet(s.timetable, s.date, b, { onDone: () => store.touch() }); else go("timetable");
   },
   "tt-open": () => go("timetable"),
+  "tt-draft": (el) => go("tt-review", { tt: el.dataset.id }),
   "tt-late": () => { const s = state(); if (s?.current) go("timetable", { late: "1" }); }
 };
 

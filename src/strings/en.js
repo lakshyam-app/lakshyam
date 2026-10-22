@@ -1757,6 +1757,8 @@ export default {
     create: "Create a timetable",
     hintRow: "Plan your days with a timetable",
     hintRowSub: "Study blocks, breaks, revision and tests",
+    draftRow: "Finish your timetable",
+    draftRowSub: "“{name}” is a draft: check it and tap “Use this timetable”",
     defaultName: "My timetable",
     today: "Today",
     now: "Now",
