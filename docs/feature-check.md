@@ -415,3 +415,8 @@ any saved record. (Review items 16 and the APK items were left for later, as ask
 |---|---|---|
 | AI timetables: breaks are named again (Breakfast, Tea break, Lunch, Dinner, Wake up & exercise) instead of plain "Food" / "Exercise" (1.26.1 asked for shorter replies and the names were dropped); every day plan keeps your routine's meals and exercise | Timetable with AI | ✅ fixed |
 
+## Added in 1.26.4
+
+| Change | Where | Status |
+|---|---|---|
+| Timetable blocks in Today's checklist can be tapped: they open the block's sheet to tick studied topics (they count as studied) or mark Done / Skipped; rows say "tap to tick what you studied" until something is ticked | Today | ✅ added |

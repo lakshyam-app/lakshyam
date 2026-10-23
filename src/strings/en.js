@@ -2023,6 +2023,7 @@ export default {
     sub: "How effective each day was, your reviews and your reports",
     todayTitle: "Today’s checklist",
     scoreTitle: "Today’s study score (0–100)",
+    tapToTick: "tap to tick what you studied",
     topicsTicked: (v) => `${v.n} topic${v.n === 1 ? "" : "s"} ticked`,
     skipped: "skipped",
     questions: (v) => `${v.n} of ${v.goal} questions`,

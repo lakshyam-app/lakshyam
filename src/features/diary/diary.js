@@ -20,7 +20,7 @@ import * as presets from "../../ai/presets.js";
 import { ask } from "../../ai/client.js";
 import { tutorSystem, inLang } from "../../ai/prompts.js";
 import { ensureAi, errorText } from "../ai/ai-ui.js";
-import { blockTitle, icon, fmt, fmtDate } from "../timetable/common.js";
+import { blockTitle, icon, fmt, fmtDate, openBlockSheet } from "../timetable/common.js";
 import { focusReportLine } from "../insights/focus-view.js";
 import { onSwipe } from "../../core/swipe.js";
 import { screenDayBlock, screenHandlers, todayScreenRow, screenReport, reportHandlers, screenReportLine, addScreenTime, editScreenTime, screenDays } from "./screen-time.js";
@@ -49,11 +49,14 @@ export function todayDiaryCard(syllabus, { top = "", goalShown = false } = {}) {
   const askToday = hour >= 18 && !r;
   const strip = T.dateRange(T.addDays(today, -13), today).map((d) => ({ d, ...factsOf(syllabus, d), mood: diary.review(d)?.mood }));
   const item = (done, text, sub = "") => html`<li class="${done ? "done" : ""}"><span class="ck">${done ? "✓" : ""}</span><span class="ck-main"><span>${text}</span>${sub ? html`<span class="hint">${sub}</span>` : ""}</span></li>`;
+  // 1.26.4: a timetable block opens its sheet (tick the topics you studied, Done / Skipped), as on the timetable.
+  const blockItem = (i) => html`<li class="${i.done ? "done" : ""}"><button type="button" class="ck-btn" data-action="cl-block" data-id="${i.block.id}">
+    <span class="ck">${i.done ? "✓" : ""}</span><span class="ck-main"><span>${icon(i.block)} ${blockTitle(i.block)}</span><span class="hint">${fmt(i.block.start)}${i.topicIds.length ? ` · ${t("diary.topicsTicked", { n: i.topicIds.length })}` : i.skipped ? ` · ${t("diary.skipped")}` : ` · ${t("diary.tapToTick")}`}</span></span><span class="chev-txt">›</span></button></li>`;
   return html`<section class="diary-card lv-${level}">
     <div class="dc-head"><h2>${t("diary.todayTitle")}</h2><span class="score-pill lv-${level}" title="${t("diary.scoreTitle")}">${score}</span></div>
     ${top ? html`<div class="dc-top">${top}</div>` : ""}
     <ul class="checklist">
-      ${list.items.map((i) => item(i.done, html`${icon(i.block)} ${blockTitle(i.block)}`, `${fmt(i.block.start)}${i.topicIds.length ? ` · ${t("diary.topicsTicked", { n: i.topicIds.length })}` : i.skipped ? ` · ${t("diary.skipped")}` : ""}`))}
+      ${list.items.map(blockItem)}
       ${goalShown ? "" : item(f.questions >= f.goal, t("diary.questions", { n: f.questions, goal: f.goal }), f.questions ? t("diary.accuracy", { pct: Math.round((f.correct / Math.max(1, f.questions)) * 100) }) : "")}
       ${item(f.topics > 0, t("diary.topics", { n: f.topics }))}
       ${item(Boolean(r), t("diary.reviewItem"), r ? `${D.MOOD_FACE[r.mood]} ${t(`diary.mood.${r.mood}`)}` : t("diary.reviewWhen"))}
@@ -72,6 +75,14 @@ function moodRow(date, title) {
 
 export const diaryHandlers = {
   diary: () => go("diary"),
+  "cl-block": (el) => {
+    const syllabus = store.currentSyllabus();
+    if (!syllabus) return;
+    const today = T.isoDate();
+    const list = diary.dayChecklist(syllabus.id, today);
+    const i = list.items.find((x) => x.block.id === el.dataset.id);
+    if (i && list.timetable) openBlockSheet(list.timetable, today, i.block, { onDone: () => store.touch() });
+  },
   mood: (el) => openReview(el.dataset.d, Number(el.dataset.m)),
   "sc-add": (el) => addScreenTime(el.dataset.d || null),
   "sc-edit": (el) => editScreenTime(el.dataset.d)
