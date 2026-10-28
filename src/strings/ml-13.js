@@ -281,6 +281,10 @@ export default {
   },
   notes: {
     myNotes: "എന്റെ നോട്ടുകൾ",
+    closeAll: "എല്ലാം",
+    openAll: "എല്ലാം",
+    closeAllLong: "ഈ നോട്ടിലെ എല്ലാ ഭാഗങ്ങളും അടയ്ക്കുക",
+    openAllLong: "ഈ നോട്ടിലെ എല്ലാ ഭാഗങ്ങളും തുറക്കുക",
     nNotes: "{n} നോട്ടുകൾ",
     newNote: "പുതിയ നോട്ട്",
     editNote: "നോട്ട് മാറ്റുക",

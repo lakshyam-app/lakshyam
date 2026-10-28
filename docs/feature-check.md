@@ -431,3 +431,11 @@ any saved record. (Review items 16 and the APK items were left for later, as ask
 | Text typed in a new note isn't lost when Back closes the editor (it comes back when you open the editor again) | My notes | ✅ added |
 | The AI strategy sheet no longer offers "Add to the note"; the strategy stays as the topic's 🎯 AI strategy block | Topic → AI strategy | ✅ changed |
 | The topic's existing note (from before) is kept as the first of its notes; merging topics moves every note, each kept separately | Data | ✅ kept |
+
+## Added in 1.26.6
+
+| Change | Where | Status |
+|---|---|---|
+| "▴ All / ▾ All" button at the bottom, right of Done, closes or opens every part of a note at once (shown when the note has 2 or more parts; follows parts you open or close yourself) | My notes → a note | ✅ added |
+| Copy is a 📋 button so all five buttons fit one row on a 320–412 px phone | My notes → a note | ✅ changed |
+| Escaped Markdown from a copied answer ("1\\. Third Mysore War", "\\*") shows as the plain character | Notes and AI answers | ✅ fixed |

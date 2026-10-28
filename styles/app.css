@@ -462,6 +462,10 @@ select.field { appearance: auto; }
 .ai-table { border-collapse: collapse; font-size: 0.875rem; min-width: 100%; }
 .ai-table th, .ai-table td { border: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
 .ai-table th { background: var(--brand-soft); font-weight: 600; }
+.note-actions { gap: 8px; }
+.note-actions .fold-all { padding-inline: 10px; }
+.note-actions .btn { padding-inline: 12px; min-width: 0; }
+.note-actions .btn, .note-actions .fold-all { white-space: nowrap; }
 .ai-hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
 .note-list { display: grid; gap: 12px; margin-top: 8px; }
 .note-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-panel); padding: 12px 16px 4px; display: grid; gap: 6px; }

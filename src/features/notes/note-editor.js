@@ -36,12 +36,15 @@ export function viewTopicNote(noteId, { onChange } = {}) {
   const when = n.updatedAt ? new Date(n.updatedAt).toLocaleDateString(dateLocale(), { day: "numeric", month: "short", year: "numeric" }) : "";
   openSheet(html`<p class="tt-kicker">📝 ${t("notes.myNotes")}${topic ? ` · ${nameLabel(topic)}` : ""}${when ? ` · ${when}` : ""}</p><h2>${title}</h2>
     <div class="ai-answer note-view">${noteText(bodyWithoutTitle(n.text, title))}</div>
-    <div class="sheet-actions">
+    <div class="sheet-actions note-actions">
       <button type="button" class="btn btn-quiet push-left" data-action="del" aria-label="${t("common.delete")}">🗑</button>
-      <button type="button" class="btn btn-quiet" data-action="copy">${t("question.copy")}</button>
+      <button type="button" class="btn btn-quiet" data-action="copy" aria-label="${t("question.copy")}" title="${t("question.copy")}">📋</button>
       <button type="button" class="btn btn-quiet" data-action="edit">✎ ${t("common.edit")}</button>
-      <button type="button" class="btn" data-action="close">${t("common.done")}</button></div>`, {
+      <button type="button" class="btn" data-action="close">${t("common.done")}</button>
+      <button type="button" class="btn btn-quiet fold-all" data-action="fold" hidden></button></div>`, {
     copy: async () => { try { await navigator.clipboard.writeText(n.text); toast(t("common.copied")); } catch { toast(t("common.copyFailed")); } },
+    // 1.26.6: close (or open) every part of the note at once.
+    fold: () => { const secs = sections(); const open = secs.some((d) => d.open); secs.forEach((d) => { d.open = !open; }); foldLabel(); },
     edit: () => editTopicNote(n.target.id, n.id, { onChange }),
     del: () => runFlow(async () => {
       const ok = await confirmAction({ title: t("notes.deleteTitle", { name: title }), confirmLabel: t("common.delete"), danger: true });
@@ -52,7 +55,21 @@ export function viewTopicNote(noteId, { onChange } = {}) {
     }),
     close: () => closeSheet()
   }, { label: title });
-  typesetMath(sheetBody());
+  const body = sheetBody();
+  const sections = () => [...body.querySelectorAll(".note-view details.ai-sec")];
+  const foldLabel = () => {
+    const btn = body.querySelector('[data-action="fold"]');
+    if (!btn) return;
+    const secs = sections();
+    btn.hidden = secs.length < 2;
+    const open = secs.some((d) => d.open);
+    btn.innerHTML = html`${open ? "▴" : "▾"}<span class="fold-txt"> ${open ? t("notes.closeAll") : t("notes.openAll")}</span>`;
+    btn.title = open ? t("notes.closeAllLong") : t("notes.openAllLong");
+    btn.setAttribute("aria-label", open ? t("notes.closeAllLong") : t("notes.openAllLong"));
+  };
+  foldLabel();
+  body.querySelector(".note-view")?.addEventListener("toggle", foldLabel, true); // also when you open or close one part yourself
+  typesetMath(body);
 }
 
 // What you typed but didn't save (closed by Back), so it isn't lost: shown again when you open the same note.

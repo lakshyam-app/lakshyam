@@ -50,7 +50,10 @@ const leadBold = (s) => {
 };
 
 export function aiText(value, { sections = true } = {}) {
-  const { s: src, keep } = protectMath(String(value ?? "").replace(/\r/g, ""));
+  const prot = protectMath(String(value ?? "").replace(/\r/g, ""));
+  const keep = prot.keep;
+  // 1.26.6: Markdown escapes from a copied answer ("1\\. Third Mysore War", "\\*") show as the plain character.
+  const src = prot.s.replace(/\\([.*_#+\-!|`~>()[\]])/g, "$1");
   const lines = escapeHtml(src).split("\n");
   const out = []; // { type: "h" | "li" | "sub" | "p", html, n }
   // With "## " headings present, numbered lines are steps, never headings.
