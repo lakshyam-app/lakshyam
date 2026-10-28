@@ -466,6 +466,12 @@ select.field { appearance: auto; }
 .note-actions .fold-all { padding-inline: 10px; }
 .note-actions .btn { padding-inline: 12px; min-width: 0; }
 .note-actions .btn, .note-actions .fold-all { white-space: nowrap; }
+.note-actions .mark-btn { padding-inline: 10px; }
+.mark-btn.on { background: var(--gold); border-color: var(--gold); color: #1B1405; }
+.note-view .ai-sec.marked { border-color: var(--gold); border-left: 6px solid var(--gold); }
+.note-view .ai-sec.marked > summary { background: color-mix(in srgb, var(--gold) 30%, var(--surface)); border-radius: 10px 10px 0 0; }
+.note-view .ai-sec.marked:not([open]) > summary { border-radius: 10px; }
+.note-view.is-marking .ai-sec > summary { outline: 2px dashed color-mix(in srgb, var(--gold) 70%, transparent); outline-offset: -4px; }
 .ai-hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
 .note-list { display: grid; gap: 12px; margin-top: 8px; }
 .note-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-panel); padding: 12px 16px 4px; display: grid; gap: 6px; }

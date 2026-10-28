@@ -439,3 +439,9 @@ any saved record. (Review items 16 and the APK items were left for later, as ask
 | "▴ All / ▾ All" button at the bottom, right of Done, closes or opens every part of a note at once (shown when the note has 2 or more parts; follows parts you open or close yourself) | My notes → a note | ✅ added |
 | Copy is a 📋 button so all five buttons fit one row on a 320–412 px phone | My notes → a note | ✅ changed |
 | Escaped Markdown from a copied answer ("1\\. Third Mysore War", "\\*") shows as the plain character | Notes and AI answers | ✅ fixed |
+
+## Added in 1.26.7
+
+| Change | Where | Status |
+|---|---|---|
+| 🖍 button at the bottom (next to 🗑): tap it, tap headers to colour them gold (tap again to remove), tap 🖍 again to finish; colours stay for that note, also after closing and reopening, and don't change the note's text or its "last edited" date | My notes → a note | ✅ added |

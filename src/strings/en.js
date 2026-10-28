@@ -2105,6 +2105,8 @@ export default {
     emptyBody: "Notes you write on papers, subjects, topics and banks are collected here. Use ⋯ → My note on any of them.",
     myNote: "My note",
     myNotes: "My notes",
+    colourLong: "Colour headers",
+    colourHint: "Tap the headers to colour (tap again to remove). Tap 🖍 again when finished: the colours stay.",
     closeAll: "All",
     openAll: "All",
     closeAllLong: "Close every part of this note",

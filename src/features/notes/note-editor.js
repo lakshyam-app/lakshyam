@@ -34,15 +34,28 @@ export function viewTopicNote(noteId, { onChange } = {}) {
   const title = noteTitle(n);
   const topic = store.topic(n.target.id);
   const when = n.updatedAt ? new Date(n.updatedAt).toLocaleDateString(dateLocale(), { day: "numeric", month: "short", year: "numeric" }) : "";
+  let marking = false;
   openSheet(html`<p class="tt-kicker">📝 ${t("notes.myNotes")}${topic ? ` · ${nameLabel(topic)}` : ""}${when ? ` · ${when}` : ""}</p><h2>${title}</h2>
+    <p class="ok-box mark-hint" hidden>${t("notes.colourHint")}</p>
     <div class="ai-answer note-view">${noteText(bodyWithoutTitle(n.text, title))}</div>
     <div class="sheet-actions note-actions">
-      <button type="button" class="btn btn-quiet push-left" data-action="del" aria-label="${t("common.delete")}">🗑</button>
+      <button type="button" class="btn btn-quiet" data-action="del" aria-label="${t("common.delete")}">🗑</button>
+      <button type="button" class="btn btn-quiet push-left mark-btn" data-action="mark" hidden aria-pressed="false" aria-label="${t("notes.colourLong")}" title="${t("notes.colourLong")}">🖍</button>
       <button type="button" class="btn btn-quiet" data-action="copy" aria-label="${t("question.copy")}" title="${t("question.copy")}">📋</button>
       <button type="button" class="btn btn-quiet" data-action="edit">✎ ${t("common.edit")}</button>
       <button type="button" class="btn" data-action="close">${t("common.done")}</button>
       <button type="button" class="btn btn-quiet fold-all" data-action="fold" hidden></button></div>`, {
     copy: async () => { try { await navigator.clipboard.writeText(n.text); toast(t("common.copied")); } catch { toast(t("common.copyFailed")); } },
+    // 1.26.7: colour the headers you choose: tap 🖍, tap headers (again to un-colour), tap 🖍 again. Kept for this note.
+    mark: () => {
+      marking = !marking;
+      const btn = body.querySelector('[data-action="mark"]');
+      btn.setAttribute("aria-pressed", String(marking)); btn.classList.toggle("on", marking);
+      btn.textContent = marking ? "✓🖍" : "🖍";
+      body.querySelector(".mark-hint").hidden = !marking;
+      if (marking) toast(t("notes.colourHint"), { duration: 6000 });
+      body.querySelector(".note-view").classList.toggle("is-marking", marking);
+    },
     // 1.26.6: close (or open) every part of the note at once.
     fold: () => { const secs = sections(); const open = secs.some((d) => d.open); secs.forEach((d) => { d.open = !open; }); foldLabel(); },
     edit: () => editTopicNote(n.target.id, n.id, { onChange }),
@@ -68,6 +81,23 @@ export function viewTopicNote(noteId, { onChange } = {}) {
     btn.setAttribute("aria-label", open ? t("notes.closeAllLong") : t("notes.openAllLong"));
   };
   foldLabel();
+  // Coloured headers, kept per note (in settings, so marking doesn't count as editing the note).
+  const headKey = (d) => d.querySelector(":scope > summary")?.textContent.replace(/\s+/g, " ").trim() || "";
+  const marked = new Set(store.setting(`noteMarks:${n.id}`, []) || []);
+  const paint = () => sections().forEach((d) => d.classList.toggle("marked", marked.has(headKey(d))));
+  paint();
+  const markBtn = body.querySelector('[data-action="mark"]');
+  if (markBtn) markBtn.hidden = !sections().length;
+  body.querySelector(".note-view")?.addEventListener("click", (e) => {
+    if (!marking) return;
+    const sum = e.target.closest("details.ai-sec > summary");
+    if (!sum) return;
+    e.preventDefault(); // while colouring, a tap colours the header instead of opening or closing it
+    const k = headKey(sum.parentElement);
+    if (marked.has(k)) marked.delete(k); else marked.add(k);
+    paint();
+    store.quietly(() => store.setSetting(`noteMarks:${n.id}`, [...marked]));
+  }, true);
   body.querySelector(".note-view")?.addEventListener("toggle", foldLabel, true); // also when you open or close one part yourself
   typesetMath(body);
 }
