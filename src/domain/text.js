@@ -55,9 +55,21 @@ export function aiText(value, { sections = true } = {}) {
   const out = []; // { type: "h" | "li" | "sub" | "p", html, n }
   // With "## " headings present, numbered lines are steps, never headings.
   const hashHeads = !sections || lines.some((l) => /^\s*#{1,4}\s/.test(l));
-  for (const line of lines) {
+  for (let li = 0; li < lines.length; li++) {
+    const line = lines[li];
     const t = line.trim();
     if (!t) { out.push({ type: "gap" }); continue; }
+    // 1.26.5: a Markdown table ("| a | b |" rows with a "|---|---|" line under the first) and a "---" rule.
+    if (/^\|.*\|$/.test(t) && /^\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?$/.test((lines[li + 1] || "").trim())) {
+      const cells = (r) => r.trim().replace(/^\||\|$/g, "").split("|").map((c) => inline(c.trim()));
+      const head = cells(t); const body = [];
+      li += 2;
+      while (li < lines.length && /^\|.*\|$/.test(lines[li].trim())) body.push(cells(lines[li++]));
+      li--;
+      out.push({ type: "table", html: `<div class="ai-table-wrap"><table class="ai-table"><thead><tr>${head.map((c) => `<th>${c}</th>`).join("")}</tr></thead><tbody>${body.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>` });
+      continue;
+    }
+    if (/^(?:-{3,}|\*{3,}|_{3,})$/.test(t)) { out.push({ type: "hr" }); continue; }
     let m = /^#{1,4}\s+(?:(\d+)[.)]\s*)?(.+)$/.exec(t);
     if (m) { out.push({ type: "h", n: m[1] || "", html: inline(m[2].replace(/^\*\*(.+)\*\*:?$/, "$1").replace(/:$/, "")) }); continue; }
     m = /^(\d+)[.)]\s+(.+)$/.exec(t);
@@ -88,6 +100,8 @@ export function aiText(value, { sections = true } = {}) {
       if (list !== kind) { closeList(); html += `<${kind} class="ai-list">`; list = kind; }
       flushItem(); item = x.html;
     } else if (x.type === "p") { closeList(); html += `<p>${x.html}</p>`; }
+    else if (x.type === "table") { closeList(); html += x.html; }
+    else if (x.type === "hr") { closeList(); html += "<hr class=\"ai-hr\">"; }
   }
   closeList();
   if (inSec) html += "</div></details>";
@@ -98,7 +112,23 @@ export function aiText(value, { sections = true } = {}) {
     headings when it has them, otherwise exactly as typed. No collapsible cards. */
 export function smartText(text) {
   const s = String(text ?? "");
-  return /^\s*([-•*]|#{1,4}|\d+[.)])\s+\S/m.test(s) ? aiText(s, { sections: false }) : richText(s);
+  return /^\s*([-•*]|#{1,4}|\d+[.)])\s+\S|^\s*\|.*\|\s*$/m.test(s) ? aiText(s, { sections: false }) : richText(s);
+}
+
+/** A note's name: its first heading ("## Warren Hastings…"), else its first line, short. */
+export function titleFromText(text, max = 80) {
+  const lines = String(text ?? "").replace(/\r/g, "").split("\n").map((l) => l.trim()).filter(Boolean);
+  const head = lines.find((l) => /^#{1,4}\s+\S/.test(l));
+  const pick = head || lines[0] || "";
+  return pick.replace(/^#{1,4}\s+/, "").replace(/^[-•*]\s+/, "").replace(/\*\*|__/g, "").replace(/^\*(.+)\*$/, "$1").trim().slice(0, max);
+}
+/** The text to show under a note's name: without its first line when that line is the name (it would show twice). */
+export function bodyWithoutTitle(text, title) {
+  const s = String(text ?? "").replace(/\r/g, "");
+  const m = /^\s*(#{1,4}\s+)?([^\n]*)\n?/.exec(s);
+  if (!m || !title) return s;
+  const first = m[2].replace(/\*\*|__/g, "").trim();
+  return first === String(title).trim() ? s.slice(m[0].length).replace(/^\s*\n/, "") : s;
 }
 
 /** A note: AI write-ups saved into it ("## " parts, or marked 🤖) get the full AI layout. */

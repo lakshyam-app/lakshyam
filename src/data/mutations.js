@@ -184,6 +184,20 @@ export function saveNote(target, label, text) {
   return store.apply({ notes: { put: [copy(prev || {}, { id, target: prev?.target ? { ...prev.target, ...target } : target, label, text: clean })] } });
 }
 
+/* ---------- 1.26.5: a topic's own notes (several, each with a name) ---------- */
+
+/** Saves one of a topic's notes (new when noteId is null). Its target stays the topic, so the Notes screen,
+    search and "Find in my notes" see it like before. The topic's first note (from before 1.26.5) keeps its id. Returns the id. */
+export async function saveTopicNote(topicId, noteId, { title, text }) {
+  const topic = store.topic(topicId);
+  const prev = noteId ? store.byId("notes", noteId) : null;
+  const id = prev?.id || `${ids.note("topic", topicId)}:${newId("tn")}`;
+  const rec = copy(prev || { createdAt: Date.now() }, { id, target: { type: "topic", id: topicId }, label: topic?.name || prev?.label || "", title: String(title || "").trim().slice(0, 120), text: String(text || "").trim() });
+  if (!rec.title) delete rec.title;
+  await store.apply({ notes: { put: [rec] } });
+  return id;
+}
+
 /* ---------- revision notes made from a study PDF (several per topic, one record each) ---------- */
 
 /** Saves a new PDF revision note for a topic. Returns its id. */
@@ -372,13 +386,15 @@ function mergeTopicChanges(from, to, extra = { put: {}, del: {} }) {
     const l = current("topicLists", l0);
     put("topicLists", copy(l, { topicIds: [...new Set(l.topicIds.map((x) => (x === from.id ? to.id : x)))] }));
   });
-  const fromNote = store.byId("notes", ids.note("topic", from.id));
-  if (fromNote) {
-    const toId = ids.note("topic", to.id);
-    const toNote = store.byId("notes", toId);
-    put("notes", toNote ? copy(toNote, { text: `${toNote.text}\n\n${fromNote.text}` }) : copy(fromNote, { id: toId, target: { type: "topic", id: to.id } }));
-    del("notes", fromNote.id);
-  }
+  // Every note of the topic moves with it, each kept as its own note (1.26.5: a topic can have several).
+  store.all("notes").filter((n) => n.target?.type === "topic" && n.target.id === from.id).forEach((n) => {
+    const isFirst = n.id === ids.note("topic", from.id);
+    const toFirst = ids.note("topic", to.id);
+    const taken = (store.byId("notes", toFirst) && !extra.del.notes?.has(toFirst)) || extra.put.notes?.has(toFirst);
+    const id = isFirst && !taken ? toFirst : `${toFirst}:${newId("tn")}`;
+    put("notes", copy(n, { id, target: { ...n.target, id: to.id }, label: to.name }));
+    del("notes", n.id);
+  });
   put("topics", copy(current("topics", to), { aliasKeys: [...new Set([...(to.aliasKeys || []), ...keysOf(from)])] }));
   del("topics", from.id);
   return toChanges(extra);

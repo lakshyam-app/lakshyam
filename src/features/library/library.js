@@ -16,7 +16,7 @@ import * as tests from "../../data/tests.js";
 import { setupPanel, setupHandlers } from "../import/setup.js";
 import { mountQuestions, visibleQuestions, lacksAnswer } from "../question/list.js";
 import { copyQuestions } from "../question/copy.js";
-import { noteBlock, editNote, openNote } from "../notes/note-editor.js";
+import { noteBlock, editNote, openNote, topicNotes, noteTitle } from "../notes/note-editor.js";
 import { topicMenu, labelFor, labelDot, LABELS, renameTopicFlow, renameSubjectFlow, markStudied } from "./topic-actions.js";
 import { addPaperFlow, answerKeyFlow } from "./paper-files.js";
 import { banksRows } from "./banks.js";
@@ -494,7 +494,7 @@ export const topicScreen = {
     ${strat ? html`<button type="button" class="note-preview strat-preview" data-action="strategy-view">
       <span class="note-label">🎯 ${t("ai.strategySaved")}${strat.at ? ` · ${new Date(strat.at).toLocaleDateString(dateLocale())}` : ""}${strat.by ? ` · 🤖 ${strat.by}` : ""} · ${t("notes.tapToRead")}</span>
       <span class="note-text">${plainPreview(strat.text, 200)}</span></button>` : ""}
-    ${noteBlock("topic", id)}
+    ${myNotesRow(id)}
     ${topic.isFallback && can("ai") && questions.length >= 2 && store.topicsOf(topic.subjectId).some((x) => !x.isFallback) ? html`<button type="button" class="row tidy-row" data-action="tidy">
       <span class="row-main"><span class="row-title">${t("tidy.button", { n: questions.length })}</span><span class="row-sub">${t("tidy.buttonSub")}</span></span>${chev}</button>` : ""}
     <div id="qHost"></div>`;
@@ -507,11 +507,11 @@ export const topicScreen = {
       "strategy-view": () => viewStrategy(topic),
       practice: () => practice(key, questions, { type: "topic", ref: id, label: tests.topicLabel(topic) }),
       tests: () => (done.length === 1 ? go("result", { id: done[0].id, ...openedFrom("topic", { id }) }) : go("tests", { type: "topic", ref: id, ...openedFrom("topic", { id }) })),
-      "note-edit": () => openNote("topic", id, topic.name),
+      "my-notes": () => go("topic-notes", { id }),
       menu: () => topicMenu(topic, { onPage: true, extra: [
         st?.studiedCount ? { id: "minus", label: t("studied.minus", { n: st.studiedCount }), run: () => mut.addStudied(syllabus.id, id, -1) } : null,
         { id: "copy", label: t("listing.copy"), run: () => copyQuestions(visibleQuestions(key, questions), `${subject?.name} — ${topic.name}`) },
-        { id: "note", label: t("notes.myNote"), run: () => openNote("topic", id, topic.name) },
+        { id: "note", label: `📝 ${t("notes.myNotes")}`, run: () => go("topic-notes", { id }) },
         aiItem,
         pdfItem
       ].filter(Boolean) })
@@ -519,6 +519,13 @@ export const topicScreen = {
     mountQuestions(container.querySelector("#qHost"), { key, questions, showPaper: true });
   }
 };
+
+/** 1.26.5: the topic's own notes are on their own page; here only a way to them (how many, the newest name). */
+function myNotesRow(topicId) {
+  const notes = topicNotes(topicId);
+  return html`<button type="button" class="row my-notes-row" data-action="my-notes"><span class="row-main"><span class="row-title">📝 ${t("notes.myNotes")}${notes.length ? ` (${notes.length})` : ""}</span>
+    <span class="row-sub">${notes.length ? t("notes.latest", { name: noteTitle(notes[0]) }) : t("notes.addFirst")}</span></span>${chev}</button>`;
+}
 
 /* ---------- Paper ---------- */
 

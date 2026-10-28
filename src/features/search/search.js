@@ -16,7 +16,7 @@ import { chev } from "../library/library.js";
 import { openedFrom } from "../../core/back.js";
 import { listPdfs } from "../../pdf/pdf-store.js";
 import { passagesOf, queryOf, rank, snippet } from "../../domain/note-search.js";
-import { viewNote } from "../notes/note-editor.js";
+import { viewNoteRecord } from "../notes/note-editor.js";
 
 /** Every note and study PDF (for typed searches). */
 async function allSources() {
@@ -142,7 +142,7 @@ export const searchScreen = {
       "note-hit": (el) => {
         const h = noteHits[Number(el.dataset.i)]; if (!h) return;
         if (h.src.kind === "pdf") go("pdf-view", { id: h.src.ref, n: h.page || 1, ...openedFrom("search", { q: state.q, scope: state.scope }) });
-        else { const n = store.byId("notes", h.src.ref); if (n) viewNote(n.target.type, n.target.id, n.label || ""); }
+        else { viewNoteRecord(store.byId("notes", h.src.ref)); }
       }
     });
     onLongPress(results, (el) => preview(el.dataset.id));

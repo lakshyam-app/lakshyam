@@ -5,7 +5,7 @@ import { t } from "../../core/i18n.js";
 import { go, goBack } from "../../core/router.js";
 import { richText, noteText } from "../../domain/text.js";
 import * as store from "../../data/store.js";
-import { noteTarget, editNote, viewNote } from "./note-editor.js";
+import { noteTarget, viewNoteRecord, editNoteRecord, noteTitle } from "./note-editor.js";
 import { runFlow, chooseAction } from "../../core/dialogs.js";
 import { label as nameLabel } from "../../core/names.js";
 
@@ -125,12 +125,12 @@ export const notesScreen = {
       const rows = all
         .filter((x) => view.subject === "all" || (view.subject === "none" ? !x.subjectId : x.subjectId === view.subject))
         .filter((x) => view.kind === "all" || (view.kind === "ai" ? isAi(x.n) : view.kind === "own" ? !isAi(x.n) : x.kind === view.kind))
-        .filter((x) => !q || `${x.n.text} ${x.name}`.toLowerCase().includes(q))
+        .filter((x) => !q || `${x.n.text} ${x.name} ${x.n.title || ""}`.toLowerCase().includes(q))
         .sort((a, b) => SORT_FN[view.sort](a, b) || (b.n.updatedAt || 0) - (a.n.updatedAt || 0));
       countEl.textContent = t("notes.count", { n: rows.length, of: all.length });
       rowsEl.innerHTML = rows.length ? html`${rows.map(({ n, target, asked }) => html`
         <article class="note-card">
-          <header class="qcard-meta"><span>${target ? `${target.kind} · ${target.name}` : (n.label || t("notes.kind.other"))}${target?.sub ? ` · ${target.sub}` : ""}</span>${asked ? html`<span class="mini-chip">${t("notes.asked", { n: asked })}</span>` : ""}</header>
+          <header class="qcard-meta"><span>${target ? `${target.kind} · ${target.name}` : (n.label || t("notes.kind.other"))}${target?.sub ? ` · ${target.sub}` : ""}${n.target?.type === "topic" ? html` · <strong>${noteTitle(n)}</strong>` : ""}</span>${asked ? html`<span class="mini-chip">${t("notes.asked", { n: asked })}</span>` : ""}</header>
           <div class="note-body-btn" data-action="read" data-id="${n.id}">
             <div class="qtext note-body ai-answer ${n.text.length > 600 || n.text.split("\n").length > 10 ? "is-long" : ""}">${noteText(n.text)}</div></div>
           <div class="row-actions">
@@ -163,12 +163,9 @@ export const notesScreen = {
           { id: "all", label: t("notes.f.allSyllabi"), sub: t("notes.f.allSub", { n: notes.length }), current: view.scope === "all" }] });
         if (id && id !== view.scope) { view.scope = id; store.touch(); }
       }),
-      read: (el) => { const n = store.byId("notes", el.dataset.id); viewNote(n.target.type, n.target.id, n.label || noteTarget(n)?.name || ""); },
+      read: (el) => viewNoteRecord(store.byId("notes", el.dataset.id)),
       open: (el) => { const target = noteTarget(store.byId("notes", el.dataset.id)); go(target.to, target.params); },
-      edit: (el) => {
-        const n = store.byId("notes", el.dataset.id);
-        editNote(n.target.type, n.target.id, n.label || noteTarget(n)?.name || "");
-      }
+      edit: (el) => editNoteRecord(store.byId("notes", el.dataset.id))
     });
   }
 };

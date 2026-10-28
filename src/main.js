@@ -23,6 +23,7 @@ import { mapScreen } from "./features/progress/map.js";
 import { guideScreen, guidePdfScreen } from "./features/guide/guide.js";
 import { autoDriveBackup } from "./features/settings/drive.js";
 import { libraryScreen, subjectScreen, subjectAllScreen, topicScreen, paperScreen } from "./features/library/library.js";
+import { topicNotesScreen } from "./features/notes/topic-notes.js";
 import { bankScreen, bankAddScreen } from "./features/library/banks.js";
 import { tidyScreen } from "./features/library/tidy.js";
 import { searchScreen } from "./features/search/search.js";
@@ -45,7 +46,7 @@ import { reviseScreen, cardsScreen } from "./features/revise/revise.js";
 import { settingsScreen } from "./features/settings/settings.js";
 import { remindersScreen, remindersOnOpen, syncSoon, listenToWorker } from "./features/reminders/reminders.js";
 
-[todayScreen, libraryScreen, subjectScreen, subjectAllScreen, topicScreen, paperScreen, bankScreen, bankAddScreen, tidyScreen,
+[todayScreen, libraryScreen, subjectScreen, subjectAllScreen, topicScreen, topicNotesScreen, paperScreen, bankScreen, bankAddScreen, tidyScreen,
   searchScreen, aiHubScreen, pdfsScreen, pdfScreen, pdfPageScreen, pdfViewScreen, pdfMakeScreen, insightsScreen, insightTopicScreen, timetableScreen, ttListScreen, ttPlansScreen, ttPlanScreen, ttScheduleScreen, ttNewScreen, ttReviewScreen, diaryScreen, diaryDaysScreen, progressScreen, historyScreen, testsScreen, statsSubjectScreen, statsTopicScreen, statsTopicsScreen, statsTablesScreen, testScreen, resultScreen, notesScreen, reviseScreen, cardsScreen, settingsScreen, remindersScreen, examsScreen, mapScreen, guideScreen, guidePdfScreen]
   .forEach(registerScreen);
 

@@ -4,7 +4,7 @@
      (Other apps on the same site keep their caches.)
    - A new version waits until the user taps "Refresh" in the app. */
 
-const VERSION = "1.26.4";
+const VERSION = "1.26.5";
 // Background backup through your own Google script (see src/cloud/sw-backup.js).
 importScripts("./src/cloud/sw-backup.js");
 // Reminders: shows the reminder the app planned when your reminder script wakes it (see src/cloud/sw-notify.js).
@@ -132,6 +132,7 @@ const SHELL_FILES = [
   "./src/features/library/topic-picker.js",
   "./src/features/notes/note-editor.js",
   "./src/features/notes/notes.js",
+  "./src/features/notes/topic-notes.js",
   "./src/features/pdfs/pdf-cloud.js",
   "./src/features/pdfs/pdf-view.js",
   "./src/features/pdfs/pdfs.js",

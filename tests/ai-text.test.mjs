@@ -38,3 +38,31 @@ test("the answer language is repeated at the very end of the request", () => {
   assert.ok(ml.startsWith("Task\n\nLANGUAGE:") && /Malayalam/.test(ml) && /Quote:/.test(ml));
   assert.match(inLang("Task", "both"), /English first/);
 });
+
+/* 1.26.5: your own topic notes (pasted from anywhere): a name from the first heading, tables, rules. */
+import { titleFromText, bodyWithoutTitle } from "../src/domain/text.js";
+test("a note's name comes from its first heading, else its first line", () => {
+  assert.equal(titleFromText("## Warren Hastings (1773–1785): Story Mode\n\nPicture Hastings…"), "Warren Hastings (1773–1785): Story Mode");
+  assert.equal(titleFromText("\n\n**Plain first line** here\n## Later heading"), "Later heading");
+  assert.equal(titleFromText("Just a line of text\nmore"), "Just a line of text");
+  assert.equal(titleFromText(""), "");
+  assert.equal(titleFromText("- point one"), "point one");
+});
+test("the name isn't shown twice: the matching first heading is left out when reading", () => {
+  assert.equal(bodyWithoutTitle("## Warren Hastings\n\nPicture him.", "Warren Hastings"), "Picture him.");
+  assert.equal(bodyWithoutTitle("## Warren Hastings\nPicture him.", "Other name"), "## Warren Hastings\nPicture him.");
+  assert.equal(bodyWithoutTitle("Line one\nLine two", "Line one"), "Line two");
+});
+test("Markdown tables and --- rules are laid out; text in cells is escaped", () => {
+  const h = String(noteText("## A\n| Act | Year |\n|---|---|\n| Regulating | **1773** |\n| Pitt's <b> | 1784 |\n\n---\n## B\ntext"));
+  assert.match(h, /<table class="ai-table"><thead><tr><th>Act<\/th><th>Year<\/th><\/tr><\/thead><tbody><tr><td>Regulating<\/td><td><strong>1773<\/strong><\/td><\/tr>/);
+  assert.match(h, /Pitt&#39;s &lt;b&gt;|Pitt's &lt;b&gt;/);
+  assert.match(h, /<hr class="ai-hr">/);
+  assert.doesNotMatch(h, /\|---\|/);
+});
+test("the sample story-mode note keeps every part: headings, bold lines, bullets, italics", () => {
+  const note = "## Warren Hastings (1773–1785): Story Mode\n\nPicture Hastings as a new manager.\n👉 **3 Laws → 3 Wars → 1 Scandal → 1 Society**\n\n### 📜 Part 1: Three Laws from London\n\n**(i) The New Boss: Regulating Act, 1773**\nLondon fears…\n\n### 🧠 Memory Hooks\n- **Laws:** Regulate (1773) → Settle (1781) → Control (1784)\n\n*Several names aren't in your notes.*";
+  const h = String(noteText(bodyWithoutTitle(note, titleFromText(note))));
+  ["Picture Hastings", "<strong>3 Laws", "Part 1: Three Laws from London", "<strong>(i) The New Boss", "Memory Hooks", "<li><strong>Laws:</strong>", "<em>Several names"].forEach((x) => assert.ok(h.includes(x) || h.includes(x.replace("'", "&#39;")), x));
+  assert.doesNotMatch(h, /##|\*\*/);
+});

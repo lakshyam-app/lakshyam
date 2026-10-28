@@ -11,7 +11,7 @@ import * as store from "../../data/store.js";
 import { label as nameLabel } from "../../core/names.js";
 import { listPdfs } from "../../pdf/pdf-store.js";
 import { passagesOf, queryOf, rank, snippet } from "../../domain/note-search.js";
-import { viewNote } from "../notes/note-editor.js";
+import { viewNoteRecord } from "../notes/note-editor.js";
 import * as P from "../../ai/prompts.js";
 import { askInSheet } from "../ai/ai-ui.js";
 import { plainQuestion } from "../ai/ai-actions.js";
@@ -57,7 +57,7 @@ export async function findInNotes(q) {
     open: (el) => {
       const r = hits[Number(el.dataset.i)];
       if (r.src.kind === "pdf") go("pdf-view", { id: r.src.ref, n: r.page || 1, ...from });
-      else { const n = store.byId("notes", r.src.ref); if (n) viewNote(n.target.type, n.target.id, n.label || ""); }
+      else { viewNoteRecord(store.byId("notes", r.src.ref)); }
     },
     ai: async () => {
       const list = hits.map((r, i) => ({ n: i + 1, where: where(r).replace(/^\S+\s/, ""), text: r.text.slice(0, 1200) }));

@@ -306,12 +306,8 @@ export async function topicStrategy(topic) {
     title: `🤖 ${t("ai.strategyTitle")}`, sub: `${label} · ${t("ai.strategySub", { n: total, papers: f.papers })}`,
     // Malayalam takes several times more tokens than English: give it room so it isn't cut off.
     maxTokens: (l) => (l === "en" ? 4500 : 9000), system: (l) => P.tutorSystem(l, P.SECTIONED),
-    user: (l) => P.inLang(P.topicStrategyTask({ subject: subject?.name || "", topic: topic.name, f, lines, shown, total, mine, marking: mk }), l),
-    actions: [{ id: "note", label: t("ai.addToNote", { topic: nameLabel(topic) }), run: async (text) => {
-      await mut.appendNote({ type: "topic", id: topic.id }, topic.name, `🤖 ${t("ai.strategyTitle")} — ${new Date().toLocaleDateString()}\n${text}`);
-      toast(t("ai.addedToNote", { topic: nameLabel(topic) }));
-      return true;
-    } }]
+    user: (l) => P.inLang(P.topicStrategyTask({ subject: subject?.name || "", topic: topic.name, f, lines, shown, total, mine, marking: mk }), l)
+    // 1.26.5: no "Add to the note" here: the strategy stays the topic's own AI strategy block (read / new / clear).
   });
 }
 

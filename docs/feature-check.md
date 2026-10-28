@@ -420,3 +420,14 @@ any saved record. (Review items 16 and the APK items were left for later, as ask
 | Change | Where | Status |
 |---|---|---|
 | Timetable blocks in Today's checklist can be tapped: they open the block's sheet to tick studied topics (they count as studied) or mark Done / Skipped; rows say "tap to tick what you studied" until something is ticked | Today | ✅ added |
+
+## Added in 1.26.5
+
+| Change | Where | Status |
+|---|---|---|
+| A topic can have several notes of your own, each with a name (typed, or taken from the pasted note's first heading); "📝 My notes" page lists them by name, newest edit first; read (laid out), edit, copy, delete (with Undo) | Topic → 📝 My notes, ⋯ → My notes | ✅ added |
+| The topic page no longer shows the note's text, only the "📝 My notes (n)" button | Topic | ✅ changed |
+| Pasted Markdown is laid out: headings (##, ###), **bold**, *italic*, bullets, numbered lists, tables and --- lines | Notes (also AI answers) | ✅ added |
+| Text typed in a new note isn't lost when Back closes the editor (it comes back when you open the editor again) | My notes | ✅ added |
+| The AI strategy sheet no longer offers "Add to the note"; the strategy stays as the topic's 🎯 AI strategy block | Topic → AI strategy | ✅ changed |
+| The topic's existing note (from before) is kept as the first of its notes; merging topics moves every note, each kept separately | Data | ✅ kept |
