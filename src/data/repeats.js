@@ -20,3 +20,21 @@ export function timesAsked(questionId) {
   if (!ids) return 1;
   return new Set(ids.map((id) => store.question(id)?.paperId).filter(Boolean)).size || 1;
 }
+
+/** 1.27 · Every question asked in two or more papers, one per group (the newest asking in this syllabus),
+    most-asked first. → [{ q, times }] */
+export function repeatedQuestions(syllabusId, subjectId = null) {
+  const idx = repeatIndex();
+  const seen = new Set(); const out = [];
+  const yearOf = (q) => examYear(store.paper(q.paperId)?.name) || 0;
+  store.questionsFor({ syllabusId, subjectId }).forEach((q) => {
+    const ids = idx.get(q.id);
+    if (!ids || seen.has(ids)) return;
+    seen.add(ids);
+    const here = ids.map((id) => store.question(id)).filter((x) => x && store.paper(x.paperId)?.syllabusId === syllabusId && (!subjectId || x.subjectId === subjectId));
+    const times = timesAsked(q.id);
+    if (times < 2 || !here.length) return;
+    out.push({ q: here.sort((a, b) => yearOf(b) - yearOf(a))[0], times });
+  });
+  return out.sort((a, b) => b.times - a.times || yearOf(b.q) - yearOf(a.q));
+}

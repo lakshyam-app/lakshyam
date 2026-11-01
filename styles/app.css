@@ -1526,6 +1526,17 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .mini-chip.stubborn { border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--line)); color: var(--danger); background: var(--wrong-bg); min-height: 32px; padding: 0 10px; border-radius: 999px; font-size: 0.8125rem; }
 button.mini-chip.stubborn { cursor: pointer; }
 .paper-row .done-tick { color: var(--ok); font-weight: 700; }
+.paper-row .ser { flex: none; min-width: 1.75em; text-align: right; color: var(--muted); font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+.paper-row .ser::after { content: "."; }
+#libRows.arranging { position: relative; }
+.arrange-row { user-select: none; -webkit-user-select: none; background: var(--bg); }
+.arrange-row .drag-handle { flex: none; width: 48px; height: 48px; margin-right: -6px; border: 0; border-radius: 12px; background: var(--brand-soft); color: var(--brand);
+  font-size: 1.5rem; line-height: 1; touch-action: none; cursor: grab; -webkit-tap-highlight-color: transparent; }
+.arrange-row.dragging { position: relative; z-index: 5; background: var(--surface); box-shadow: 0 10px 24px rgb(0 0 0 / 0.22); border-radius: 12px; will-change: transform; }
+.arrange-row.dragging .drag-handle { cursor: grabbing; background: var(--brand); color: #fff; }
+body.is-dragging { overscroll-behavior: none; }
+.repeats-row { margin: 4px 0 8px; padding: 10px 14px; border: 1px solid var(--line); border-left: 4px solid var(--brand); border-radius: 10px; background: var(--surface); }
+.prompt-box { white-space: pre-wrap; font-size: 0.8125rem; background: var(--brand-soft); border-radius: 8px; padding: 8px 10px; overflow-wrap: anywhere; }
 /* 🔁 asked in several papers · ⏳ answer as of a year */
 .chip-rep { background: color-mix(in srgb, var(--brand) 14%, var(--surface)); color: var(--brand); }
 .chip-asof { background: color-mix(in srgb, var(--gold) 18%, var(--surface)); color: #7A5A1A; }

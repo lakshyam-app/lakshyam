@@ -201,10 +201,10 @@ export async function saveTopicNote(topicId, noteId, { title, text }) {
 /* ---------- revision notes made from a study PDF (several per topic, one record each) ---------- */
 
 /** Saves a new PDF revision note for a topic. Returns its id. */
-export async function savePdfNote({ topicId, pdfId, pdfName, pages = "", text, models = null }) {
+export async function savePdfNote({ topicId, pdfId, pdfName, pages = "", text, models = null, pasted = false }) {
   const rid = newId("pn");
   const id = ids.note("pdfnote", rid);
-  await store.apply({ notes: { put: [{ id, target: { type: "pdfnote", id: rid, topicId, pdfId, pages }, label: pdfName, text: String(text || "").trim(), createdAt: Date.now(), ...(models?.length ? { aiModels: models.slice(0, 6) } : {}) }] } });
+  await store.apply({ notes: { put: [{ id, target: { type: "pdfnote", id: rid, topicId, pdfId, pages, ...(pasted ? { pasted: true } : {}) }, label: pdfName, text: String(text || "").trim(), createdAt: Date.now(), ...(models?.length ? { aiModels: models.slice(0, 6) } : {}) }] } });
   return rid;
 }
 

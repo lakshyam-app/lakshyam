@@ -35,6 +35,8 @@ import { nameHtml, label as nameLabel } from "../../core/names.js";
 import { onSwipe } from "../../core/swipe.js";
 import { examYear } from "../../domain/current.js";
 import { maxScore } from "../../domain/testing.js";
+import { arrangePapers } from "../../domain/paper-order.js";
+import { repeatedQuestions } from "../../data/repeats.js";
 
 /** ▶ Practice from a listing: the questions as shown (exam filter and sort applied). */
 export function practice(key, questions, scope, keepOrder = false) {
@@ -46,6 +48,10 @@ const VIEWS = ["subjects", "topics", "papers", "banks"];
 let swipeIn = ""; // "next" | "prev": the tab just reached by a swipe slides in from that side
 let lastView = "subjects";
 const filterText = { subjects: "", topics: "", papers: "", banks: "" };
+let arranging = false; // 1.27: Papers → ⇅ Arrange (drag papers into your own order)
+const orderKey = (syllabusId) => `paperOrder:${syllabusId}`;
+/** This syllabus's papers in your order (by year and code until you arrange them). */
+export const orderedPapers = (syllabusId) => arrangePapers(store.papersOf(syllabusId), store.setting(orderKey(syllabusId), null));
 // Topics view: chip ("all" or a list ID), sort, studied filter, label filter
 const topicView = { chip: "all", sort: "freq", studied: "all", labels: null };
 
@@ -250,7 +256,15 @@ function rowsFor(view, syllabusId, q) {
     if (per100 !== null && (x.best === null || per100 > x.best)) x.best = per100;
     done.set(a.scope.ref, x);
   });
-  return store.papersOf(syllabusId).filter((p) => matches(q, p.name, p.postName)).map((p) => {
+  const ordered = orderedPapers(syllabusId);
+  if (arranging) {
+    return ordered.map((p, i) => html`<div class="row paper-row arrange-row" data-id="${p.id}">
+      <span class="ser">${i + 1}</span>
+      <span class="row-main"><span class="row-title">${p.postName || p.name}</span><span class="row-sub">${[p.postName ? p.name : null, examYear(p.name)].filter(Boolean).join(" · ")}</span></span>
+      <button type="button" class="drag-handle" aria-label="${t("papers.dragHint")}" title="${t("papers.dragHint")}">⠿</button></div>`);
+  }
+  const serial = new Map(ordered.map((p, i) => [p.id, i + 1]));
+  return ordered.filter((p) => matches(q, p.name, p.postName)).map((p) => {
     const year = examYear(p.name);
     const d = done.get(p.id);
     const noKey = store.questionsOfPaper(p.id).filter(lacksAnswer).length;
@@ -258,6 +272,7 @@ function rowsFor(view, syllabusId, q) {
       d ? t("papers.doneBest", { n: d.n, best: formatNumber(Math.round(d.best * 10) / 10) }) : t("papers.notDone"),
       noKey ? t("papers.noKey", { n: noKey }) : null].filter((x) => x !== null && x !== "").join(" · ");
     return html`<button type="button" class="row paper-row ${d ? "is-done" : ""}" data-action="open" data-to="paper" data-id="${p.id}">
+      <span class="ser">${serial.get(p.id)}</span>
       <span class="row-main"><span class="row-title">${d ? html`<span class="done-tick" aria-hidden="true">✓</span> ` : ""}${p.postName || p.name}</span>
         <span class="row-sub">${sub}</span></span>
       <span class="row-count">${p.questionCount}</span>${chev}
@@ -280,10 +295,10 @@ export const libraryScreen = {
       <div class="segmented four" role="tablist">${VIEWS.map((v) => html`
         <button type="button" role="tab" aria-selected="${String(v === view)}" class="${v === view ? "on" : ""}"
           data-action="view" data-view="${v}">${t(`library.views.${v}`)}</button>`)}</div>
-      <input type="search" class="search" id="libFilter" placeholder="${t("common.searchPlaceholder")}"
-        value="${filterText[view]}" autocomplete="off">
+      ${view === "papers" && arranging ? "" : html`<input type="search" class="search" id="libFilter" placeholder="${t("common.searchPlaceholder")}"
+        value="${filterText[view]}" autocomplete="off">`}
       ${view === "topics" ? topicChips() : ""}
-      ${view === "papers" ? html`<button type="button" class="btn btn-quiet add-btn" data-action="add-paper">${t("addPaper.button")}</button>` : ""}
+      ${view === "papers" ? papersTop(syllabus.id) : ""}
       ${view === "banks" ? html`<button type="button" class="btn btn-quiet add-btn" data-action="new-bank">${t("banks.newBank")}</button>` : ""}
       <div class="rows" id="libRows"></div>
       ${view === "topics" ? html`<p class="hint pad">${t("topics.tip")}</p>` : ""}
@@ -292,7 +307,8 @@ export const libraryScreen = {
     // Swipe left / right to the next / previous tab (Subjects ⇄ Topics ⇄ Papers ⇄ Banks).
     const at = VIEWS.indexOf(view);
     const toView = (i, dir) => { if (i < 0 || i >= VIEWS.length) return; swipeIn = dir; go("library", { view: VIEWS[i] }, { replace: true }); };
-    onSwipe(container.querySelector(".library"), { left: () => toView(at + 1, "next"), right: () => toView(at - 1, "prev") });
+    if (!(view === "papers" && arranging)) onSwipe(container.querySelector(".library"), { left: () => toView(at + 1, "next"), right: () => toView(at - 1, "prev") });
+    else if (view !== "papers") arranging = false;
 
     const rowsEl = container.querySelector("#libRows");
     const drawRows = () => {
@@ -303,8 +319,10 @@ export const libraryScreen = {
     };
     drawRows();
 
+    rowsEl.classList.toggle("arranging", view === "papers" && arranging);
+    if (view === "papers" && arranging) dragToArrange(rowsEl, (ids) => store.quietly(() => store.setSetting(orderKey(syllabus.id), ids)));
     let timer = null;
-    container.querySelector("#libFilter").addEventListener("input", (e) => {
+    container.querySelector("#libFilter")?.addEventListener("input", (e) => {
       filterText[view] = e.target.value;
       clearTimeout(timer);
       timer = setTimeout(drawRows, 120);
@@ -324,6 +342,16 @@ export const libraryScreen = {
       "list-menu": () => listMenu(topicView.chip, syllabus.id),
       "note-edit": () => openNote("list", topicView.chip, store.byId("topicLists", topicView.chip)?.name || ""),
       "add-paper": () => addPaperFlow(),
+      arrange: () => { arranging = true; window.scrollTo(0, 0); store.touch(); },
+      "arrange-done": () => { arranging = false; store.touch(); },
+      "arrange-reset": () => runFlow(async () => {
+        const ok = await confirmAction({ title: t("papers.resetTitle"), body: t("papers.resetBody"), confirmLabel: t("papers.reset") });
+        if (!ok) return;
+        const prev = store.setting(orderKey(syllabus.id), null);
+        await store.setSetting(orderKey(syllabus.id), null);
+        toast(t("papers.resetDone"), { actionLabel: t("common.undo"), onAction: () => store.setSetting(orderKey(syllabus.id), prev) });
+      }),
+      repeats: () => go("repeats"),
       alike: () => lookAlikeSheet(),
       "ca-quiz": () => openCaQuiz(),
       "new-bank": () => runFlow(async () => {
@@ -341,6 +369,87 @@ export const libraryScreen = {
     }
   }
 };
+
+/* ---------- Papers: your order, and questions asked again ---------- */
+
+function papersTop(syllabusId) {
+  if (arranging) {
+    return html`<p class="ok-box">${t("papers.arrangeHint")}</p>
+      <div class="actions-row"><button type="button" class="btn" data-action="arrange-done">✓ ${t("common.done")}</button>
+        ${store.setting(orderKey(syllabusId), null) ? html`<button type="button" class="btn btn-quiet" data-action="arrange-reset">${t("papers.reset")}</button>` : ""}</div>`;
+  }
+  const reps = repeatedQuestions(syllabusId).length;
+  return html`<div class="actions-row"><button type="button" class="btn btn-quiet add-btn" data-action="add-paper">${t("addPaper.button")}</button>
+      ${store.papersOf(syllabusId).length > 1 ? html`<button type="button" class="btn btn-quiet add-btn" data-action="arrange">⇅ ${t("papers.arrange")}</button>` : ""}</div>
+    ${reps ? html`<button type="button" class="row repeats-row" data-action="repeats"><span class="row-main"><span class="row-title">🔁 ${t("repeats.title")}</span>
+      <span class="row-sub">${t("repeats.rowSub", { n: reps })}</span></span>${chev}</button>` : ""}`;
+}
+
+/* Hold ⠿ and drag a paper up or down. Only the handle drags, so the list never scrolls by accident while you
+   drag (and scrolls itself, gently, when you hold near the top or bottom). The other papers glide out of the way
+   and the numbers follow. Dropping saves the order. */
+function dragToArrange(listEl, save) {
+  const EDGE = 96;
+  listEl.addEventListener("pointerdown", (e) => {
+    const handle = e.target.closest(".drag-handle");
+    if (!handle || e.button > 0) return;
+    e.preventDefault();
+    const row = handle.closest(".arrange-row");
+    const before = [...listEl.querySelectorAll(".arrange-row")].map((r) => r.dataset.id).join();
+    const grab = e.clientY - row.getBoundingClientRect().top;
+    let y = e.clientY; let raf = 0; let lastFrame = performance.now();
+    row.classList.add("dragging");
+    document.body.classList.add("is-dragging");
+    navigator.vibrate?.(15);
+    const others = () => [...listEl.querySelectorAll(".arrange-row")].filter((r) => r !== row);
+    const follow = () => { const top = row.offsetTop; const listTop = listEl.getBoundingClientRect().top; row.style.transform = `translateY(${y - listTop - grab - top}px)`; };
+    const renumber = () => listEl.querySelectorAll(".arrange-row .ser").forEach((el, i) => { el.textContent = String(i + 1); });
+    const place = () => {
+      const fingerTop = y - listEl.getBoundingClientRect().top - grab; // where the dragged row's top would be
+      const mid = fingerTop + row.offsetHeight / 2;
+      const rest = others();
+      const target = rest.find((r) => mid < r.offsetTop + r.offsetHeight / 2) || null;
+      if (target ? row.nextElementSibling === target : listEl.lastElementChild === row) return;
+      // FLIP: the rows that move glide to their new place instead of jumping.
+      const old = new Map(rest.map((r) => [r, r.offsetTop]));
+      if (target) listEl.insertBefore(row, target); else listEl.appendChild(row);
+      rest.forEach((r) => {
+        const d = old.get(r) - r.offsetTop;
+        if (!d) return;
+        r.style.transition = "none"; r.style.transform = `translateY(${d}px)`;
+        r.getBoundingClientRect();
+        r.style.transition = "transform 160ms ease"; r.style.transform = "";
+      });
+      renumber();
+      navigator.vibrate?.(5);
+    };
+    const tick = (now) => {
+      const dt = Math.min(48, now - lastFrame); lastFrame = now;
+      const bottomBar = document.querySelector(".tabbar")?.getBoundingClientRect().top ?? window.innerHeight;
+      const depth = y < EDGE ? -(EDGE - y) : y > bottomBar - EDGE ? y - (bottomBar - EDGE) : 0;
+      if (depth) {
+        const speed = Math.sign(depth) * Math.min(1, Math.abs(depth) / EDGE) ** 2 * 1.1; // px per ms, gentle near the edge
+        const before = window.scrollY;
+        window.scrollBy(0, speed * dt);
+        if (window.scrollY !== before) { follow(); place(); }
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    const move = (ev) => { if (ev.pointerId !== e.pointerId) return; ev.preventDefault(); y = ev.clientY; follow(); place(); };
+    const end = (ev) => {
+      if (ev.pointerId !== e.pointerId) return;
+      window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", end); window.removeEventListener("pointercancel", end);
+      cancelAnimationFrame(raf);
+      row.style.transition = "transform 160ms ease"; row.style.transform = "";
+      setTimeout(() => { row.style.transition = ""; row.classList.remove("dragging"); }, 170);
+      document.body.classList.remove("is-dragging");
+      const ids = [...listEl.querySelectorAll(".arrange-row")].map((r) => r.dataset.id);
+      if (ids.join() !== before) save(ids);
+    };
+    window.addEventListener("pointermove", move, { passive: false }); window.addEventListener("pointerup", end); window.addEventListener("pointercancel", end);
+  });
+}
 
 /* ---------- shared header ---------- */
 
@@ -513,6 +622,7 @@ export const topicScreen = {
         { id: "copy", label: t("listing.copy"), run: () => copyQuestions(visibleQuestions(key, questions), `${subject?.name} — ${topic.name}`) },
         { id: "note", label: `📝 ${t("notes.myNotes")}`, run: () => go("topic-notes", { id }) },
         aiItem,
+        { id: "ai-import", label: `📥 ${t("aiImport.menu")}`, run: () => go("ai-import", { topic: id, kind: "questions" }) },
         pdfItem
       ].filter(Boolean) })
     });

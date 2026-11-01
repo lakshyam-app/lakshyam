@@ -88,12 +88,14 @@ async function makeFrom(topic, kind, general = null) {
   const id = await chooseAction({ title: t(`ai.make.title.${kind}`), sub: nameLabel(topic), items: [
     ...pdfs.map((r) => ({ id: `pdf:${r.id}`, label: `📄 ${shortPdf(r.name)}`, sub: t(`ai.make.fromPdf.${kind}`) })),
     { id: "add", label: `＋ ${t("ai.make.addPdf")}`, sub: t("ai.make.addPdfSub") },
-    general ? { id: "general", label: `🤖 ${t("ai.make.general")}`, sub: t("ai.make.generalSub") } : null
+    general ? { id: "general", label: `🤖 ${t("ai.make.general")}`, sub: t("ai.make.generalSub") } : null,
+    { id: "paste", label: `📥 ${t("aiImport.fromOther")}`, sub: t("aiImport.fromOtherSub") }
   ] });
   // The chooser's sheet stays open: the general flow draws its own sheet in its place, and go() closes it.
   if (!id) return;
   if (id === "general") return general();
   if (id === "add") return go("pdfs", { type: "topic", id: topic.id });
+  if (id === "paste") return go("ai-import", { topic: topic.id, kind });
   return go("pdf-make", { id: id.slice(4), kind });
 }
 
@@ -262,8 +264,8 @@ export function renderCardsPanel(host, { syllabus, scope, topic = null }) {
 export function renderPdfNotesPanel(host, { scope, topic = null }) {
   const every = pdfNotesOf(scope);
   if (!every.length) {
-    host.innerHTML = html`<p class="hint pad">${t("ai.pnNone")}</p>${topic ? html`<div class="actions-row"><button type="button" class="btn btn-quiet" data-action="pn-make">🤖 ${t("ai.make.more")}</button><button type="button" class="btn btn-quiet" data-action="pn-pdfs">📄 ${t("pdf.title")}</button></div>` : ""}`;
-    onAction(host, { "pn-pdfs": () => go("pdfs", { type: "topic", id: topic.id }), "pn-make": () => makeFrom(topic, "note") });
+    host.innerHTML = html`<p class="hint pad">${t("ai.pnNone")}</p>${topic ? html`<div class="actions-row"><button type="button" class="btn btn-quiet" data-action="pn-make">🤖 ${t("ai.make.more")}</button><button type="button" class="btn btn-quiet" data-action="pn-pdfs">📄 ${t("pdf.title")}</button><button type="button" class="btn btn-quiet" data-action="pn-paste">📥 ${t("aiImport.short")}</button></div>` : ""}`;
+    onAction(host, { "pn-pdfs": () => go("pdfs", { type: "topic", id: topic.id }), "pn-make": () => makeFrom(topic, "note"), "pn-paste": () => go("ai-import", { topic: topic.id, kind: "note" }) });
     return;
   }
   const from = fromFilter("notes", scope, every);
@@ -272,7 +274,7 @@ export function renderPdfNotesPanel(host, { scope, topic = null }) {
   const card = (n) => {
     const tp = store.topic(n.target.topicId);
     return html`<article class="note-card pdf-note" data-nid="${n.id}">
-      <header class="qcard-meta"><span>📄 ${n.label || "PDF"}${n.target.pages ? ` · ${t("ai.pnPages", { pages: n.target.pages })}` : ""} · ${when(n)}${!scope.topicId && tp ? ` · ${nameLabel(tp)}` : ""}${n.aiModels?.length ? ` · 🤖 ${n.aiModels.join(", ")}` : ""}</span>${n.aiModels?.length ? flagChip({ ref: `pn:${n.id}`, by: n.aiModels[0], kind: "pdfNotes" }) : ""}</header>
+      <header class="qcard-meta"><span>${n.target.pasted ? "📥" : "📄"} ${n.label || "PDF"}${n.target.pages ? ` · ${t("ai.pnPages", { pages: n.target.pages })}` : ""} · ${when(n)}${!scope.topicId && tp ? ` · ${nameLabel(tp)}` : ""}${n.aiModels?.length ? ` · 🤖 ${n.aiModels.join(", ")}` : ""}</span>${n.aiModels?.length ? flagChip({ ref: `pn:${n.id}`, by: n.aiModels[0], kind: "pdfNotes" }) : ""}</header>
       <div class="note-body-btn" data-action="pn-read"><div class="qtext note-body ai-answer ${n.text.length > 600 || n.text.split("\n").length > 10 ? "is-long" : ""}">${noteText(n.text)}</div></div>
       ${n.tricks?.text ? html`<details class="explain ai-extra note-tricks" data-k="tricks"><summary>🧠 ${t("ai.pnTricks")}</summary>
         <div class="ai-answer">${aiText(n.tricks.text, { sections: false })}</div>
@@ -292,7 +294,7 @@ export function renderPdfNotesPanel(host, { scope, topic = null }) {
   host.innerHTML = html`<div class="list-head">${aiNote(t("ai.pnHint"))}${from.chips}</div>
     <div class="actions-row"><button type="button" class="btn btn-quiet" data-action="pn-all">📖 ${notes.length > 1 ? t("ai.pnReadAll", { n: notes.length }) : t("notes.read")}</button>
       ${topic ? html`<button type="button" class="btn btn-quiet" data-action="pn-make">🤖 ${t("ai.make.more")}</button>` : ""}</div>
-    ${from.cur === "all" && groups.size > 1 ? [...groups.values()].map((g) => html`<h3 class="rows-head">📄 ${g[0].label || "PDF"} <span class="count">${g.length}</span></h3>${g.map(card)}`) : notes.map(card)}`;
+    ${from.cur === "all" && groups.size > 1 ? [...groups.values()].map((g) => html`<h3 class="rows-head">${g[0].target.pdfId ? `📄 ${g[0].label || "PDF"}` : `📥 ${t("ai.from.none")}`} <span class="count">${g.length}</span></h3>${g.map(card)}`) : notes.map(card)}`;
   const noteOf = (el) => store.byId("notes", el.closest("[data-nid]").dataset.nid);
   onAction(host, {
     ...fromHandler,

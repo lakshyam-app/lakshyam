@@ -445,3 +445,12 @@ any saved record. (Review items 16 and the APK items were left for later, as ask
 | Change | Where | Status |
 |---|---|---|
 | 🖍 button at the bottom (next to 🗑): tap it, tap headers to colour them gold (tap again to remove), tap 🖍 again to finish; colours stay for that note, also after closing and reopening, and don't change the note's text or its "last edited" date | My notes → a note | ✅ added |
+
+## Added in 1.27.0
+
+| Change | Where | Status |
+|---|---|---|
+| Papers are numbered 1, 2, 3… and listed oldest year first, then by paper code | Library → Papers | ✅ added |
+| ⇅ Arrange: hold ⠿ and drag papers into your own order; only the handle drags (no accidental scrolling), the list scrolls itself near the top/bottom, other papers glide aside, numbers follow; saved on drop; "Back to year order" (with Undo); new papers slot in by year and code | Library → Papers | ✅ added |
+| 🔁 Asked again: every question asked in 2+ papers, once each, most-asked first; filter by subject; practise them | Library → Papers → 🔁 Asked again | ✅ added |
+| 📥 Bring in from another AI: copy instructions for any AI app, paste its reply (JSON or plain text), check, untick, save as AI questions, flashcards or a revision note; no PDF needed; shown as "not from a PDF" | Topic ⋯ menu; Make more; empty Notes tab | ✅ added |
