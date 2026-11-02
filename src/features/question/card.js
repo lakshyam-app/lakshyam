@@ -34,14 +34,14 @@ export function difficultyOf(q) {
 
 /** review: an answer record from a finished test ({ selected, correct, isCorrect, graded, guessed, timeMs }).
     listNo: the card's place in the list shown (1, 2, 3…). actions: false for a read-only look (no buttons). */
-export function questionCard(q, { showPaper = true, mode = "study", revealed = null, showDifficulty = true, review = null, n = null, listNo = null, actions = true } = {}) {
+export function questionCard(q, { showPaper = true, mode = "study", revealed = null, showDifficulty = true, review = null, n = null, listNo = null, actions = true, asked: askedOverride = null } = {}) {
   if (review) mode = "review";
   const paper = store.paper(q.paperId);
   const state = store.questionState(q.id);
   const deleted = q.status === "deleted_by_psc";
   const flagged = Boolean(state?.flagged);
   const diff = showDifficulty ? difficultyOf(q) : null;
-  const asked = q.source === "ai" ? 1 : timesAsked(q.id); // 🔁 asked in this many papers
+  const asked = q.source === "ai" ? 1 : askedOverride ?? timesAsked(q.id); // 🔁 asked in this many papers (1.27.2: a list may count its own way)
   const asOf = asOfYear(q); // ⏳ an answer that may have changed since
   // AI questions: where they came from (a study PDF and page) instead of their internal number.
   const isAi = q.source === "ai";

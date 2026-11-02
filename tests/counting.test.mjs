@@ -189,3 +189,22 @@ test("why wrong answers went wrong", () => {
   const s = whyStats([w("misread"), w("changed"), w("know"), w(undefined), { graded: true, selected: 0, isCorrect: true, why: "know" }]);
   assert.deepEqual([s.know, s.mix, s.misread, s.changed, s.tagged, s.wrong, s.careless], [1, 0, 1, 1, 3, 4, 2]);
 });
+
+import { similarity, ruleFor, LEVELS } from "../src/domain/repeats.js";
+test("1.27.2: how alike the wording must be (50 / 75 / 100 %)", () => {
+  const q = (id, paperId, text) => ({ id, paperId, subjectId: "s1", text, options: ["x", "y"], answerIndex: 0 });
+  const a = q("a", "p1", "Who founded the SNDP Yogam in Kerala?");
+  const b = q("b", "p2", "In Kerala the SNDP Yogam was founded by whom?"); // same words, another order
+  const c = q("c", "p3", "Who founded the Atmavidya Sangham in Kerala?");  // about half the words
+  assert.equal(similarity(a.text, b.text), 0.625); // 5 shared of 8 different words (words under 3 letters left out)
+  assert.equal(similarity(a.text, c.text), 0.5);
+  const at = (l) => repeatGroups([a, b, c], ruleFor(l));
+  assert.deepEqual([...(at(50).get("a") || [])].sort(), ["a", "b", "c"]);
+  assert.deepEqual([...(at(60).get("a") || [])].sort(), ["a", "b"]);
+  assert.equal(at(75).has("a"), false);
+  assert.equal(at(100).has("a"), false);
+  const d = q("d", "p4", "who FOUNDED the sndp yogam, in Kerala");
+  assert.deepEqual([...(repeatGroups([a, d], ruleFor(100)).get("a") || [])].sort(), ["a", "d"], "same words, case and punctuation ignored");
+  assert.deepEqual(LEVELS, ["std", 50, 60, 75, 90, 100]);
+  assert.deepEqual(ruleFor("std"), { same: 0.7, sameAnswer: 0.5 });
+});

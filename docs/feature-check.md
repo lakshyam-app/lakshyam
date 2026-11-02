@@ -462,3 +462,12 @@ any saved record. (Review items 16 and the APK items were left for later, as ask
 | Maths copied from AI apps shows as maths: escaped delimiters (\\[ … \\]), doubled backslashes (\\text) and formula lines with no $…$ are typeset; your saved text is not changed; previews show it plainly | My notes, PDF/pasted notes | ✅ fixed |
 | 🔁 Asked again sheet: the subject › topic at the top (and on any paper where it differs) | Question cards, Asked again | ✅ added |
 | Tap a paper in the 🔁 sheet to read that question in full: question, options with the answer ✓, explanation; ‹ › to the next paper, "‹ All n" back to the list | Question cards, Asked again | ✅ added |
+
+## Added in 1.27.2
+
+| Change | Where | Status |
+|---|---|---|
+| "🗂 Compare with": this syllabus (default), another syllabus, or every other syllabus: questions of this syllabus that also came there; each paper in the 🔁 sheet shows its syllabus when it's another one | Library → Papers → 🔁 Asked again | ✅ added |
+| "≈ Wording alike": Usual (70 %, or 50 % with the same answer) or at least 50 / 60 / 75 / 90 / 100 % of the words; at a chosen %, each question is grouped only with questions alike to it (no chains) | Asked again | ✅ added |
+| Likeness worked out on all the words (before, very common words were left out of the count) | Asked again, 🔁 chips | ✅ fixed |
+| "This syllabus" counts only this syllabus's papers (before, a question asked once here and once in another syllabus also showed) | Asked again | ✅ fixed |

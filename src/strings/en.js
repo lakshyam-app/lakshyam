@@ -257,7 +257,28 @@ export default {
     hint: "Each question asked in two or more papers, shown once, most-asked first. Tap 🔁 on a card to see where else it came.",
     allSubjects: "All subjects",
     whichSubject: "Asked again: which subject?",
-    none: "No question has come in more than one paper yet."
+    none: "No question has come in more than one paper yet.",
+    hintOther: "Questions of {here} that also came in {other}, once each, most-asked first. Tap 🔁 on a card to see every paper.",
+    noneOther: "No question of this syllabus also came in {other} at this likeness. Try a lower ≈ %.",
+    withinThis: "This syllabus",
+    withinThisSub: "Asked in two or more papers of {name}",
+    withOther: "With {name}",
+    withOtherSub: "Questions of {here} that also came in {other}",
+    withAllSub: "Questions of {here} that also came in any other syllabus",
+    allOther: "every other syllabus",
+    compareTitle: "Find repeats where?",
+    compareSub: "Questions of {name}, compared with…",
+    levelTitle: "How alike must the wording be?",
+    levelSub: "Alike = the share of their words (3 letters or more) two questions have in common, ignoring case and punctuation.",
+    level: { std: "Usual", pct: "At least {p}%" },
+    levelHint: {
+      std: "70% of the words, or 50% with the same answer (what the 🔁 chips use everywhere)",
+      50: "Loose: catches reworded questions, and some that only look alike",
+      60: "Fairly loose",
+      75: "Mostly the same wording",
+      90: "Almost word for word",
+      100: "The same words (order, case and punctuation may differ)"
+    }
   },
   aiImport: {
     title: "Bring in from another AI",

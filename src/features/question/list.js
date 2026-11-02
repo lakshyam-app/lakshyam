@@ -77,7 +77,7 @@ function papersIn(questions) {
  * Card actions shared by every list of question cards (Library, results, search).
  * view: { refresh(id), remove(id) } from mountCards. onOption(q, i) handles option taps (optional).
  */
-export function bindCardActions(host, { view, bank = null, onOption = null, onReveal = null, selectedFor = null }) {
+export function bindCardActions(host, { view, bank = null, onOption = null, onReveal = null, selectedFor = null, repeats = null }) {
   const quiet = (fn, qid) => store.quietly(fn).then(() => view.refresh(qid));
   const qOf = (el) => store.question(el.closest("[data-qid]").dataset.qid);
   onAction(host, {
@@ -109,7 +109,7 @@ export function bindCardActions(host, { view, bank = null, onOption = null, onRe
     // A question you keep missing: an AI memory trick for it (saved to your notes if you like).
     "q-trick": (el) => wrongTricks([qOf(el)]),
     // 🔁 Asked again: where else this question came.
-    "q-repeats": (el) => repeatsSheet(qOf(el)),
+    "q-repeats": (el) => { const q = qOf(el); repeatsSheet(q, repeats?.placesOf(q) || null); },
     // ⏳ An answer that may have changed since the paper.
     "q-asof": (el) => asOfSheet(qOf(el), { selected: selectedFor?.(qOf(el)), refresh: (id) => view.refresh(id) }),
     "q-speak": (el) => speakQuestion(qOf(el)),
@@ -138,7 +138,7 @@ export function bindCardActions(host, { view, bank = null, onOption = null, onRe
  * host: element to fill. opts: { key, questions, showPaper, bank, examFilter }
  * examFilter: show the "Exams" chip (for listings that mix papers).
  */
-export function mountQuestions(host, { key, questions, showPaper = true, bank = null, examFilter = true, oneViewButton = false, extraMenu = null }) {
+export function mountQuestions(host, { key, questions, showPaper = true, bank = null, examFilter = true, oneViewButton = false, extraMenu = null, repeats = null }) {
   const papers = examFilter ? papersIn(questions) : [];
   const exams = examsBy.get(key);
   const list = visibleQuestions(key, questions);
@@ -167,12 +167,12 @@ export function mountQuestions(host, { key, questions, showPaper = true, bank = 
 
   // Always draw from the saved copy, so a redrawn card shows the latest edit.
   // listNo: the card's place in this list (as shown: after the exam filter and sort), next to its paper number.
-  const card = (q0, i) => { const q = store.question(q0.id) || q0; return questionCard(q, { showPaper, mode: viewMode(), showDifficulty: difficultyOn(), revealed: reveal.has(q.id) ? reveal.get(q.id) : null, listNo: Number.isInteger(i) ? i + 1 : null }); };
+  const card = (q0, i) => { const q = store.question(q0.id) || q0; return questionCard(q, { showPaper, mode: viewMode(), showDifficulty: difficultyOn(), revealed: reveal.has(q.id) ? reveal.get(q.id) : null, listNo: Number.isInteger(i) ? i + 1 : null, asked: repeats?.timesOf(q) ?? null }); };
   const view = mountCards(host.querySelector(".qhost"), { key, items: list, card, layout });
-  const redraw = () => mountQuestions(host, { key, questions, showPaper, bank, examFilter, oneViewButton, extraMenu });
+  const redraw = () => mountQuestions(host, { key, questions, showPaper, bank, examFilter, oneViewButton, extraMenu, repeats });
 
   bindCardActions(host, {
-    view, bank,
+    view, bank, repeats,
     onOption: (q, i, quiet) => {
       if (viewMode() === "edit") return quiet(() => mut.setAnswer(q, i), q.id);
       if (viewMode() === "selftest") { reveal.set(q.id, i); view.refresh(q.id); }
@@ -245,12 +245,14 @@ export function mountQuestions(host, { key, questions, showPaper = true, bank = 
 
 /* ---------- 🔁 asked again · ⏳ answer as of ---------- */
 
-function repeatsSheet(q) {
-  const list = repeatsOf(q.id);
-  const n = timesAsked(q.id);
+function repeatsSheet(q, places = null) {
+  const list = places || repeatsOf(q.id);
+  const n = places ? new Set(places.map((x) => x.q.paperId)).size : timesAsked(q.id);
+  const homeSyl = store.paper(q.paperId)?.syllabusId;
+  const sylName = (x) => { const id = x.syllabusId || store.paper(x.q.paperId)?.syllabusId; return id && id !== homeSyl ? store.syllabi().find((y) => y.id === id)?.name || "" : ""; };
   // 1.27.1: the topic at the top; tap a place to read that question in full (options, answer, explanation), ‹ › between them.
   const where = (x) => [nameLabel(store.subject(x.q.subjectId)), nameLabel(store.topic(x.q.topicId))].filter(Boolean).join(" › ");
-  const place = (x) => `${[x.year, x.paper?.postName || x.paper?.name].filter(Boolean).join(" · ")}${x.q.number ? ` · ${t("question.number", { n: x.q.number })}` : ""}`;
+  const place = (x) => `${sylName(x) ? `🗂 ${sylName(x)} · ` : ""}${[x.year, x.paper?.postName || x.paper?.name].filter(Boolean).join(" · ")}${x.q.number ? ` · ${t("question.number", { n: x.q.number })}` : ""}`;
   const showList = () => {
     openSheet(html`<h2>🔁 ${t("question.askedN", { n })}</h2>
       <p class="rep-topic">📚 ${where({ q })}</p>
