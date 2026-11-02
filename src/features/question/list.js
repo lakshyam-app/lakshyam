@@ -8,8 +8,9 @@ import { openedFrom } from "../../core/back.js";
 import { t } from "../../core/i18n.js";
 import { toast } from "../../core/toast.js";
 import { runFlow, chooseAction, askText, confirmAction } from "../../core/dialogs.js";
-import { openSheet, closeSheet } from "../../core/sheet.js";
-import { letterFor } from "../../domain/text.js";
+import { openSheet, closeSheet, sheetBody } from "../../core/sheet.js";
+import { typesetMath } from "../../core/math.js";
+import { letterFor, richText, smartText } from "../../domain/text.js";
 import * as store from "../../data/store.js";
 import { label as nameLabel } from "../../core/names.js";
 import * as mut from "../../data/mutations.js";
@@ -246,13 +247,43 @@ export function mountQuestions(host, { key, questions, showPaper = true, bank = 
 
 function repeatsSheet(q) {
   const list = repeatsOf(q.id);
-  openSheet(html`<h2>🔁 ${t("question.askedN", { n: timesAsked(q.id) })}</h2>
-    <p class="hint">${t("question.askedHint")}</p>
-    <div class="rows">${list.map((x) => html`<div class="row rep-row ${x.q.id === q.id ? "is-current" : ""}"><span class="row-main">
-      <span class="row-title">${[x.year, x.paper?.postName || x.paper?.name].filter(Boolean).join(" · ")}${x.q.number ? ` · ${t("question.number", { n: x.q.number })}` : ""}</span>
-      <span class="row-sub clamp">${x.q.text}</span></span></div>`)}</div>
-    <div class="sheet-actions"><button type="button" class="btn" data-action="close">${t("common.close")}</button></div>`,
-  { close: () => closeSheet() }, { label: t("question.askedN", { n: timesAsked(q.id) }) });
+  const n = timesAsked(q.id);
+  // 1.27.1: the topic at the top; tap a place to read that question in full (options, answer, explanation), ‹ › between them.
+  const where = (x) => [nameLabel(store.subject(x.q.subjectId)), nameLabel(store.topic(x.q.topicId))].filter(Boolean).join(" › ");
+  const place = (x) => `${[x.year, x.paper?.postName || x.paper?.name].filter(Boolean).join(" · ")}${x.q.number ? ` · ${t("question.number", { n: x.q.number })}` : ""}`;
+  const showList = () => {
+    openSheet(html`<h2>🔁 ${t("question.askedN", { n })}</h2>
+      <p class="rep-topic">📚 ${where({ q })}</p>
+      <p class="hint">${t("question.askedHint")}</p>
+      <div class="rows">${list.map((x, i) => html`<button type="button" class="row rep-row ${x.q.id === q.id ? "is-current" : ""}" data-action="rep-open" data-i="${i}"><span class="row-main">
+        <span class="row-title">${place(x)}</span>
+        <span class="row-sub clamp">${x.q.text}</span>${where(x) !== where({ q }) ? html`<span class="row-sub">📚 ${where(x)}</span>` : ""}</span><span class="chev-txt">›</span></button>`)}</div>
+      <p class="hint">${t("question.repTapHint")}</p>
+      <div class="sheet-actions"><button type="button" class="btn" data-action="close">${t("common.close")}</button></div>`,
+    { close: () => closeSheet(), "rep-open": (el) => showOne(Number(el.dataset.i)) }, { label: t("question.askedN", { n }) });
+  };
+  const showOne = (i) => {
+    const x = list[i];
+    const answer = x.q.answerIndex;
+    openSheet(html`<p class="tt-kicker">🔁 ${i + 1} / ${list.length} · ${place(x)}</p>
+      <p class="rep-topic">📚 ${where(x)}</p>
+      <div class="qtext rep-full">${richText(x.q.text)}</div>
+      <ol class="options rep-options">${(x.q.options || []).map((o, j) => html`<li class="${j === answer ? "right" : ""}"><span class="opt-letter">${letterFor(j)}</span><span class="opt-text">${richText(o)}</span>${j === answer ? html`<span class="tick">✓</span>` : ""}</li>`)}</ol>
+      ${Number.isInteger(answer) ? "" : html`<p class="hint">${t("question.noAnswerKey")}</p>`}
+      ${x.q.explanation ? html`<details class="explain" open><summary>${t("question.explanation")}</summary><div class="ai-answer">${smartText(x.q.explanation)}</div></details>` : ""}
+      <div class="sheet-actions rep-actions">
+        <button type="button" class="btn btn-quiet push-left" data-action="rep-list">‹ ${t("question.repAll", { n: list.length })}</button>
+        <button type="button" class="btn btn-quiet" data-action="rep-prev" ${i ? "" : "disabled"} aria-label="${t("question.repPrev")}">‹</button>
+        <button type="button" class="btn btn-quiet" data-action="rep-next" ${i < list.length - 1 ? "" : "disabled"} aria-label="${t("question.repNext")}">›</button>
+        <button type="button" class="btn" data-action="close">${t("common.close")}</button></div>`, {
+      close: () => closeSheet(),
+      "rep-list": () => showList(),
+      "rep-prev": () => showOne(Math.max(0, i - 1)),
+      "rep-next": () => showOne(Math.min(list.length - 1, i + 1))
+    }, { label: place(x) });
+    const body = sheetBody(); if (body) { body.scrollTop = 0; typesetMath(body); }
+  };
+  showList();
 }
 
 function asOfSheet(q, { selected, refresh }) {

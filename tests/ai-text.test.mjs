@@ -66,3 +66,16 @@ test("the sample story-mode note keeps every part: headings, bold lines, bullets
   ["Picture Hastings", "<strong>3 Laws", "Part 1: Three Laws from London", "<strong>(i) The New Boss", "Memory Hooks", "<li><strong>Laws:</strong>", "<em>Several names"].forEach((x) => assert.ok(h.includes(x) || h.includes(x.replace("'", "&#39;")), x));
   assert.doesNotMatch(h, /##|\*\*/);
 });
+
+/* 1.27.1: maths pasted from AI apps */
+import { fixLatex } from "../src/domain/text.js";
+test("maths from AI apps: escaped delimiters, double backslashes and bare formula lines are typeset", () => {
+  assert.equal(fixLatex("M3=M1+\\\\text{Bank Time Deposits}"), "$$M3=M1+\\text{Bank Time Deposits}$$");
+  assert.equal(fixLatex("M3=M1+\\text{Bank Time Deposits}"), "$$M3=M1+\\text{Bank Time Deposits}$$");
+  assert.equal(fixLatex("\\\\[M3=M1+\\\\text{TD}\\\\]"), "\\[M3=M1+\\text{TD}\\]");
+  assert.equal(fixLatex("$$M3=M1+\\\\text{TD}$$"), "$$M3=M1+\\text{TD}$$");
+  assert.equal(fixLatex("- M3 includes \\text{TD}"), "- M3 includes \\text{TD}", "bullets left alone");
+  assert.equal(fixLatex("ബാങ്ക് \\text{TD}"), "ബാങ്ക് \\text{TD}", "Malayalam lines left alone");
+  assert.equal(fixLatex("No maths here: a\\b"), "No maths here: a\\b");
+  assert.equal(fixLatex("$x^{2}$ is fine"), "$x^{2}$ is fine");
+});

@@ -1536,12 +1536,18 @@ button.mini-chip.stubborn { cursor: pointer; }
 .arrange-row.dragging .drag-handle { cursor: grabbing; background: var(--brand); color: #fff; }
 body.is-dragging { overscroll-behavior: none; }
 .repeats-row { margin: 4px 0 8px; padding: 10px 14px; border: 1px solid var(--line); border-left: 4px solid var(--brand); border-radius: 10px; background: var(--surface); }
+.rep-topic { margin: 0 0 6px; font-weight: 600; color: var(--brand); }
+button.rep-row { text-align: left; }
+.rep-row .chev-txt { color: var(--muted); }
+.rep-full { font-size: 1.0625rem; line-height: 1.6; margin: 8px 0 12px; }
+.rep-options { margin-bottom: 8px; }
+.rep-actions .btn { padding-inline: 12px; }
 .prompt-box { white-space: pre-wrap; font-size: 0.8125rem; background: var(--brand-soft); border-radius: 8px; padding: 8px 10px; overflow-wrap: anywhere; }
 /* 🔁 asked in several papers · ⏳ answer as of a year */
 .chip-rep { background: color-mix(in srgb, var(--brand) 14%, var(--surface)); color: var(--brand); }
 .chip-asof { background: color-mix(in srgb, var(--gold) 18%, var(--surface)); color: #7A5A1A; }
 :root[data-theme="dark"] .chip-asof { color: var(--gold); }
-.rep-row { cursor: default; }
+.rep-row { cursor: pointer; }
 .rep-row.is-current .row-title::after { content: " ●"; color: var(--brand); }
 /* Tidy "Other" · look-alike names */
 .tidy-row { border: 1px dashed var(--line); border-radius: 12px; padding: 10px 12px; margin: 4px 0 10px; background: var(--surface); }

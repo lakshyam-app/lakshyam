@@ -454,3 +454,11 @@ any saved record. (Review items 16 and the APK items were left for later, as ask
 | ⇅ Arrange: hold ⠿ and drag papers into your own order; only the handle drags (no accidental scrolling), the list scrolls itself near the top/bottom, other papers glide aside, numbers follow; saved on drop; "Back to year order" (with Undo); new papers slot in by year and code | Library → Papers | ✅ added |
 | 🔁 Asked again: every question asked in 2+ papers, once each, most-asked first; filter by subject; practise them | Library → Papers → 🔁 Asked again | ✅ added |
 | 📥 Bring in from another AI: copy instructions for any AI app, paste its reply (JSON or plain text), check, untick, save as AI questions, flashcards or a revision note; no PDF needed; shown as "not from a PDF" | Topic ⋯ menu; Make more; empty Notes tab | ✅ added |
+
+## Fixed in 1.27.1
+
+| Change | Where | Status |
+|---|---|---|
+| Maths copied from AI apps shows as maths: escaped delimiters (\\[ … \\]), doubled backslashes (\\text) and formula lines with no $…$ are typeset; your saved text is not changed; previews show it plainly | My notes, PDF/pasted notes | ✅ fixed |
+| 🔁 Asked again sheet: the subject › topic at the top (and on any paper where it differs) | Question cards, Asked again | ✅ added |
+| Tap a paper in the 🔁 sheet to read that question in full: question, options with the answer ✓, explanation; ‹ › to the next paper, "‹ All n" back to the list | Question cards, Asked again | ✅ added |

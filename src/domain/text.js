@@ -134,8 +134,24 @@ export function bodyWithoutTitle(text, title) {
   return first === String(title).trim() ? s.slice(m[0].length).replace(/^\s*\n/, "") : s;
 }
 
+/* 1.27.1: maths copied from an AI app often arrives escaped ("\\[ … \\]", "\\text{…}") or with no $…$ at all
+   ("M3=M1+\\text{Bank Time Deposits}"). Put it right so it is typeset, without changing the note you saved. */
+const LATEX_CMD = /\\{1,2}(?:text|frac|dfrac|times|sqrt|cdot|div|pm|leq?|geq?|neq|approx|sum|prod|left|right|mathrm|mathbf|quad|alpha|beta|gamma|delta|theta|pi|sigma|Delta|infty|rightarrow|to)\b|[\^_]\{/;
+export function fixLatex(text) {
+  let s = String(text ?? "");
+  if (!/\\/.test(s)) return s;
+  s = s.replace(/\\\\([[\]()])/g, "\\$1"); // \\[ → \[
+  const { s: rest, keep } = protectMath(s); // maths already marked: only its doubled backslashes are put right
+  const lines = rest.split("\n").map((line) => {
+    const l = line.trim();
+    if (!l || l.includes(M_OPEN) || /^([-*•#|>]|\d+[.)]\s)/.test(l) || /[\u0D00-\u0D7F]/.test(l) || !LATEX_CMD.test(l)) return line;
+    return `$$${l.replace(/\\\\(?=[A-Za-z{}])/g, "\\")}$$`; // a line that is only a formula
+  }).join("\n");
+  return lines.replace(/\uE000(\d+)\uE001/g, (_, i) => keep[Number(i)].replace(/\\\\(?=[A-Za-z{}])/g, "\\"));
+}
+
 /** A note: AI write-ups saved into it ("## " parts, or marked 🤖) get the full AI layout. */
-export const noteText = (text) => (/^\s*#{1,4}\s/m.test(String(text || "")) ? aiText(text) : smartText(text));
+export const noteText = (text0) => { const text = fixLatex(text0); return /^\s*#{1,4}\s/m.test(String(text || "")) ? aiText(text) : smartText(text); };
 
 /** Plain one-line preview of formatted text (no ##, ** or bullets). */
-export const plainPreview = (text, max = 140) => String(text ?? "").split("\n").map((l) => l.replace(/^\s*(#{1,4}|[-•*]|\d+[.)])\s+/, "").replace(/\*\*/g, "").trim()).filter(Boolean).join(" · ").slice(0, max);
+export const plainPreview = (text, max = 140) => String(text ?? "").replace(/\\{1,2}(?:text|mathrm|mathbf)\{([^}]*)\}/g, "$1").replace(/\${1,2}|\\{1,2}[[\]()]/g, "").split("\n").map((l) => l.replace(/^\s*(#{1,4}|[-•*]|\d+[.)])\s+/, "").replace(/\*\*/g, "").trim()).filter(Boolean).join(" · ").slice(0, max);
